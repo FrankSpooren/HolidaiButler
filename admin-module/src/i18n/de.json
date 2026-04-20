@@ -33,7 +33,20 @@
     "section_platform": "Plattform",
     "section_system": "System",
     "pagesNav": "Seiten & Navigation",
-    "agentsSystem": "Agents & System"
+    "agentsSystem": "Agents & System",
+    "section_workspace": "Workspace",
+    "section_intelligence": "Intelligenz",
+    "section_management": "Verwaltung",
+    "overview": "Übersicht",
+    "bronnen": "Quellen",
+    "ideeen": "Ideen",
+    "contentItems": "Elemente",
+    "kalender": "Kalender",
+    "analyse": "Analyse",
+    "seizoenen": "Jahreszeiten",
+    "socialAccounts": "Social Accounts",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen"
   },
   "auth": {
     "login": "Anmelden",
@@ -272,7 +285,19 @@
       "pages": "Seitenverwaltung",
       "analytics": "Analysen",
       "settings": "Einstellungen"
-    }
+    },
+    "platformDashboard": "Plattform Dashboard",
+    "customize": "Dashboard anpassen",
+    "customizeTitle": "Dashboard anpassen",
+    "customizeDesc": "Wählen Sie, welche KPIs auf Ihrem Dashboard sichtbar sind.",
+    "last7days": "Letzte 7 Tage",
+    "pendingReview": "in Prüfung",
+    "total": "gesamt",
+    "processUptime": "Prozess-Laufzeit",
+    "newContent": "Neuer Inhalt",
+    "calendar": "Kalender",
+    "analytics": "Analytics",
+    "poiManagement": "POI Verwaltung"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -564,6 +589,37 @@
       "day": "Tag",
       "week": "Woche",
       "month": "Monat"
+    },
+    "tab": {
+      "report": "Bericht",
+      "content": "Content"
+    },
+    "report": {
+      "title": "Content Performance Bericht",
+      "lastWeek": "Letzte Woche",
+      "lastMonth": "Letzter Monat",
+      "custom": "Benutzerdefiniert",
+      "printPdf": "Als PDF drucken (Strg+P)",
+      "exportPdf": "PDF / Drucken",
+      "executiveSummary": "Zusammenfassung",
+      "summaryText": "In diesem Zeitraum wurden {{total}} Content-Items erstellt, davon {{published}} veröffentlicht und {{scheduled}} geplant. {{reviewCount}} neue Bewertungen mit einer Durchschnittsbewertung von {{avgRating}}. Der Chatbot hat {{sessions}} Sitzungen mit {{messages}} Nachrichten bearbeitet.",
+      "generated": "Erstellt",
+      "kpi": {
+        "totalContent": "Gesamt Content",
+        "published": "Veröffentlicht",
+        "scheduled": "Geplant",
+        "drafts": "Entwürfe",
+        "reviews": "Neue Bewertungen",
+        "chatSessions": "Chatbot Sitzungen"
+      },
+      "byPlatform": "Content pro Plattform",
+      "total": "Gesamt",
+      "publishRate": "Veröffentlichungsrate",
+      "byPillar": "Content pro Pillar",
+      "topPerformers": "Top Performer",
+      "contentTitle": "Titel",
+      "commentary": "Anmerkungen",
+      "commentaryPlaceholder": "Persönliche Anmerkungen zu diesem Bericht hinzufügen..."
     }
   },
   "settings": {
@@ -1336,7 +1392,39 @@
     "dnsTitle": "DNS- & Server-Konfiguration",
     "dnsStep1": "Schritt 1: DNS A-Records erstellen",
     "dnsStep2": "Schritt 2: SSL-Zertifikat anfordern",
-    "dnsStep3": "Schritt 3: Apache VHost konfigurieren"
+    "dnsStep3": "Schritt 3: Apache VHost konfigurieren",
+    "widget": {
+      "titleStudio": "Content Studio Setup",
+      "titlePlatform": "Plattform Setup",
+      "stepsComplete": "Schritte abgeschlossen",
+      "optional": "optional",
+      "allDone": "Setup abgeschlossen!",
+      "dismiss": "Widget schließen",
+      "next": "Weiter",
+      "openChecklist": "Setup-Checkliste öffnen"
+    },
+    "steps": {
+      "welcome": "Willkommen!",
+      "welcomeDesc": "Entdecken Sie die Möglichkeiten Ihres Arbeitsbereichs.",
+      "brandProfile": "Markenprofil einrichten",
+      "brandProfileDesc": "Fügen Sie Firmenname, Branche, USPs und Tonalität hinzu.",
+      "connectSocial": "Social Media verbinden",
+      "connectSocialDesc": "Verbinden Sie Facebook, Instagram oder LinkedIn.",
+      "firstSuggestion": "AI-Content generieren",
+      "firstSuggestionDesc": "Lassen Sie die AI Ihre ersten Content-Vorschläge generieren.",
+      "planItem": "Erstes Element planen",
+      "planItemDesc": "Wählen Sie ein Content-Element und planen Sie es im Kalender.",
+      "viewCalendar": "Kalender ansehen",
+      "viewCalendarDesc": "Übersicht geplanter und veröffentlichter Inhalte.",
+      "explorePois": "POIs erkunden",
+      "explorePoisDesc": "Verwalten Sie die Points of Interest Ihres Reiseziels.",
+      "testChatbot": "Chatbot testen",
+      "testChatbotDesc": "Stellen Sie dem AI-Chatbot eine Frage.",
+      "checkEvents": "Events ansehen",
+      "checkEventsDesc": "Entdecken Sie das Veranstaltungsmodul.",
+      "inviteTeam": "Teammitglieder einladen",
+      "inviteTeamDesc": "Fügen Sie Kollegen hinzu."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",
@@ -1632,7 +1720,11 @@
       "cancelSchedule": "Abbrechen",
       "scheduleTitle": "Inhalt planen",
       "dateTime": "Datum & Uhrzeit",
-      "account": "Konto"
+      "account": "Konto",
+      "filters": "Filter",
+      "toggleFilters": "Filter ein-/ausblenden",
+      "clearFilters": "Filter zurücksetzen",
+      "print": "Drucken"
     },
     "performance": {
       "days": "Tage",

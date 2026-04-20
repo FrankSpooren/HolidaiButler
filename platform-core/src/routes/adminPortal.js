@@ -180,6 +180,7 @@ import createMediaRouter from "./mediaRoutes.js";
 import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCollectionRoutes.js";
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
+import notificationService from '../services/notificationService.js';
 
 
 const router = Router();
@@ -979,139 +980,292 @@ router.get('/auth/me', adminAuth('reviewer'), async (req, res) => {
 
 /**
  * GET /dashboard
- * Aggregated KPI data. Redis cached for 120 seconds.
+ * Aggregated KPI data with period deltas and destination filtering.
+ * Query: destination (1|2|all, default all), period (7|30|90, default 30)
+ * Redis cached per destination+period for 120 seconds.
  */
-router.get('/dashboard', adminAuth('reviewer'), async (req, res) => {
+router.get('/dashboard', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
-    const cacheKey = 'admin:dashboard:kpis';
+    const { destination = 'all', period = '30' } = req.query;
+    const days = Math.min(parseInt(period) || 30, 365);
+    const destId = destination !== 'all' ? resolveDestinationId(destination) || parseInt(destination) : null;
+
+    // Respect RBAC destination scope
+    if (req.destScope && destId && !req.destScope.includes(destId)) {
+      return res.status(403).json({ success: false, error: { code: 'DESTINATION_FORBIDDEN', message: 'Access denied' } });
+    }
+
+    const cacheKey = `admin:dashboard:kpis:${destId || 'all'}:${days}`;
     const redis = getRedis();
-
-    // Try cache first
     if (redis) {
-      try {
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-          return res.json(JSON.parse(cached));
-        }
-      } catch {
-        // Cache miss, continue
-      }
+      try { const c = await redis.get(cacheKey); if (c) return res.json(JSON.parse(c)); } catch { /* miss */ }
     }
 
-    // Collect KPI data with graceful degradation
-    const result = {
-      success: true,
-      data: {
-        timestamp: new Date().toISOString(),
-        destinations: { calpe: { id: 1 }, texel: { id: 2 } },
-        platform: {}
-      }
-    };
+    const destFilter = destId ? 'AND destination_id = :destId' : '';
+    const destRepl = destId ? { destId } : {};
 
-    // 1. POI counts per destination
+    const result = { success: true, data: { timestamp: new Date().toISOString(), period: days, destination: destId || 'all', kpis: {} } };
+
+    // ── POIs ──
     try {
-      const poiCounts = await mysqlSequelize.query(
-        `SELECT destination_id,
-                COUNT(*) as total,
-                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active
-         FROM POI GROUP BY destination_id`,
-        { type: QueryTypes.SELECT }
+      const [current] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total, SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active FROM POI WHERE 1=1 ${destFilter}`,
+        { replacements: destRepl }
       );
-      for (const row of poiCounts) {
-        const destKey = row.destination_id === 1 ? 'calpe' : row.destination_id === 2 ? 'texel' : null;
-        if (destKey) {
-          result.data.destinations[destKey].pois = {
-            total: parseInt(row.total),
-            active: parseInt(row.active)
-          };
-        }
-      }
-    } catch (err) {
-      logger.warn('[AdminPortal] POI count query failed:', err.message);
-      result.data.destinations.calpe.pois = { total: 0, active: 0, error: true };
-      result.data.destinations.texel.pois = { total: 0, active: 0, error: true };
-    }
-
-    // 2. Review counts per destination
-    try {
-      const reviewCounts = await mysqlSequelize.query(
-        `SELECT destination_id, COUNT(*) as total FROM reviews GROUP BY destination_id`,
-        { type: QueryTypes.SELECT }
+      // POIs added in period
+      const [added] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM POI WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
       );
-      for (const row of reviewCounts) {
-        const destKey = row.destination_id === 1 ? 'calpe' : row.destination_id === 2 ? 'texel' : null;
-        if (destKey) {
-          result.data.destinations[destKey].reviews = parseInt(row.total);
-        }
-      }
+      // Previous period
+      const [prevAdded] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM POI WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const cur = Number(added[0]?.cnt || 0);
+      const prev = Number(prevAdded[0]?.cnt || 0);
+      result.data.kpis.pois = {
+        total: Number(current[0]?.total || 0),
+        active: Number(current[0]?.active || 0),
+        added: cur,
+        delta: prev > 0 ? Math.round(((cur - prev) / prev) * 100) : (cur > 0 ? 100 : 0),
+      };
     } catch (err) {
-      logger.warn('[AdminPortal] Review count query failed:', err.message);
+      logger.warn('[AdminPortal] POI query failed:', err.message);
+      result.data.kpis.pois = { total: 0, active: 0, added: 0, delta: 0 };
     }
 
-    // Ensure defaults
-    if (!result.data.destinations.calpe.reviews) result.data.destinations.calpe.reviews = 0;
-    if (!result.data.destinations.texel.reviews) result.data.destinations.texel.reviews = 0;
-
-    // 3. Admin user count (from admin_users, not customer Users table)
+    // ── Reviews ──
     try {
-      const userCount = await mysqlSequelize.query(
+      const [total] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE 1=1 ${destFilter}`, { replacements: destRepl }
+      );
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM reviews WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.cnt || 0);
+      const p = Number(prev[0]?.cnt || 0);
+      result.data.kpis.reviews = {
+        total: Number(total[0]?.cnt || 0),
+        new: c,
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Review query failed:', err.message);
+      result.data.kpis.reviews = { total: 0, new: 0, delta: 0 };
+    }
+
+    // ── Chatbot ──
+    try {
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt, SUM(message_count) as msgs FROM holibot_sessions WHERE started_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM holibot_sessions WHERE started_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND started_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.cnt || 0);
+      const p = Number(prev[0]?.cnt || 0);
+      result.data.kpis.chatbot = {
+        sessions: c,
+        messages: Number(cur[0]?.msgs || 0),
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Chatbot query failed:', err.message);
+      result.data.kpis.chatbot = { sessions: 0, messages: 0, delta: 0 };
+    }
+
+    // ── Content ──
+    try {
+      const [cur] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total,
+          SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) as drafts,
+          SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) as published,
+          SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) as scheduled
+        FROM content_items WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, ...destRepl } }
+      );
+      const [prev] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total FROM content_items WHERE created_at >= DATE_SUB(NOW(), INTERVAL :days2 DAY) AND created_at < DATE_SUB(NOW(), INTERVAL :days DAY) ${destFilter}`,
+        { replacements: { days, days2: days * 2, ...destRepl } }
+      );
+      const c = Number(cur[0]?.total || 0);
+      const p = Number(prev[0]?.total || 0);
+      result.data.kpis.content = {
+        total: c,
+        drafts: Number(cur[0]?.drafts || 0),
+        published: Number(cur[0]?.published || 0),
+        scheduled: Number(cur[0]?.scheduled || 0),
+        delta: p > 0 ? Math.round(((c - p) / p) * 100) : (c > 0 ? 100 : 0),
+      };
+    } catch (err) {
+      logger.warn('[AdminPortal] Content query failed:', err.message);
+      result.data.kpis.content = { total: 0, drafts: 0, published: 0, scheduled: 0, delta: 0 };
+    }
+
+    // ── Users ──
+    try {
+      const [uc] = await mysqlSequelize.query(
         `SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM admin_users`,
         { type: QueryTypes.SELECT }
       );
-      result.data.platform.totalUsers = parseInt(userCount[0]?.total || 0);
-      result.data.platform.activeUsers = parseInt(userCount[0]?.active || 0);
+      result.data.kpis.users = { total: Number(uc?.total || 0), active: Number(uc?.active || 0) };
     } catch {
-      result.data.platform.totalUsers = 0;
-      result.data.platform.activeUsers = 0;
+      result.data.kpis.users = { total: 0, active: 0 };
     }
 
-    // 4. Chatbot sessions (last 7 days)
-    try {
-      const chatSessions = await mysqlSequelize.query(
-        `SELECT COUNT(*) as total FROM holibot_sessions
-         WHERE started_at > DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-        { type: QueryTypes.SELECT }
-      );
-      result.data.platform.chatbotSessions7d = parseInt(chatSessions[0]?.total || 0);
-    } catch {
-      result.data.platform.chatbotSessions7d = 0;
-    }
-
-    // 5. Agent count (from registry)
-    result.data.platform.totalAgents = 18;
-
-    // 6. Scheduled jobs
-    result.data.platform.scheduledJobs = 40;
-
-    // 7. System uptime
-    result.data.platform.uptimeHours = parseFloat((process.uptime() / 3600).toFixed(1));
-
-    // 8. Agent health summary (shared with daily briefing — B5 consistency fix)
+    // ── Agents ──
     try {
       const { getSystemHealthSummary } = await import('../services/orchestrator/auditTrail/index.js');
-      result.data.platform.healthSummary = await getSystemHealthSummary(24);
+      const health = await getSystemHealthSummary(24);
+      result.data.kpis.agents = { total: 18, alerts: health?.alerts || 0, errors: health?.errors || 0, jobs: health?.jobs || 0 };
     } catch {
-      result.data.platform.healthSummary = { jobs: 0, alerts: 0, errors: 0 };
+      result.data.kpis.agents = { total: 18, alerts: 0, errors: 0, jobs: 0 };
     }
 
-    // Cache result
-    if (redis) {
-      try {
-        await redis.set(cacheKey, JSON.stringify(result), 'EX', 120);
-      } catch {
-        // Cache write failure is non-critical
-      }
-    }
+    // ── Uptime ──
+    result.data.kpis.uptime = { hours: parseFloat((process.uptime() / 3600).toFixed(1)) };
 
+    if (redis) { try { await redis.set(cacheKey, JSON.stringify(result), 'EX', 120); } catch {} }
     res.json(result);
   } catch (error) {
     logger.error('[AdminPortal] Dashboard error:', error);
-    res.status(500).json({
-      success: false,
-      error: { code: 'SERVER_ERROR', message: 'An error occurred fetching dashboard data' }
-    });
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
   }
 });
+
+/**
+ * GET /onboarding/progress — Get user's onboarding progress
+ * Returns completed steps, dismissed state, and applicable steps based on platform mode
+ */
+router.get('/onboarding/progress', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+
+        // Get or create progress
+    const [rows] = await mysqlSequelize.query(
+      'SELECT * FROM onboarding_progress WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+
+    let progress;
+    if (rows.length === 0) {
+      await mysqlSequelize.query(
+        'INSERT INTO onboarding_progress (user_id) VALUES (:userId)',
+        { replacements: { userId } }
+      );
+      progress = { user_id: userId, completed_steps: [], dismissed: false, completed_at: null };
+    } else {
+      progress = rows[0];
+      if (typeof progress.completed_steps === 'string') {
+        try { progress.completed_steps = JSON.parse(progress.completed_steps); } catch { progress.completed_steps = []; }
+      }
+    }
+
+    res.json({ success: true, data: progress });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding progress error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/step/:stepId — Mark a step as completed
+ */
+router.post('/onboarding/step/:stepId', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { stepId } = req.params;
+
+    const [rows] = await mysqlSequelize.query(
+      'SELECT completed_steps FROM onboarding_progress WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+
+    let steps = [];
+    if (rows.length > 0) {
+      steps = typeof rows[0].completed_steps === 'string'
+        ? JSON.parse(rows[0].completed_steps || '[]')
+        : (rows[0].completed_steps || []);
+    }
+
+    const toggle = req.body?.toggle === true;
+    if (toggle && steps.includes(stepId)) {
+      steps = steps.filter(s => s !== stepId);
+    } else if (!steps.includes(stepId)) {
+      steps.push(stepId);
+    }
+
+    if (rows.length === 0) {
+      await mysqlSequelize.query(
+        'INSERT INTO onboarding_progress (user_id, completed_steps) VALUES (:userId, :steps)',
+        { replacements: { userId, steps: JSON.stringify(steps) } }
+      );
+    } else {
+      await mysqlSequelize.query(
+        'UPDATE onboarding_progress SET completed_steps = :steps WHERE user_id = :userId',
+        { replacements: { userId, steps: JSON.stringify(steps) } }
+      );
+    }
+
+    res.json({ success: true, data: { completed_steps: steps } });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding step error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/dismiss — Dismiss the onboarding widget
+ */
+router.post('/onboarding/dismiss', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    await mysqlSequelize.query(
+      `INSERT INTO onboarding_progress (user_id, dismissed) VALUES (:userId, TRUE)
+       ON DUPLICATE KEY UPDATE dismissed = TRUE, completed_at = NOW()`,
+      { replacements: { userId } }
+    );
+    // Also update admin_users flag
+    await mysqlSequelize.query(
+      'UPDATE admin_users SET onboarding_completed = 1 WHERE id = :userId',
+      { replacements: { userId } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding dismiss error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/reopen — Reopen dismissed onboarding
+ */
+router.post('/onboarding/reopen', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    await mysqlSequelize.query(
+      'UPDATE onboarding_progress SET dismissed = FALSE, completed_at = NULL WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+    await mysqlSequelize.query(
+      'UPDATE admin_users SET onboarding_completed = 0 WHERE id = :userId',
+      { replacements: { userId } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding reopen error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
 
 /**
  * GET /dashboard/actions — Action-oriented dashboard data
@@ -5016,6 +5170,131 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
 // ============================================================
 // MODULE 8D-4: SETTINGS
 // ============================================================
+
+
+/**
+ * GET /analytics/report — Executive report data for PDF/print
+ * Query: destination (code/id), period (last_week|last_month|custom), start, end
+ * Returns aggregated KPIs, top performers, content stats for report rendering
+ */
+router.get('/analytics/report', adminAuth('reviewer'), destinationScope, async (req, res) => {
+  try {
+    const destId = req.query.destination ? resolveDestinationId(req.query.destination) : (req.destScope?.[0] || 1);
+    const { period = 'last_month', start, end } = req.query;
+
+    let startDate, endDate;
+    const now = new Date();
+    if (period === 'last_week') {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 6);
+    } else if (period === 'last_month') {
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0); // last day prev month
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    } else if (start && end) {
+      startDate = new Date(start);
+      endDate = new Date(end);
+    } else {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 29);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    // Destination info
+    const destNames = { 1: 'Calpe', 2: 'Texel', 3: 'Alicante', 4: 'WarreWijzer' };
+    const destName = destNames[destId] || 'Unknown';
+
+    // Content stats
+    const [contentStats] = await mysqlSequelize.query(
+      `SELECT
+        COUNT(*) AS total_items,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published,
+        SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled,
+        SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) AS drafts
+      FROM content_items
+      WHERE destination_id = :destId
+        AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Content by platform
+    const [platformStats] = await mysqlSequelize.query(
+      `SELECT target_platform, COUNT(*) AS count,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items
+      WHERE destination_id = :destId AND created_at BETWEEN :start AND :end
+      GROUP BY target_platform ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Content by pillar
+    const [pillarStats] = await mysqlSequelize.query(
+      `SELECT cp.name AS pillar_name, cp.color AS pillar_color, COUNT(ci.id) AS count,
+        SUM(CASE WHEN ci.approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items ci
+      JOIN content_concepts cc ON cc.id = ci.concept_id
+      JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+      GROUP BY cp.id ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Top performing content (by SEO score if available)
+    const [topContent] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.target_platform, ci.approval_status, ci.seo_score,
+              ci.published_at, cp.name AS pillar_name
+      FROM content_items ci
+      LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+      LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+        AND ci.approval_status IN ('published', 'scheduled')
+      ORDER BY ci.seo_score DESC, ci.published_at DESC
+      LIMIT 10`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // POI & review stats for the period
+    const [reviewStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS new_reviews, ROUND(AVG(rating), 1) AS avg_rating
+      FROM reviews WHERE destination_id = :destId AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    // Chatbot stats
+    const [chatStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS sessions, SUM(message_count) AS messages
+      FROM holibot_sessions WHERE destination_id = :destId AND started_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const cs = contentStats[0] || {};
+    const rs = reviewStats[0] || {};
+    const ch = chatStats[0] || {};
+
+    res.json({
+      success: true,
+      data: {
+        destination: { id: destId, name: destName },
+        period: { start: startStr, end: endStr, label: period },
+        content: {
+          total: cs.total_items || 0,
+          published: cs.published || 0,
+          scheduled: cs.scheduled || 0,
+          drafts: cs.drafts || 0,
+          byPlatform: platformStats || [],
+          byPillar: pillarStats || [],
+        },
+        topContent: topContent || [],
+        reviews: { count: rs.new_reviews || 0, avgRating: rs.avg_rating || 0 },
+        chatbot: { sessions: ch.sessions || 0, messages: ch.messages || 0 },
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Analytics report error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPORT_ERROR', message: error.message } });
+  }
+});
 
 /**
  * GET /settings
@@ -12523,6 +12802,34 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
 });
 
 /**
+ * PATCH /content/concepts/:id — Update concept (title, pillar, etc.)
+ * Opdracht 9: inline editing support
+ */
+router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const conceptId = Number(req.params.id);
+    const { title, pillar_id, approval_status, content_type } = req.body;
+    const updates = [];
+    const replacements = [];
+    if (title !== undefined) { updates.push('title = ?'); replacements.push(String(title).substring(0, 500)); }
+    if (pillar_id !== undefined) { updates.push('pillar_id = ?'); replacements.push(pillar_id); }
+    if (approval_status !== undefined) { updates.push('approval_status = ?'); replacements.push(approval_status); }
+    if (content_type !== undefined) { updates.push('content_type = ?'); replacements.push(content_type); }
+    if (updates.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No fields to update' } });
+    updates.push('updated_at = NOW()');
+    replacements.push(conceptId);
+    await mysqlSequelize.query(
+      `UPDATE content_concepts SET ${updates.join(', ')} WHERE id = ?`,
+      { replacements }
+    );
+    res.json({ success: true, data: { concept_id: conceptId, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept update error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
  * DELETE /content/concepts/:id — Soft delete concept + all items
  */
 router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
@@ -13408,6 +13715,101 @@ router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAc
 // ============================================================================
 // FASE C: PUBLISHING — Calendar, Publish, Schedule, Social Accounts, Seasonal
 // ============================================================================
+
+/**
+ * GET /content/report — Content-only report data for Content Studio Rapport tab
+ * Query: destination_id, period (last_week|last_month|custom), start, end
+ * Returns content-specific KPIs only (no reviews, chatbot, website data)
+ */
+router.get('/content/report', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destination_id) || req.adminUser?.destination_id || 1;
+    const { period = 'last_month', start, end } = req.query;
+
+    let startDate, endDate;
+    const now = new Date();
+    if (period === 'last_week') {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 6);
+    } else if (period === 'last_month') {
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    } else if (start && end) {
+      startDate = new Date(start);
+      endDate = new Date(end);
+    } else {
+      endDate = new Date(now); endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate); startDate.setDate(startDate.getDate() - 29);
+    }
+
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    const destNames = { 1: 'Calpe', 2: 'Texel', 3: 'Alicante', 4: 'WarreWijzer' };
+
+    const [contentStats] = await mysqlSequelize.query(
+      `SELECT COUNT(*) AS total,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published,
+        SUM(CASE WHEN approval_status = 'scheduled' THEN 1 ELSE 0 END) AS scheduled,
+        SUM(CASE WHEN approval_status = 'draft' THEN 1 ELSE 0 END) AS drafts
+      FROM content_items WHERE destination_id = :destId AND created_at BETWEEN :start AND :end`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [platformStats] = await mysqlSequelize.query(
+      `SELECT target_platform, COUNT(*) AS count,
+        SUM(CASE WHEN approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items WHERE destination_id = :destId AND created_at BETWEEN :start AND :end
+      GROUP BY target_platform ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [pillarStats] = await mysqlSequelize.query(
+      `SELECT cp.name AS pillar_name, cp.color AS pillar_color, COUNT(ci.id) AS count,
+        SUM(CASE WHEN ci.approval_status = 'published' THEN 1 ELSE 0 END) AS published
+      FROM content_items ci
+      JOIN content_concepts cc ON cc.id = ci.concept_id
+      JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+      GROUP BY cp.id ORDER BY count DESC`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const [topContent] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.target_platform, ci.approval_status, ci.seo_score,
+              ci.published_at, cp.name AS pillar_name
+      FROM content_items ci
+      LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+      LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+      WHERE ci.destination_id = :destId AND ci.created_at BETWEEN :start AND :end
+        AND ci.approval_status IN ('published', 'scheduled')
+      ORDER BY ci.seo_score DESC, ci.published_at DESC LIMIT 10`,
+      { replacements: { destId, start: startStr, end: endStr + ' 23:59:59' } }
+    );
+
+    const cs = contentStats[0] || {};
+    const total = Number(cs.total) || 0;
+    const published = Number(cs.published) || 0;
+
+    res.json({
+      success: true,
+      data: {
+        destination: { id: destId, name: destNames[destId] || 'Unknown' },
+        period: { start: startStr, end: endStr, label: period },
+        content: {
+          total, published, scheduled: Number(cs.scheduled) || 0, drafts: Number(cs.drafts) || 0,
+          publishRate: total > 0 ? Math.round((published / total) * 100) : 0,
+          byPlatform: platformStats || [],
+          byPillar: pillarStats || [],
+        },
+        topContent: topContent || [],
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Content report error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONTENT_REPORT_ERROR', message: error.message } });
+  }
+});
+
 
 /**
  * GET /content/calendar — Calendar data (month/week view)
@@ -15920,6 +16322,221 @@ router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeA
   } catch (error) {
     logger.error('[AdminPortal] Job trigger error:', error);
     res.status(500).json({ success: false, error: { code: 'TRIGGER_ERROR', message: error.message } });
+  }
+});
+
+
+// ═══════════════════════════════════════════
+// GET /content/studio/overview — Executive overview aggregation (Opdracht 6 v4.0)
+router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = req.destinationId || 1;
+
+    // Today's scheduled + published
+    const [todayScheduled] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND DATE(scheduled_at) = CURDATE() AND approval_status NOT IN ('deleted','archived')`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+    const [todayPublished] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND DATE(published_at) = CURDATE()`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // This week scheduled + published
+    const [weekScheduled] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND YEARWEEK(scheduled_at, 1) = YEARWEEK(CURDATE(), 1) AND approval_status NOT IN ('deleted','archived')`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+    const [weekPublished] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND YEARWEEK(published_at, 1) = YEARWEEK(CURDATE(), 1)`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Calendar gaps (weekdays without scheduled content in next 14 days)
+    const gapDays = await mysqlSequelize.query(
+      `SELECT DATE(d.dt) as gap_date FROM (
+        SELECT CURDATE() + INTERVAL seq DAY as dt FROM (
+          SELECT 0 as seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6
+          UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13
+        ) nums
+      ) d
+      LEFT JOIN content_items ci ON DATE(ci.scheduled_at) = DATE(d.dt) AND ci.destination_id = ? AND ci.approval_status NOT IN ('deleted','archived')
+      WHERE DAYOFWEEK(d.dt) NOT IN (1, 7) AND ci.id IS NULL`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // AI suggestions pending
+    const [pendingSuggestions] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_suggestions WHERE destination_id = ? AND status = 'pending'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Drafts
+    const [drafts] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'draft'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Pending review
+    const [pendingReview] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'pending_review'`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Failed publishes (last 7 days)
+    const [failedPublishes] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as count FROM content_items WHERE destination_id = ? AND approval_status = 'failed' AND updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    // Top performing content (last 30 days)
+    const topContent = await mysqlSequelize.query(
+      `SELECT ci.id, ci.title, ci.content_type, ci.target_platform, COALESCE(SUM(cp.engagement), 0) as total_engagement, COALESCE(SUM(cp.reach), 0) as total_reach
+       FROM content_items ci
+       LEFT JOIN content_performance cp ON cp.content_item_id = ci.id
+       WHERE ci.destination_id = ? AND ci.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND ci.approval_status NOT IN ('deleted','archived')
+       GROUP BY ci.id ORDER BY total_engagement DESC LIMIT 3`,
+      { replacements: [destId], type: QueryTypes.SELECT }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        today: { scheduled: todayScheduled?.count || 0, published: todayPublished?.count || 0 },
+        thisWeek: { scheduled: weekScheduled?.count || 0, published: weekPublished?.count || 0 },
+        gaps: { count: gapDays?.length || 0, dates: (gapDays || []).slice(0, 5).map(g => g.gap_date) },
+        suggestions: { pending: pendingSuggestions?.count || 0 },
+        attention: {
+          drafts: drafts?.count || 0,
+          pendingReview: pendingReview?.count || 0,
+          failedPublishes: failedPublishes?.count || 0,
+        },
+        topContent: topContent || [],
+      }
+    });
+  } catch (error) {
+    logger.error('[AdminPortal] Content overview error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'OVERVIEW_ERROR', message: error.message } });
+  }
+});
+
+
+// ═══════════════════════════════════════════
+
+// GET /notifications — list notifications for current user
+
+// ─── Sidebar Badge Counts (studio mode) ────────────────────────────
+router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
+  try {
+    const destId = req.destinationId;
+    if (!destId) return res.json({ success: true, data: {} });
+
+    const db = req.app.locals.db;
+
+    // Drafts count
+    const [[draftsRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM content_items WHERE approval_status = 'draft' AND destination_id = ?`,
+      [destId]
+    );
+
+    // Pending ideas (suggestions)
+    const [[ideasRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM content_suggestions WHERE status = 'pending' AND destination_id = ?`,
+      [destId]
+    );
+
+    // New sources (trending data last 7 days)
+    const [[sourcesRow]] = await db.query(
+      `SELECT COUNT(*) as c FROM trending_data WHERE destination_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
+      [destId]
+    );
+
+    // Calendar gaps (workdays without scheduled content in next 14 days)
+    let gaps = 0;
+    try {
+      const [scheduled] = await db.query(
+        `SELECT DATE(scheduled_at) as d FROM content_items
+         WHERE destination_id = ? AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
+         AND approval_status IN ('scheduled', 'published')
+         GROUP BY DATE(scheduled_at)`,
+        [destId]
+      );
+      const scheduledDates = new Set(scheduled.map(r => r.d?.toISOString?.()?.slice(0,10) || ''));
+      const now = new Date();
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + i);
+        const day = d.getDay();
+        if (day === 0 || day === 6) continue; // skip weekends
+        const iso = d.toISOString().slice(0, 10);
+        if (!scheduledDates.has(iso)) gaps++;
+      }
+    } catch { /* gaps stays 0 */ }
+
+    res.json({
+      success: true,
+      data: {
+        drafts: draftsRow?.c || 0,
+        ideas: ideasRow?.c || 0,
+        sources: sourcesRow?.c || 0,
+        gaps,
+      }
+    });
+  } catch (err) {
+    console.error('[sidebar-badges]', err.message);
+    res.json({ success: true, data: {} });
+  }
+});
+
+router.get('/notifications', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const offset = parseInt(req.query.offset) || 0;
+    const unreadOnly = req.query.unread_only === 'true';
+    const data = await notificationService.getForUser(userId, { limit, offset, unreadOnly });
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('[AdminPortal] Get notifications error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'NOTIFICATIONS_ERROR', message: error.message } });
+  }
+});
+
+// PATCH /notifications/:id/read — mark single notification as read
+router.patch('/notifications/:id/read', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const ok = await notificationService.markRead(parseInt(req.params.id), userId);
+    if (!ok) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Notification not found or already read' } });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Mark read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MARK_READ_ERROR', message: error.message } });
+  }
+});
+
+// POST /notifications/read-all — mark all as read
+router.post('/notifications/read-all', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const count = await notificationService.markAllRead(userId);
+    res.json({ success: true, data: { marked: count } });
+  } catch (error) {
+    logger.error('[AdminPortal] Mark all read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MARK_ALL_READ_ERROR', message: error.message } });
+  }
+});
+
+// DELETE /notifications/:id — dismiss notification
+router.delete('/notifications/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const ok = await notificationService.dismiss(parseInt(req.params.id), userId);
+    if (!ok) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Notification not found' } });
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Dismiss notification error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'DISMISS_ERROR', message: error.message } });
   }
 });
 

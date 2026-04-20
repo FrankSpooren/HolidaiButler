@@ -3,7 +3,7 @@ import {
   Box, Typography, Card, Grid, Skeleton, Button, ButtonGroup, Tooltip, Chip,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Dialog, DialogTitle, DialogContent, ToggleButton, ToggleButtonGroup,
-  IconButton, Tabs, Tab
+  IconButton, Tabs, Tab, TextField
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -20,6 +20,9 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CloseIcon from '@mui/icons-material/Close';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PrintIcon from '@mui/icons-material/Print';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PublicIcon from '@mui/icons-material/Public';
 import DevicesIcon from '@mui/icons-material/Devices';
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone';
@@ -31,11 +34,13 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, Area, AreaChart
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
-import { useAnalyticsOverview, useChatbotAnalytics, useAnalyticsTrend, useAnalyticsSnapshot, useWebsiteAnalytics } from '../hooks/useAnalytics.js';
+import { useAnalyticsOverview, useChatbotAnalytics, useAnalyticsTrend, useAnalyticsSnapshot, useWebsiteAnalytics, useAnalyticsReport } from '../hooks/useAnalytics.js';
 import { analyticsService } from '../api/analyticsService.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
+import ContentAnalyseTab from './ContentAnalyseTab.jsx';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 
 const PIE_COLORS = ['#5E8B7E', '#1976d2', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'];
 const LANG_LABELS = { nl: 'Nederlands', en: 'English', de: 'Deutsch', es: 'Español', fr: 'Français' };
@@ -93,7 +98,7 @@ function TrendDialog({ open, onClose, metric, destination, t }) {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {t('analytics.trend.title')}: {metricLabels[metric] || metric}
-        <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} size="small" aria-label="Sluiten"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2 }}>
@@ -515,6 +520,7 @@ function ChatbotTab({ destination, t }) {
   );
 }
 
+
 // ════════════════════════════════════════════
 // MAIN PAGE
 // ════════════════════════════════════════════
@@ -523,7 +529,9 @@ export default function AnalyticsPage() {
   const globalDestination = useDestinationStore(s => s.selectedDestination);
   const [destination, setDestination] = useState(globalDestination);
   const destParam = destination !== 'all' ? destination : undefined;
-  const [activeTab, setActiveTab] = useState(0);
+  const TAB_MAP = { website: 0, poi: 1, chatbot: 2, content: 3 };
+  const initTab = TAB_MAP[new URLSearchParams(window.location.search).get('tab')] || 0;
+  const [activeTab, setActiveTab] = useState(initTab);
   const [exporting, setExporting] = useState(null);
 
   useEffect(() => { setDestination(globalDestination); }, [globalDestination]);
@@ -576,11 +584,14 @@ export default function AnalyticsPage() {
           label={t('analytics.tab.poiReviews', 'POI & Reviews')} sx={{ textTransform: 'none', minHeight: 48 }} />
         <Tab icon={<ChatIcon sx={{ fontSize: 18 }} />} iconPosition="start"
           label={t('analytics.tab.chatbot', 'Chatbot')} sx={{ textTransform: 'none', minHeight: 48 }} />
+        <Tab icon={<EditNoteIcon sx={{ fontSize: 18 }} />} iconPosition="start"
+          label={t('analytics.tab.content', 'Content')} sx={{ textTransform: 'none', minHeight: 48 }} />
       </Tabs>
 
       {activeTab === 0 && <WebsiteTab destination={destParam} t={t} />}
       {activeTab === 1 && <PoiReviewsTab destination={destParam} t={t} isLoading={isLoading} analytics={analytics} snapshot={snapshot} />}
       {activeTab === 2 && <ChatbotTab destination={destParam} t={t} />}
+      {activeTab === 3 && <ContentAnalyseTab destinationId={destParam} />}
     </Box>
   );
 }
