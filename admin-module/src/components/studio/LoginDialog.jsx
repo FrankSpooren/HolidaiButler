@@ -60,7 +60,8 @@ export default function LoginDialog({ open, onClose }) {
         localStorage.setItem('hb-admin-lang', user.preferred_language);
       }
       onClose?.();
-      if (user?.destinationType === 'content_only' || window.location.hostname.startsWith('studio.')) {
+      const { isStudioMode } = await import('../../utils/studioMode.js');
+      if (user?.destinationType === 'content_only' || isStudioMode()) {
         navigate('/content-studio', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });

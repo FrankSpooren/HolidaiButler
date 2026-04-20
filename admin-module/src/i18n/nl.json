@@ -1382,9 +1382,9 @@
   "contentStudio": {
     "title": "Content Studio",
     "tabs": {
-      "trending": "Content Bronnen",
-      "suggestions": "Content Ideeën",
-      "content": "Content Items",
+      "trending": "Bronnen",
+      "suggestions": "Ideeën",
+      "content": "Items",
       "calendar": "Kalender",
       "analyse": "Analyse",
       "seasons": "Seizoenen",

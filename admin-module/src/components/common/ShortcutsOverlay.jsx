@@ -11,9 +11,9 @@ const SHORTCUT_SECTIONS = [
     shortcuts: [
       { keys: ['G', 'D'], label: 'Ga naar Dashboard' },
       { keys: ['G', 'C'], label: 'Ga naar Content Studio' },
-      { keys: ['G', 'B'], label: 'Ga naar Content Bronnen' },
-      { keys: ['G', 'I'], label: 'Ga naar Content Ideeen' },
-      { keys: ['G', 'T'], label: 'Ga naar Content Items' },
+      { keys: ['G', 'B'], label: 'Ga naar Bronnen' },
+      { keys: ['G', 'I'], label: 'Ga naar Ideeën' },
+      { keys: ['G', 'T'], label: 'Ga naar Items' },
       { keys: ['G', 'K'], label: 'Ga naar Kalender' },
       { keys: ['G', 'A'], label: 'Ga naar Analyse' },
       { keys: ['G', 'M'], label: 'Ga naar Media' },

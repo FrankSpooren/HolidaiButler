@@ -1341,9 +1341,9 @@
   "contentStudio": {
     "title": "Estudio de Contenido",
     "tabs": {
-      "trending": "Fuentes de Contenido",
-      "suggestions": "Ideas de Contenido",
-      "content": "Elementos de Contenido",
+      "trending": "Fuentes",
+      "suggestions": "Ideas",
+      "content": "Elementos",
       "calendar": "Calendario",
       "analyse": "Análisis",
       "seasons": "Temporadas",

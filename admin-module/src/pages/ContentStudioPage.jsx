@@ -2905,9 +2905,9 @@ export default function ContentStudioPage() {
       </Box>
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }} variant="scrollable" scrollButtons="auto">
-        <Tab label={t('contentStudio.tabs.trending', 'Content Bronnen')} />
-        <Tab label={t('contentStudio.tabs.suggestions', 'Suggesties')} />
-        <Tab label={t('contentStudio.tabs.content', 'Content Items')} />
+        <Tab label={t('contentStudio.tabs.trending', 'Bronnen')} />
+        <Tab label={t('contentStudio.tabs.suggestions', 'Ideeën')} />
+        <Tab label={t('contentStudio.tabs.content', 'Items')} />
         <Tab label={t('contentStudio.tabs.calendar', 'Kalender')} icon={<CalendarMonthIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
         <Tab label={t('contentStudio.tabs.analyse', 'Analyse')} />
         <Tab label={t('contentStudio.tabs.seasons', 'Seizoenen')} />
