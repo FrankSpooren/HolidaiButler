@@ -14,6 +14,8 @@ import PublishIcon from '@mui/icons-material/Publish';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import client from '../../api/client.js';
 import { tokens } from '../../theme/tokens.js';
@@ -63,6 +65,23 @@ export default function NotificationsCenter() {
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const intervalRef = useRef(null);
+
+  const [onboardingProgress, setOnboardingProgress] = useState(null);
+
+  // Listen for onboarding state broadcasts
+  useEffect(() => {
+    const handler = (e) => setOnboardingProgress(e.detail);
+    window.addEventListener('hb:onboarding-state', handler);
+    // Also fetch on mount
+    client.get('/onboarding/progress').then(res => {
+      const d = res.data?.data;
+      if (d) setOnboardingProgress({ completedSteps: d.completed_steps || [], dismissed: !!d.dismissed });
+    }).catch(() => {});
+    return () => window.removeEventListener('hb:onboarding-state', handler);
+  }, []);
+
+  const onboardingIncomplete = onboardingProgress && !onboardingProgress.dismissed
+    && onboardingProgress.completedSteps?.length < 6; // 6 required steps
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -181,7 +200,7 @@ export default function NotificationsCenter() {
     <>
       <Tooltip title="Notificaties">
         <IconButton onClick={handleOpen} size="small" color="inherit">
-          <Badge badgeContent={unread} color="error" max={99}
+          <Badge badgeContent={unread + (onboardingIncomplete ? 1 : 0)} color="error" max={99}
             sx={{ "& .MuiBadge-badge": { fontSize: "0.65rem", height: 16, minWidth: 16 } }}
           >
             <NotificationsIcon fontSize="small" />
@@ -211,7 +230,48 @@ export default function NotificationsCenter() {
         </Box>
 
         <Box sx={{ overflowY: "auto", maxHeight: 440 }}>
-          {notifications.length === 0 ? (
+          {/* Pinned onboarding notification */}
+          {onboardingIncomplete && (
+            <Box
+              onClick={() => { setAnchorEl(null); window.dispatchEvent(new CustomEvent('hb:onboarding-reopen')); }}
+              sx={{
+                p: 2, cursor: 'pointer',
+                background: 'linear-gradient(135deg, rgba(2,195,154,0.08) 0%, rgba(94,139,126,0.08) 100%)',
+                borderBottom: '1px solid ' + tokens.border.subtle,
+                '&:hover': { bgcolor: 'rgba(2,195,154,0.12)' },
+                animation: 'hbOnboardPulse 3s ease-in-out infinite',
+                '@keyframes hbOnboardPulse': {
+                  '0%, 100%': { borderLeft: '4px solid ' + tokens.brand.teal },
+                  '50%': { borderLeft: '4px solid transparent' },
+                },
+                '@media (prefers-reduced-motion: reduce)': { animation: 'none', borderLeft: '4px solid ' + tokens.brand.teal },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <RocketLaunchIcon sx={{ color: tokens.brand.teal, fontSize: 22 }} />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>
+                    Setup checklist niet voltooid
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                    {onboardingProgress?.completedSteps?.length || 0}/6 stappen voltooid — klik om verder te gaan
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={Math.round(((onboardingProgress?.completedSteps?.length || 0) / 6) * 100)}
+                    sx={{ mt: 0.75, height: 4, borderRadius: 2, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: tokens.brand.teal } }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {notifications.length === 0 && !onboardingIncomplete ? (
+            <Box sx={{ p: 4, textAlign: "center" }}>
+              <NotificationsIcon sx={{ fontSize: 40, color: "text.disabled", mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">Geen notificaties</Typography>
+            </Box>
+          ) : notifications.length === 0 ? (
             <Box sx={{ p: 4, textAlign: "center" }}>
               <NotificationsIcon sx={{ fontSize: 40, color: "text.disabled", mb: 1 }} />
               <Typography variant="body2" color="text.secondary">Geen notificaties</Typography>

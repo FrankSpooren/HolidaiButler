@@ -1196,7 +1196,10 @@ router.post('/onboarding/step/:stepId', adminAuth('reviewer'), async (req, res) 
         : (rows[0].completed_steps || []);
     }
 
-    if (!steps.includes(stepId)) {
+    const toggle = req.body?.toggle === true;
+    if (toggle && steps.includes(stepId)) {
+      steps = steps.filter(s => s !== stepId);
+    } else if (!steps.includes(stepId)) {
       steps.push(stepId);
     }
 
