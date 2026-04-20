@@ -61,6 +61,10 @@ const contentService = {
     return client.post('/content/concepts/generate', data, { timeout: 300000 }).then(r => r.data);
   },
 
+  updateConcept(conceptId, data) {
+    return client.patch(`/content/concepts/${conceptId}`, data).then(r => r.data);
+  },
+
   deleteConcept(conceptId) {
     return client.delete(`/content/concepts/${conceptId}`).then(r => r.data);
   },

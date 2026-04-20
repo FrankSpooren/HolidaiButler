@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.51.0
-> **Laatst bijgewerkt**: 15 april 2026
+> **Versie**: 4.54.0
+> **Laatst bijgewerkt**: 20 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -364,7 +364,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 252 |
 | adminPortal.js | v3.44.0 |
 | Agents | 25 |
-| BullMQ jobs | 65 |
+| BullMQ jobs | 74 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
@@ -431,7 +431,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - **Backend**: Geïntegreerd in platform-core (`adminPortal.js` v3.40.0)
 - **Auth**: JWT (8h access + 7d refresh), bcrypt, RBAC (6 rollen)
 - **i18n**: NL (default), EN, DE, ES
-- **Endpoints**: 248 admin endpoints (+2: Pexels + Flickr image search)
+- **Endpoints**: 295 admin endpoints
 - **Standalone Login**: studio.holidaibutler.com (Content Studio branded login, USP's, vergelijkingstabel)
 
 ### RBAC Rollen (6 rollen, hiërarchie 100→30)
@@ -682,7 +682,7 @@ analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 ```bash
 pm2 status                    # PM2 processes
 redis-cli ping                # Redis
-# BullMQ jobs (verwacht: 65)
+# BullMQ jobs (verwacht: 74)
 cd /var/www/api.holidaibutler.com/platform-core
 node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
 ```
@@ -818,6 +818,8 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.54.0** | **2026-04-20** | **Corporate UX Upgrade Command v4.0 — Opdracht 8+11-15 (7 opdrachten)**. **Opdracht 8**: Sidebar herstructurering (corporate grouping, badges, collapse icon-only mode). **Opdracht 11**: Kalender Corporate Polish (mini-kalender sidebar, keyboard nav t/arrows/1-2-3, workload indicator, platform/pillar/status filters, CSV/ICS export, print view). **Opdracht 12**: Analytics herstructurering (Content tab in Analytics, Rapport sub-tab verwijderd, Analytics sidebar-link hersteld). **Frank feedback**: Platform Dashboard (personaliseerbare KPI widgets, 7d/30d/90d delta badges, destination-scoped data, klikbare blokken). Conditional sidebar (adminOnly/studioOnly). **Opdracht 13**: Onboarding Widget Intercom-stijl (persistent cirkel rechtsonder, 6-10 context-afhankelijke stappen, NotificationsCenter integratie, toggle steps, session dismiss, createPortal). **Opdracht 14**: Performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB, Cache-Control headers, sourcemaps disabled). **Opdracht 15**: WCAG 2.1 AA (21 fixes: 16 aria-labels, 5 keyboard access). +6 endpoints (295 totaal), +4 onboarding endpoints, +1 content/report, +1 analytics/report. 74 BullMQ jobs. |
+| **4.53.0** | **2026-04-19** | **Content Items Enterprise Density + ConceptDialog Focus Mode (Command v4.0 Opdracht 9+10)**. **Opdracht 9**: Density toggle (3 modes, localStorage), column visibility popover, keyboard nav (j/k/Enter/x/Shift+A) met shortcuts popover + Ctrl+K link, sticky table header, 15-rij skeleton loading, enhanced empty state, inline titel editing (dubbelklik, PATCH /content/concepts/:id), row hover actie-iconen, status chips dark-mode-safe (Material 300-reeks), Type kolom toont content_type i.p.v. source_type, table-layout fixed. **Opdracht 10**: Full-screen toggle (F key + button), auto-save draft 10s, keyboard shortcuts (Ctrl+S/Enter/P, F, Esc), unsaved changes indicator (3-state chip), beforeunload warning, Dialog onClose met confirm. **CORS**: publiqio.com in Apache allowlist. +1 endpoint (289 totaal). 4 bestanden. Commit 35eadba. |
 | **4.44.2** | **2026-04-12** | **AI Vision model migratie: pixtral-12b-2409 (deprecated) → mistral-medium-latest**. Alle image tagging, alt-text generatie en visuele analyse draait nu op hetzelfde model als content generatie en vertalingen — single model strategy. Model-string via ENV variabele (MISTRAL_VISION_MODEL) zodat toekomstige wisselingen geen code-deploy vereisen. BullMQ media-processing queue fix: statische import stond in JSDoc comment block (nooit geëxecuteerd), upload triggerde geen automatische AI tagging pipeline. Nu dynamische import, full_pipeline (thumbnails + quality + pHash + AI tags) draait automatisch bij upload. 2 bestanden gewijzigd (mediaProcessingWorker.js, mediaRoutes.js) + .env. |
 | **4.44.0** | **2026-04-10** | **Corporate Landing Page Upgrade — holidaibutler.com (9 opdrachten)**. Volledige redesign van de B2B corporate pagina. **Opdracht 1 (Badges)**: 4 badges (EU-First, White Label, Local2Local, Multi-Tenancy) in hero met flagcdn.com EU-vlag, witte icon-cirkels. **Opdracht 2 (Hero)**: "25 AI Agents. Eén Platform. Nul concessies." + 2 CTA buttons (Demo Aanvragen modal + Platform Ontdekken). **Opdracht 2+ (Demo Modal)**: Contactformulier naar `demo_requests` tabel (source: `corporate_landing`), veld Functie, zakelijke e-mail validatie (40+ consumer-domeinen geblokkeerd), GDPR consent + privacybeleid link. **Opdracht 3 (Module Cards)**: 9 gecorrigeerde USP-teksten (Ongelimiteerd POIs, 35+ blocks zonder code, 100+ talen, PubliQio standalone, etc.). **Opdracht 4 (Stats)**: Count-up animatie (easeOutCubic, IntersectionObserver): 251 API Endpoints → 100+ Talen → 35+ Blocks → 25 AI Agents → 1 Platform. **Opdracht 5 (Proces)**: "Van Data, via Beleving tot Resultaat" — 3 fasen (Data/Configuratie & Modules/Groei) met groene cards + pijlen + 3 KPI proof points (HubSpot 2026, Statista/Kantar 2024, ETC 2025) met bronlinks. **Opdracht 6 (Showcase)**: CalpeTrip, TexelMaps, PubliQio als live projecten + WarreWijzer/Alicante in voorbereiding. **Opdracht 7 (EU-Stack)**: 6 EU-providers met landenvlaggen (flagcdn) in donkere sectie. **Opdracht 8 (CTA)**: Dual-button CTA + contactinfo + productenbalk. **Opdracht 9 (Responsive + i18n)**: Hamburger menu mobiel, taal-dropdown met vlaggen (PubliQio patroon), i18n.js extern vertaalbestand (162 keys × 5 talen: NL/EN/DE/ES/FR), scroll-snap carousels op mobiel (85% viewport + peek), floating CTA, mobiele padding optimalisatie. **Privacy**: `privacy.html` — 11-secties GDPR-compliant pagina in HB design + PubliQio PrivacyPage.jsx geharmoniseerd (zelfde structuur, info@, Frank Spooren, AP contactgegevens, AVG artikelnummers, 72h/24h SLA's). **Bestanden**: 3 nieuwe (`i18n.js`, `privacy.html`, admin-module PrivacyPage.jsx update) + `index.html` volledig herbouwd (~850 LOC). |
 | **4.43.1** | **2026-04-09** | **PubliQio Post-Release Polish**. (1) Hero punt-uitlijning: losse "." na PubliQio wrappte naar eigen regel op mobiel → nu als `suffix="."` in PubliQioText component (geen line-break mogelijk). (2) EU badges balk mobiel responsiviteit: kleinere cirkels (28px xs), compactere gap, op xs alleen icoon + korte naam (geen subtitle), op sm+ volledige tekst. 1 bestand (LoginPage.jsx). |
