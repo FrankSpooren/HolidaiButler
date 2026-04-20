@@ -1416,7 +1416,39 @@
     "dnsTitle": "DNS & Server Configuration",
     "dnsStep1": "Step 1: Create DNS A records",
     "dnsStep2": "Step 2: Request SSL certificate",
-    "dnsStep3": "Step 3: Configure Apache VHost"
+    "dnsStep3": "Step 3: Configure Apache VHost",
+    "widget": {
+      "titleStudio": "Configuration Content Studio",
+      "titlePlatform": "Configuration de la plateforme",
+      "stepsComplete": "étapes terminées",
+      "optional": "optionnel",
+      "allDone": "Configuration terminée !",
+      "dismiss": "Fermer le widget",
+      "next": "Suivant",
+      "openChecklist": "Ouvrir la checklist"
+    },
+    "steps": {
+      "welcome": "Bienvenue !",
+      "welcomeDesc": "Découvrez les possibilités de votre espace de travail.",
+      "brandProfile": "Configurez votre profil de marque",
+      "brandProfileDesc": "Ajoutez le nom, le secteur, les USPs et le ton.",
+      "connectSocial": "Connecter les réseaux sociaux",
+      "connectSocialDesc": "Liez Facebook, Instagram ou LinkedIn.",
+      "firstSuggestion": "Générer du contenu IA",
+      "firstSuggestionDesc": "Laissez l'IA générer vos premières suggestions de contenu.",
+      "planItem": "Planifier votre premier élément",
+      "planItemDesc": "Choisissez un élément et planifiez-le dans le calendrier.",
+      "viewCalendar": "Voir le calendrier",
+      "viewCalendarDesc": "Aperçu du contenu planifié et publié.",
+      "explorePois": "Explorer vos POIs",
+      "explorePoisDesc": "Gérez les points d'intérêt de votre destination.",
+      "testChatbot": "Tester le chatbot",
+      "testChatbotDesc": "Posez une question au chatbot IA.",
+      "checkEvents": "Voir les événements",
+      "checkEventsDesc": "Découvrez le module événements.",
+      "inviteTeam": "Inviter des membres",
+      "inviteTeamDesc": "Ajoutez des collègues pour contribuer au contenu."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",

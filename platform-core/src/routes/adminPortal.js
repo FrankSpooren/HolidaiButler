@@ -1142,6 +1142,129 @@ router.get('/dashboard', adminAuth('reviewer'), destinationScope, async (req, re
 });
 
 /**
+ * GET /onboarding/progress — Get user's onboarding progress
+ * Returns completed steps, dismissed state, and applicable steps based on platform mode
+ */
+router.get('/onboarding/progress', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+
+        // Get or create progress
+    const [rows] = await mysqlSequelize.query(
+      'SELECT * FROM onboarding_progress WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+
+    let progress;
+    if (rows.length === 0) {
+      await mysqlSequelize.query(
+        'INSERT INTO onboarding_progress (user_id) VALUES (:userId)',
+        { replacements: { userId } }
+      );
+      progress = { user_id: userId, completed_steps: [], dismissed: false, completed_at: null };
+    } else {
+      progress = rows[0];
+      if (typeof progress.completed_steps === 'string') {
+        try { progress.completed_steps = JSON.parse(progress.completed_steps); } catch { progress.completed_steps = []; }
+      }
+    }
+
+    res.json({ success: true, data: progress });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding progress error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/step/:stepId — Mark a step as completed
+ */
+router.post('/onboarding/step/:stepId', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { stepId } = req.params;
+
+    const [rows] = await mysqlSequelize.query(
+      'SELECT completed_steps FROM onboarding_progress WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+
+    let steps = [];
+    if (rows.length > 0) {
+      steps = typeof rows[0].completed_steps === 'string'
+        ? JSON.parse(rows[0].completed_steps || '[]')
+        : (rows[0].completed_steps || []);
+    }
+
+    if (!steps.includes(stepId)) {
+      steps.push(stepId);
+    }
+
+    if (rows.length === 0) {
+      await mysqlSequelize.query(
+        'INSERT INTO onboarding_progress (user_id, completed_steps) VALUES (:userId, :steps)',
+        { replacements: { userId, steps: JSON.stringify(steps) } }
+      );
+    } else {
+      await mysqlSequelize.query(
+        'UPDATE onboarding_progress SET completed_steps = :steps WHERE user_id = :userId',
+        { replacements: { userId, steps: JSON.stringify(steps) } }
+      );
+    }
+
+    res.json({ success: true, data: { completed_steps: steps } });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding step error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/dismiss — Dismiss the onboarding widget
+ */
+router.post('/onboarding/dismiss', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    await mysqlSequelize.query(
+      `INSERT INTO onboarding_progress (user_id, dismissed) VALUES (:userId, TRUE)
+       ON DUPLICATE KEY UPDATE dismissed = TRUE, completed_at = NOW()`,
+      { replacements: { userId } }
+    );
+    // Also update admin_users flag
+    await mysqlSequelize.query(
+      'UPDATE admin_users SET onboarding_completed = 1 WHERE id = :userId',
+      { replacements: { userId } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding dismiss error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /onboarding/reopen — Reopen dismissed onboarding
+ */
+router.post('/onboarding/reopen', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    await mysqlSequelize.query(
+      'UPDATE onboarding_progress SET dismissed = FALSE, completed_at = NULL WHERE user_id = :userId',
+      { replacements: { userId } }
+    );
+    await mysqlSequelize.query(
+      'UPDATE admin_users SET onboarding_completed = 0 WHERE id = :userId',
+      { replacements: { userId } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Onboarding reopen error:', error);
+    res.status(500).json({ success: false, error: { code: 'ONBOARDING_ERROR', message: error.message } });
+  }
+});
+
+
+/**
  * GET /dashboard/actions — Action-oriented dashboard data
  * Returns: pending reviews, expiring tokens, top performer, trending topics, recent content
  */

@@ -1416,7 +1416,39 @@
     "dnsTitle": "DNS & Server Configuration",
     "dnsStep1": "Step 1: Create DNS A records",
     "dnsStep2": "Step 2: Request SSL certificate",
-    "dnsStep3": "Step 3: Configure Apache VHost"
+    "dnsStep3": "Step 3: Configure Apache VHost",
+    "widget": {
+      "titleStudio": "Content Studio Setup",
+      "titlePlatform": "Platform Setup",
+      "stepsComplete": "steps completed",
+      "optional": "optional",
+      "allDone": "Setup complete!",
+      "dismiss": "Close widget",
+      "next": "Next",
+      "openChecklist": "Open setup checklist"
+    },
+    "steps": {
+      "welcome": "Welcome!",
+      "welcomeDesc": "Discover the capabilities of your workspace.",
+      "brandProfile": "Set up your brand profile",
+      "brandProfileDesc": "Add company name, industry, USPs and tone of voice so AI generates on-brand content.",
+      "connectSocial": "Connect social media",
+      "connectSocialDesc": "Link Facebook, Instagram or LinkedIn so content can be published directly.",
+      "firstSuggestion": "Generate AI content",
+      "firstSuggestionDesc": "Let AI generate your first content suggestions based on your brand profile.",
+      "planItem": "Plan your first item",
+      "planItemDesc": "Choose a content item and schedule it on the calendar.",
+      "viewCalendar": "View the calendar",
+      "viewCalendarDesc": "Overview of planned and published content by day, week or month.",
+      "explorePois": "Explore your POIs",
+      "explorePoisDesc": "View and manage the Points of Interest in your destination.",
+      "testChatbot": "Test the chatbot",
+      "testChatbotDesc": "Ask the AI chatbot a question and experience how visitors discover your destination.",
+      "checkEvents": "Check events",
+      "checkEventsDesc": "Discover the events module with local happenings.",
+      "inviteTeam": "Invite team members",
+      "inviteTeamDesc": "Add colleagues so they can contribute and review content."
+    }
   },
   "contentStudio": {
     "title": "Content Studio",
