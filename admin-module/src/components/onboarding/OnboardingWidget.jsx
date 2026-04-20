@@ -41,12 +41,24 @@ const ALL_STEPS = [
  * MUI sx converts numeric values to theme spacing (24 → 192px).
  * Native CSS style bypasses this entirely.
  */
-const CONTAINER_STYLE = {
-  position: 'fixed',
-  bottom: '24px',
-  right: '24px',
-  zIndex: 1250,
-};
+// Inject CSS rule once — bulletproof fixed positioning
+if (typeof document !== "undefined" && !document.getElementById('hb-onboarding-css')) {
+  const style = document.createElement('style');
+  style.id = 'hb-onboarding-css';
+  style.textContent = `
+    #hb-onboarding-widget {
+      position: fixed !important;
+      bottom: 24px !important;
+      right: 24px !important;
+      z-index: 1250 !important;
+      left: auto !important;
+      top: auto !important;
+      transform: none !important;
+    }
+    @media print { #hb-onboarding-widget { display: none !important; } }
+  `;
+  document.head.appendChild(style);
+}
 
 export default function OnboardingWidget({ user, featureFlags = {} }) {
   const { t } = useTranslation();
@@ -141,7 +153,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   if (hiddenThisSession) return null;
 
   return createPortal(
-    <div style={CONTAINER_STYLE}>
+    <div id="hb-onboarding-widget">
       {/* ── Expanded panel ── */}
       <Collapse in={expanded}>
         <Paper elevation={8} sx={{ borderRadius: 3, overflow: 'hidden', mb: 1, border: '1px solid', borderColor: 'divider', maxWidth: 360 }}>
