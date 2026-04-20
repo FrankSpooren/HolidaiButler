@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Paper, IconButton, Tooltip, Chip, Button,
-  LinearProgress, Collapse, Fade, CircularProgress,
+  LinearProgress, Collapse, CircularProgress,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -145,6 +145,12 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   const studioMode = isStudioMode();
 
   const [expanded, setExpanded] = useState(false);
+  const [sessionHidden, setSessionHidden] = useState(() => {
+    try { return sessionStorage.getItem('hb-onboarding-hidden') === '1'; } catch { return false; }
+  });
+  const [sessionHidden, setSessionHidden] = useState(() => {
+    try { return sessionStorage.getItem('hb-onboarding-hidden') === '1'; } catch { return false; }
+  });
   const [completedSteps, setCompletedSteps] = useState([]);
   const [dismissed, setDismissed] = useState(true); // Start hidden until loaded
   const [loaded, setLoaded] = useState(false);
@@ -199,7 +205,9 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   useEffect(() => {
     const handler = async () => {
       setDismissed(false);
+      setSessionHidden(false);
       setExpanded(true);
+      try { sessionStorage.removeItem('hb-onboarding-hidden'); } catch {}
       try { await client.post('/onboarding/reopen'); } catch { /* non-blocking */ }
     };
     window.addEventListener('hb:onboarding-reopen', handler);
@@ -232,12 +240,14 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   }, [completedSteps]);
 
   const handleDismiss = useCallback(() => {
-    // Only close the expanded panel, keep the progress circle visible
+    // Hide widget for this session only (reappears on refresh/new login)
+    setSessionHidden(true);
     setExpanded(false);
+    try { sessionStorage.setItem('hb-onboarding-hidden', '1'); } catch {}
   }, []);
 
   const handleFullDismiss = useCallback(async () => {
-    // Fully dismiss (only when all steps complete)
+    // Permanently dismiss (only when all steps complete)
     setDismissed(true);
     setExpanded(false);
     try { await client.post('/onboarding/dismiss'); } catch { /* non-blocking */ }
@@ -246,9 +256,10 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
   // Don't render if not loaded, dismissed, or platform_admin on first visit (they use OnboardingPage)
   if (!loaded) return null;
   if (dismissed && allDone) return null;
+  if (sessionHidden) return null;
+  if (sessionHidden) return null;
 
   return (
-    <Fade in>
       <Box sx={{
         position: 'fixed',
         bottom: 24,
@@ -256,6 +267,8 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
         zIndex: 1250,
         maxWidth: expanded ? 360 : 'auto',
         '@media print': { display: 'none' },
+        opacity: 1,
+        transition: 'opacity 300ms ease',
       }}>
         {/* ── Expanded: Checklist ── */}
         <Collapse in={expanded}>
@@ -429,6 +442,6 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
           </Tooltip>
         )}
       </Box>
-    </Fade>
+
   );
 }
