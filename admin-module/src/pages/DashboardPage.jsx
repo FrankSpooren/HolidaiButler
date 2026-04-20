@@ -83,6 +83,7 @@ function KpiWidget({ widget, value, subtext, delta, loading, onClick }) {
   if (loading) return <Skeleton variant="rounded" height={110} />;
   return (
     <Card
+      role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       onClick={onClick}
       sx={{
         height: '100%', borderTop: `3px solid ${color}`,
@@ -115,7 +116,7 @@ function KpiWidget({ widget, value, subtext, delta, loading, onClick }) {
 // ── Action Row ───────────────────────────────────────────────
 function ActionRow({ icon, text, onClick }) {
   return (
-    <Box onClick={onClick} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.75, px: 1, borderRadius: 1, cursor: onClick ? 'pointer' : 'default', '&:hover': onClick ? { bgcolor: 'action.hover' } : {} }}>
+    <Box role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined} onClick={onClick} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.75, px: 1, borderRadius: 1, cursor: onClick ? 'pointer' : 'default', '&:hover': onClick ? { bgcolor: 'action.hover' } : {} }}>
       {icon}
       <Typography variant="body2" sx={{ flex: 1 }}>{text}</Typography>
     </Box>
@@ -328,7 +329,8 @@ export default function DashboardPage() {
           { label: t('dashboard.poiManagement', 'POI beheer'), icon: <PlaceIcon />, path: '/pois', color: '#f59e0b' },
         ].map((action, i) => (
           <Grid item xs={6} md={3} key={i}>
-            <Card sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3, transform: 'translateY(-2px)' }, transition: 'all 200ms ease' }}
+            <Card role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(action.path); } }}
+              sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3, transform: 'translateY(-2px)' }, transition: 'all 200ms ease' }}
               onClick={() => navigate(action.path)}>
               <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box sx={{ color: action.color }}>{action.icon}</Box>

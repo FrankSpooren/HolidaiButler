@@ -98,7 +98,7 @@ function TrendDialog({ open, onClose, metric, destination, t }) {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {t('analytics.trend.title')}: {metricLabels[metric] || metric}
-        <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} size="small" aria-label="Sluiten"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mb: 2 }}>

@@ -151,8 +151,8 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <IconButton size="small" onClick={() => setExpanded(false)} sx={{ color: '#fff' }}><ExpandMoreIcon fontSize="small" /></IconButton>
-              <IconButton size="small" onClick={handleHideCircle} sx={{ color: 'rgba(255,255,255,0.7)' }}><CloseIcon fontSize="small" /></IconButton>
+              <IconButton size="small" onClick={() => setExpanded(false)} sx={{ color: '#fff' }} aria-label="Inklappen"><ExpandMoreIcon fontSize="small" /></IconButton>
+              <IconButton size="small" onClick={handleHideCircle} sx={{ color: 'rgba(255,255,255,0.7)' }} aria-label="Verbergen"><CloseIcon fontSize="small" /></IconButton>
             </Box>
           </Box>
           <LinearProgress variant="determinate" value={progress} sx={{ height: 4, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: '#02C39A' } }} />
@@ -162,6 +162,7 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
               const Icon = step.icon;
               return (
                 <Box key={step.id}
+                  role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); isCompleted ? handleToggleStep(step.id) : handleCompleteStep(step.id, step.path); } }}
                   onClick={() => isCompleted ? handleToggleStep(step.id) : handleCompleteStep(step.id, step.path)}
                   sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 1.5, borderRadius: 1.5, cursor: 'pointer', opacity: isCompleted ? 0.6 : 1, '&:hover': { bgcolor: 'action.hover' } }}>
                   {isCompleted ? <CheckCircleIcon sx={{ fontSize: 20, color: '#02C39A', mt: 0.25 }} /> : <RadioButtonUncheckedIcon sx={{ fontSize: 20, color: 'text.disabled', mt: 0.25 }} />}
@@ -211,12 +212,20 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
               cursor: 'pointer', color: '#fff', fontSize: 12, lineHeight: 1,
             }}
             title="Verbergen"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); handleHideCircle(); } }}
+            aria-label="Setup verbergen"
           >
             ✕
           </div>
           {/* Progress circle */}
           <Paper
             elevation={6}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(true); } }}
+            aria-label="Setup checklist openen"
             onClick={() => setExpanded(true)}
             sx={{
               width: 56, height: 56, borderRadius: '50%',
