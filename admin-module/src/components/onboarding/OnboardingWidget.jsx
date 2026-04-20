@@ -7,7 +7,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import PaletteIcon from '@mui/icons-material/Palette';
 import ShareIcon from '@mui/icons-material/Share';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -24,162 +23,56 @@ import client from '../../api/client.js';
 import { isStudioMode } from '../../utils/studioMode.js';
 
 // ── Step definitions ─────────────────────────────────────────
-// Steps tagged with 'content' appear for all users
-// Steps tagged with 'platform' appear only for Admin Portal users with matching feature flags
 const ALL_STEPS = [
-  {
-    id: 'welcome',
-    icon: RocketLaunchIcon,
-    titleKey: 'onboarding.steps.welcome',
-    titleFallback: 'Welkom!',
-    descKey: 'onboarding.steps.welcomeDesc',
-    descFallback: 'Ontdek de mogelijkheden van uw werkruimte.',
-    path: null, // No navigation, just acknowledge
-    mode: 'all',
-    autoComplete: true, // Completes when widget is first opened
-  },
-  {
-    id: 'brand_profile',
-    icon: PaletteIcon,
-    titleKey: 'onboarding.steps.brandProfile',
-    titleFallback: 'Stel uw merkprofiel in',
-    descKey: 'onboarding.steps.brandProfileDesc',
-    descFallback: 'Voeg bedrijfsnaam, branche, USPs en tone of voice toe zodat AI on-brand content genereert.',
-    path: '/branding',
-    mode: 'all',
-  },
-  {
-    id: 'connect_social',
-    icon: ShareIcon,
-    titleKey: 'onboarding.steps.connectSocial',
-    titleFallback: 'Koppel social media',
-    descKey: 'onboarding.steps.connectSocialDesc',
-    descFallback: 'Verbind Facebook, Instagram of LinkedIn zodat content direct gepubliceerd kan worden.',
-    path: '/content-studio?tab=social',
-    mode: 'all',
-  },
-  {
-    id: 'first_suggestion',
-    icon: AutoAwesomeIcon,
-    titleKey: 'onboarding.steps.firstSuggestion',
-    titleFallback: 'Genereer AI content',
-    descKey: 'onboarding.steps.firstSuggestionDesc',
-    descFallback: 'Laat de AI uw eerste content suggesties genereren op basis van uw merkprofiel.',
-    path: '/content-studio?tab=suggesties',
-    mode: 'all',
-  },
-  {
-    id: 'plan_item',
-    icon: EditNoteIcon,
-    titleKey: 'onboarding.steps.planItem',
-    titleFallback: 'Plan uw eerste item',
-    descKey: 'onboarding.steps.planItemDesc',
-    descFallback: 'Kies een content item en plan het in op de kalender.',
-    path: '/content-studio?tab=items',
-    mode: 'all',
-  },
-  {
-    id: 'view_calendar',
-    icon: CalendarMonthIcon,
-    titleKey: 'onboarding.steps.viewCalendar',
-    titleFallback: 'Bekijk de kalender',
-    descKey: 'onboarding.steps.viewCalendarDesc',
-    descFallback: 'Overzicht van geplande en gepubliceerde content per dag, week of maand.',
-    path: '/content-studio?tab=kalender',
-    mode: 'all',
-  },
-  // ── Platform-only steps (Admin Portal with feature flags) ──
-  {
-    id: 'explore_pois',
-    icon: PlaceIcon,
-    titleKey: 'onboarding.steps.explorePois',
-    titleFallback: 'Verken uw POIs',
-    descKey: 'onboarding.steps.explorePoisDesc',
-    descFallback: 'Bekijk en beheer de Points of Interest in uw bestemming.',
-    path: '/pois',
-    mode: 'platform',
-    featureFlag: 'hasPOI',
-  },
-  {
-    id: 'test_chatbot',
-    icon: ChatIcon,
-    titleKey: 'onboarding.steps.testChatbot',
-    titleFallback: 'Test de chatbot',
-    descKey: 'onboarding.steps.testChatbotDesc',
-    descFallback: 'Stel een vraag aan de AI-chatbot en ervaar hoe bezoekers uw bestemming ontdekken.',
-    path: '/analytics?tab=chatbot',
-    mode: 'platform',
-    featureFlag: 'hasChatbot',
-  },
-  {
-    id: 'check_events',
-    icon: EventIcon,
-    titleKey: 'onboarding.steps.checkEvents',
-    titleFallback: 'Bekijk evenementen',
-    descKey: 'onboarding.steps.checkEventsDesc',
-    descFallback: 'Ontdek de agenda-module met lokale evenementen.',
-    path: '/content-studio',
-    mode: 'platform',
-    featureFlag: 'hasAgenda',
-  },
-  // ── Optional for all ──
-  {
-    id: 'invite_team',
-    icon: PeopleIcon,
-    titleKey: 'onboarding.steps.inviteTeam',
-    titleFallback: 'Nodig teamleden uit',
-    descKey: 'onboarding.steps.inviteTeamDesc',
-    descFallback: 'Voeg collega\'s toe zodat zij content kunnen bijdragen en reviewen.',
-    path: '/users',
-    mode: 'admin_only', // Only for platform_admin
-    optional: true,
-  },
+  { id: 'welcome', icon: RocketLaunchIcon, titleKey: 'onboarding.steps.welcome', titleFallback: 'Welkom!', descKey: 'onboarding.steps.welcomeDesc', descFallback: 'Ontdek de mogelijkheden van uw werkruimte.', path: null, mode: 'all', autoComplete: true },
+  { id: 'brand_profile', icon: PaletteIcon, titleKey: 'onboarding.steps.brandProfile', titleFallback: 'Stel uw merkprofiel in', descKey: 'onboarding.steps.brandProfileDesc', descFallback: 'Voeg bedrijfsnaam, branche, USPs en tone of voice toe zodat AI on-brand content genereert.', path: '/branding', mode: 'all' },
+  { id: 'connect_social', icon: ShareIcon, titleKey: 'onboarding.steps.connectSocial', titleFallback: 'Koppel social media', descKey: 'onboarding.steps.connectSocialDesc', descFallback: 'Verbind Facebook, Instagram of LinkedIn zodat content direct gepubliceerd kan worden.', path: '/content-studio?tab=social', mode: 'all' },
+  { id: 'first_suggestion', icon: AutoAwesomeIcon, titleKey: 'onboarding.steps.firstSuggestion', titleFallback: 'Genereer AI content', descKey: 'onboarding.steps.firstSuggestionDesc', descFallback: 'Laat de AI uw eerste content suggesties genereren op basis van uw merkprofiel.', path: '/content-studio?tab=suggesties', mode: 'all' },
+  { id: 'plan_item', icon: EditNoteIcon, titleKey: 'onboarding.steps.planItem', titleFallback: 'Plan uw eerste item', descKey: 'onboarding.steps.planItemDesc', descFallback: 'Kies een content item en plan het in op de kalender.', path: '/content-studio?tab=items', mode: 'all' },
+  { id: 'view_calendar', icon: CalendarMonthIcon, titleKey: 'onboarding.steps.viewCalendar', titleFallback: 'Bekijk de kalender', descKey: 'onboarding.steps.viewCalendarDesc', descFallback: 'Overzicht van geplande en gepubliceerde content per dag, week of maand.', path: '/content-studio?tab=kalender', mode: 'all' },
+  { id: 'explore_pois', icon: PlaceIcon, titleKey: 'onboarding.steps.explorePois', titleFallback: 'Verken uw POIs', descKey: 'onboarding.steps.explorePoisDesc', descFallback: 'Bekijk en beheer de Points of Interest in uw bestemming.', path: '/pois', mode: 'platform', featureFlag: 'hasPOI' },
+  { id: 'test_chatbot', icon: ChatIcon, titleKey: 'onboarding.steps.testChatbot', titleFallback: 'Test de chatbot', descKey: 'onboarding.steps.testChatbotDesc', descFallback: 'Stel een vraag aan de AI-chatbot en ervaar hoe bezoekers uw bestemming ontdekken.', path: '/analytics?tab=chatbot', mode: 'platform', featureFlag: 'hasChatbot' },
+  { id: 'check_events', icon: EventIcon, titleKey: 'onboarding.steps.checkEvents', titleFallback: 'Bekijk evenementen', descKey: 'onboarding.steps.checkEventsDesc', descFallback: 'Ontdek de agenda-module met lokale evenementen.', path: '/content-studio', mode: 'platform', featureFlag: 'hasAgenda' },
+  { id: 'invite_team', icon: PeopleIcon, titleKey: 'onboarding.steps.inviteTeam', titleFallback: 'Nodig teamleden uit', descKey: 'onboarding.steps.inviteTeamDesc', descFallback: 'Voeg collega\'s toe zodat zij content kunnen bijdragen en reviewen.', path: '/users', mode: 'admin_only', optional: true },
 ];
 
-// ═══════════════════════════════════════════════════════════════
-// MAIN WIDGET
+const SESSION_KEY = 'hb-onboarding-hidden';
+
 // ═══════════════════════════════════════════════════════════════
 export default function OnboardingWidget({ user, featureFlags = {} }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const studioMode = isStudioMode();
 
+  // ── State ──
   const [expanded, setExpanded] = useState(false);
-  const [sessionHidden, setSessionHidden] = useState(() => {
-    try { return sessionStorage.getItem('hb-onboarding-hidden') === '1'; } catch { return false; }
-  });
-  const [sessionHidden, setSessionHidden] = useState(() => {
-    try { return sessionStorage.getItem('hb-onboarding-hidden') === '1'; } catch { return false; }
-  });
   const [completedSteps, setCompletedSteps] = useState([]);
-  const [dismissed, setDismissed] = useState(true); // Start hidden until loaded
+  const [backendDismissed, setBackendDismissed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Determine applicable steps based on mode + feature flags
+  // Session-only hide: cleared on page refresh / new login
+  const [hiddenThisSession, setHiddenThisSession] = useState(() => {
+    try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return false; }
+  });
+
+  // ── Applicable steps ──
   const applicableSteps = ALL_STEPS.filter(step => {
     if (step.mode === 'all') return true;
     if (step.mode === 'platform' && !studioMode) {
-      // Check feature flag if specified
-      if (step.featureFlag) {
-        return featureFlags[step.featureFlag] !== false;
-      }
-      return true;
+      return step.featureFlag ? featureFlags[step.featureFlag] !== false : true;
     }
-    if (step.mode === 'admin_only') {
-      return user?.role === 'platform_admin';
-    }
+    if (step.mode === 'admin_only') return user?.role === 'platform_admin';
     return false;
   });
 
-  const totalSteps = applicableSteps.filter(s => !s.optional).length;
-  const completedCount = applicableSteps.filter(s => !s.optional && completedSteps.includes(s.id)).length;
+  const requiredSteps = applicableSteps.filter(s => !s.optional);
+  const totalSteps = requiredSteps.length;
+  const completedCount = requiredSteps.filter(s => completedSteps.includes(s.id)).length;
   const progress = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
   const allDone = completedCount >= totalSteps;
+  const nextStep = requiredSteps.find(s => !completedSteps.includes(s.id));
 
-  // Find next uncompleted step
-  const nextStep = applicableSteps.find(s => !s.optional && !completedSteps.includes(s.id));
-
-  // Load progress from backend
+  // ── Load progress from backend ──
   useEffect(() => {
     if (!user?.id) return;
     client.get('/onboarding/progress')
@@ -187,37 +80,52 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
         const data = res.data?.data;
         if (data) {
           setCompletedSteps(data.completed_steps || []);
-          setDismissed(!!data.dismissed);
-          // Auto-complete welcome step
+          setBackendDismissed(!!data.dismissed);
           if (!data.completed_steps?.includes('welcome') && !data.dismissed) {
             client.post('/onboarding/step/welcome').catch(() => {});
             setCompletedSteps(prev => [...prev, 'welcome']);
           }
         }
         setLoaded(true);
-        // Broadcast state for NotificationsCenter
-        window.dispatchEvent(new CustomEvent('hb:onboarding-state', { detail: { completedSteps: data?.completed_steps || [], dismissed: !!data?.dismissed } }));
+        window.dispatchEvent(new CustomEvent('hb:onboarding-state', {
+          detail: { completedSteps: data?.completed_steps || [], dismissed: !!data?.dismissed }
+        }));
       })
       .catch(() => setLoaded(true));
   }, [user?.id]);
 
-  // Listen for reopen event (from Header help menu)
+  // ── Listen for reopen event (from NotificationsCenter / Header) ──
   useEffect(() => {
-    const handler = async () => {
-      setDismissed(false);
-      setSessionHidden(false);
+    const handler = () => {
+      setHiddenThisSession(false);
+      setBackendDismissed(false);
       setExpanded(true);
-      try { sessionStorage.removeItem('hb-onboarding-hidden'); } catch {}
-      try { await client.post('/onboarding/reopen'); } catch { /* non-blocking */ }
+      try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+      client.post('/onboarding/reopen').catch(() => {});
     };
     window.addEventListener('hb:onboarding-reopen', handler);
     return () => window.removeEventListener('hb:onboarding-reopen', handler);
   }, []);
 
+  // ── Handlers ──
+  const handleHideCircle = useCallback(() => {
+    // Hide circle for this browser session only. Reappears on refresh/new login.
+    setHiddenThisSession(true);
+    setExpanded(false);
+    try { sessionStorage.setItem(SESSION_KEY, '1'); } catch {}
+  }, []);
+
+  const handleFullDismiss = useCallback(async () => {
+    // Permanent dismiss (only after all steps done)
+    setBackendDismissed(true);
+    setExpanded(false);
+    try { await client.post('/onboarding/dismiss'); } catch {}
+  }, []);
+
   const handleCompleteStep = useCallback(async (stepId, path) => {
     if (!completedSteps.includes(stepId)) {
       setCompletedSteps(prev => [...prev, stepId]);
-      try { await client.post(`/onboarding/step/${stepId}`); } catch { /* non-blocking */ }
+      try { await client.post(`/onboarding/step/${stepId}`); } catch {}
     }
     if (path) {
       navigate(path);
@@ -227,221 +135,121 @@ export default function OnboardingWidget({ user, featureFlags = {} }) {
 
   const handleToggleStep = useCallback(async (stepId) => {
     if (completedSteps.includes(stepId)) {
-      // Un-complete: remove from list
       const updated = completedSteps.filter(s => s !== stepId);
       setCompletedSteps(updated);
-      // Backend: overwrite completed_steps
       try { await client.post(`/onboarding/step/${stepId}`, { toggle: true }); } catch {}
     } else {
-      // Complete without navigating
       setCompletedSteps(prev => [...prev, stepId]);
       try { await client.post(`/onboarding/step/${stepId}`); } catch {}
     }
   }, [completedSteps]);
 
-  const handleDismiss = useCallback(() => {
-    // Hide widget for this session only (reappears on refresh/new login)
-    setSessionHidden(true);
-    setExpanded(false);
-    try { sessionStorage.setItem('hb-onboarding-hidden', '1'); } catch {}
-  }, []);
-
-  const handleFullDismiss = useCallback(async () => {
-    // Permanently dismiss (only when all steps complete)
-    setDismissed(true);
-    setExpanded(false);
-    try { await client.post('/onboarding/dismiss'); } catch { /* non-blocking */ }
-  }, []);
-
-  // Don't render if not loaded, dismissed, or platform_admin on first visit (they use OnboardingPage)
+  // ── Render guard ──
   if (!loaded) return null;
-  if (dismissed && allDone) return null;
-  if (sessionHidden) return null;
-  if (sessionHidden) return null;
+  if (backendDismissed && allDone) return null;  // Permanently done
+  if (hiddenThisSession) return null;             // Hidden for this session
 
   return (
-      <Box sx={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 1250,
-        maxWidth: expanded ? 360 : 'auto',
-        '@media print': { display: 'none' },
-        opacity: 1,
-        transition: 'opacity 300ms ease',
-      }}>
-        {/* ── Expanded: Checklist ── */}
-        <Collapse in={expanded}>
-          <Paper
-            elevation={8}
-            sx={{
-              borderRadius: 3,
-              overflow: 'hidden',
-              mb: 1,
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            {/* Header */}
-            <Box sx={{
-              p: 2,
-              background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                  {studioMode
-                    ? t('onboarding.widget.titleStudio', 'Content Studio Setup')
-                    : t('onboarding.widget.titlePlatform', 'Platform Setup')}
-                </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                  {completedCount}/{totalSteps} {t('onboarding.widget.stepsComplete', 'stappen voltooid')}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                <IconButton size="small" onClick={() => setExpanded(false)} sx={{ color: '#fff' }}>
-                  <ExpandMoreIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={handleDismiss} sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </Box>
+    <Box sx={{
+      position: 'fixed',
+      bottom: 24,
+      right: 24,
+      zIndex: 1250,
+      maxWidth: expanded ? 360 : 'auto',
+      '@media print': { display: 'none' },
+    }}>
+      {/* ── Expanded: Checklist ── */}
+      <Collapse in={expanded}>
+        <Paper elevation={8} sx={{ borderRadius: 3, overflow: 'hidden', mb: 1, border: '1px solid', borderColor: 'divider' }}>
+          {/* Header */}
+          <Box sx={{ p: 2, background: 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                {studioMode ? t('onboarding.widget.titleStudio', 'Content Studio Setup') : t('onboarding.widget.titlePlatform', 'Platform Setup')}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                {completedCount}/{totalSteps} {t('onboarding.widget.stepsComplete', 'stappen voltooid')}
+              </Typography>
             </Box>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <IconButton size="small" onClick={() => setExpanded(false)} sx={{ color: '#fff' }}>
+                <ExpandMoreIcon fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={handleHideCircle} sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
 
-            {/* Progress bar */}
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              sx={{
-                height: 4,
-                bgcolor: 'action.hover',
-                '& .MuiLinearProgress-bar': { bgcolor: '#02C39A' },
-              }}
-            />
+          <LinearProgress variant="determinate" value={progress} sx={{ height: 4, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: '#02C39A' } }} />
 
-            {/* Steps list */}
-            <Box sx={{ maxHeight: 400, overflowY: 'auto', p: 1 }}>
-              {applicableSteps.map(step => {
-                const isCompleted = completedSteps.includes(step.id);
-                const Icon = step.icon;
-                return (
-                  <Box
-                    key={step.id}
-                    onClick={() => isCompleted ? handleToggleStep(step.id) : handleCompleteStep(step.id, step.path)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 1.5,
-                      p: 1.5,
-                      borderRadius: 1.5,
-                      cursor: 'pointer',
-                      opacity: isCompleted ? 0.6 : 1,
-                      transition: 'background-color 150ms',
-                      '&:hover': !isCompleted ? { bgcolor: 'action.hover' } : {},
-                    }}
-                  >
-                    {/* Status icon */}
-                    {isCompleted
-                      ? <CheckCircleIcon sx={{ fontSize: 20, color: '#02C39A', mt: 0.25 }} />
-                      : <RadioButtonUncheckedIcon sx={{ fontSize: 20, color: 'text.disabled', mt: 0.25 }} />
-                    }
-                    {/* Content */}
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <Icon sx={{ fontSize: 16, color: isCompleted ? 'text.disabled' : 'primary.main' }} />
-                        <Typography variant="body2" sx={{
-                          fontWeight: isCompleted ? 400 : 600,
-                          textDecoration: isCompleted ? 'line-through' : 'none',
-                          color: isCompleted ? 'text.secondary' : 'text.primary',
-                        }}>
-                          {t(step.titleKey, step.titleFallback)}
-                        </Typography>
-                        {step.optional && (
-                          <Chip label={t('onboarding.widget.optional', 'optioneel')} size="small"
-                            sx={{ height: 16, fontSize: 9, bgcolor: 'action.hover' }} />
-                        )}
-                      </Box>
-                      {!isCompleted && (
-                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4, mt: 0.25, display: 'block' }}>
-                          {t(step.descKey, step.descFallback)}
-                        </Typography>
-                      )}
+          {/* Steps list */}
+          <Box sx={{ maxHeight: 400, overflowY: 'auto', p: 1 }}>
+            {applicableSteps.map(step => {
+              const isCompleted = completedSteps.includes(step.id);
+              const Icon = step.icon;
+              return (
+                <Box key={step.id}
+                  onClick={() => isCompleted ? handleToggleStep(step.id) : handleCompleteStep(step.id, step.path)}
+                  sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, p: 1.5, borderRadius: 1.5, cursor: 'pointer', opacity: isCompleted ? 0.6 : 1, transition: 'background-color 150ms', '&:hover': { bgcolor: 'action.hover' } }}>
+                  {isCompleted
+                    ? <CheckCircleIcon sx={{ fontSize: 20, color: '#02C39A', mt: 0.25 }} />
+                    : <RadioButtonUncheckedIcon sx={{ fontSize: 20, color: 'text.disabled', mt: 0.25 }} />}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Icon sx={{ fontSize: 16, color: isCompleted ? 'text.disabled' : 'primary.main' }} />
+                      <Typography variant="body2" sx={{ fontWeight: isCompleted ? 400 : 600, textDecoration: isCompleted ? 'line-through' : 'none', color: isCompleted ? 'text.secondary' : 'text.primary' }}>
+                        {t(step.titleKey, step.titleFallback)}
+                      </Typography>
+                      {step.optional && <Chip label={t('onboarding.widget.optional', 'optioneel')} size="small" sx={{ height: 16, fontSize: 9, bgcolor: 'action.hover' }} />}
                     </Box>
+                    {!isCompleted && (
+                      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4, mt: 0.25, display: 'block' }}>
+                        {t(step.descKey, step.descFallback)}
+                      </Typography>
+                    )}
                   </Box>
-                );
-              })}
-            </Box>
+                </Box>
+              );
+            })}
+          </Box>
 
-            {/* Footer */}
-            {allDone ? (
-              <Box sx={{ p: 2, textAlign: 'center', bgcolor: 'rgba(2,195,154,0.08)' }}>
-                <CheckCircleIcon sx={{ fontSize: 32, color: '#02C39A', mb: 0.5 }} />
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {t('onboarding.widget.allDone', 'Setup voltooid!')}
-                </Typography>
-                <Button size="small" onClick={handleFullDismiss} sx={{ mt: 1, textTransform: 'none' }}>
-                  {t('onboarding.widget.dismiss', 'Widget sluiten')}
-                </Button>
-              </Box>
-            ) : nextStep && (
-              <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Button
-                  fullWidth variant="contained" size="small"
-                  startIcon={<nextStep.icon sx={{ fontSize: 16 }} />}
-                  onClick={() => handleCompleteStep(nextStep.id, nextStep.path)}
-                  sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#02C39A', '&:hover': { bgcolor: '#02a883' } }}
-                >
-                  {t('onboarding.widget.next', 'Volgende')}: {t(nextStep.titleKey, nextStep.titleFallback)}
-                </Button>
-              </Box>
+          {/* Footer */}
+          {allDone ? (
+            <Box sx={{ p: 2, textAlign: 'center', bgcolor: 'rgba(2,195,154,0.08)' }}>
+              <CheckCircleIcon sx={{ fontSize: 32, color: '#02C39A', mb: 0.5 }} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{t('onboarding.widget.allDone', 'Setup voltooid!')}</Typography>
+              <Button size="small" onClick={handleFullDismiss} sx={{ mt: 1, textTransform: 'none' }}>{t('onboarding.widget.dismiss', 'Widget sluiten')}</Button>
+            </Box>
+          ) : nextStep && (
+            <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button fullWidth variant="contained" size="small" startIcon={<nextStep.icon sx={{ fontSize: 16 }} />}
+                onClick={() => handleCompleteStep(nextStep.id, nextStep.path)}
+                sx={{ textTransform: 'none', fontWeight: 600, bgcolor: '#02C39A', '&:hover': { bgcolor: '#02a883' } }}>
+                {t('onboarding.widget.next', 'Volgende')}: {t(nextStep.titleKey, nextStep.titleFallback)}
+              </Button>
+            </Box>
+          )}
+        </Paper>
+      </Collapse>
+
+      {/* ── Collapsed: Progress Circle ── */}
+      {!expanded && (
+        <Tooltip title={t('onboarding.widget.openChecklist', 'Setup checklist openen')} placement="left">
+          <Paper elevation={6} onClick={() => setExpanded(true)}
+            sx={{ width: 56, height: 56, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              background: allDone ? '#02C39A' : 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)', color: '#fff',
+              transition: 'transform 200ms ease, box-shadow 200ms ease', '&:hover': { transform: 'scale(1.1)', boxShadow: 8 }, position: 'relative' }}>
+            {allDone ? <CheckCircleIcon sx={{ fontSize: 28 }} /> : (
+              <>
+                <CircularProgress variant="determinate" value={progress} size={48} thickness={3}
+                  sx={{ position: 'absolute', color: '#02C39A', '& .MuiCircularProgress-circle': { strokeLinecap: 'round' } }} />
+                <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 13 }}>{progress}%</Typography>
+              </>
             )}
           </Paper>
-        </Collapse>
-
-        {/* ── Collapsed: Progress Circle ── */}
-        {!expanded && (
-          <Tooltip title={t('onboarding.widget.openChecklist', 'Setup checklist openen')} placement="left">
-            <Paper
-              elevation={6}
-              onClick={() => setExpanded(true)}
-              sx={{
-                width: 56, height: 56, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer',
-                background: allDone ? '#02C39A' : 'linear-gradient(135deg, #5E8B7E 0%, #2C3E50 100%)',
-                color: '#fff',
-                transition: 'transform 200ms ease, box-shadow 200ms ease',
-                '&:hover': { transform: 'scale(1.1)', boxShadow: 8 },
-                position: 'relative',
-              }}
-            >
-              {allDone ? (
-                <CheckCircleIcon sx={{ fontSize: 28 }} />
-              ) : (
-                <>
-                  <CircularProgress
-                    variant="determinate"
-                    value={progress}
-                    size={48}
-                    thickness={3}
-                    sx={{
-                      position: 'absolute',
-                      color: '#02C39A',
-                      '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 13 }}>
-                    {progress}%
-                  </Typography>
-                </>
-              )}
-            </Paper>
-          </Tooltip>
-        )}
-      </Box>
-
+        </Tooltip>
+      )}
+    </Box>
   );
 }
