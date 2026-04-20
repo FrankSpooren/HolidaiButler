@@ -64,7 +64,7 @@ function DeltaBadge({ value, suffix = '' }) {
 const ALL_WIDGETS = [
   { id: 'pois', label: 'POIs', icon: PlaceIcon, color: '#1976d2', path: '/pois' },
   { id: 'reviews', label: 'Reviews', icon: StarIcon, color: '#f59e0b', path: '/reviews' },
-  { id: 'chatbot', label: 'Chatbot', icon: ChatIcon, color: '#8b5cf6', path: '/analytics' },
+  { id: 'chatbot', label: 'Chatbot', icon: ChatIcon, color: '#8b5cf6', path: '/analytics?tab=chatbot' },
   { id: 'content', label: 'Content', icon: EditNoteIcon, color: '#5E8B7E', path: '/content-studio?tab=items' },
   { id: 'users', label: 'Gebruikers', icon: PeopleIcon, color: '#06b6d4', path: '/users' },
   { id: 'agents', label: 'Agents', icon: SmartToyIcon, color: '#22c55e', path: '/agents' },

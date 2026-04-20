@@ -529,7 +529,9 @@ export default function AnalyticsPage() {
   const globalDestination = useDestinationStore(s => s.selectedDestination);
   const [destination, setDestination] = useState(globalDestination);
   const destParam = destination !== 'all' ? destination : undefined;
-  const [activeTab, setActiveTab] = useState(0);
+  const TAB_MAP = { website: 0, poi: 1, chatbot: 2, content: 3 };
+  const initTab = TAB_MAP[new URLSearchParams(window.location.search).get('tab')] || 0;
+  const [activeTab, setActiveTab] = useState(initTab);
   const [exporting, setExporting] = useState(null);
 
   useEffect(() => { setDestination(globalDestination); }, [globalDestination]);
