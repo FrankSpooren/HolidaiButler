@@ -46,9 +46,9 @@ const ALL_COMMANDS = [
   // NAVIGATIE (20)
   { id: 'nav-dashboard', label: 'Dashboard', icon: Dashboard, path: '/dashboard', section: 'Navigatie', shortcut: 'G D', keywords: 'home overzicht start' },
   { id: 'nav-content', label: 'Content Studio', icon: AutoAwesome, path: '/content-studio', section: 'Navigatie', shortcut: 'G C', keywords: 'studio items concepten' },
-  { id: 'nav-bronnen', label: 'Content Bronnen', icon: TrendingUp, path: '/content-studio', tabIndex: 0, section: 'Navigatie', shortcut: 'G B', keywords: 'bronnen sources trending zoektermen' },
-  { id: 'nav-ideeen', label: 'Content Ideeen', icon: Lightbulb, path: '/content-studio', tabIndex: 1, section: 'Navigatie', shortcut: 'G I', keywords: 'suggesties ideeen voorstellen' },
-  { id: 'nav-items', label: 'Content Items', icon: ViewList, path: '/content-studio', tabIndex: 2, section: 'Navigatie', shortcut: 'G T', keywords: 'items tabel lijst concepts' },
+  { id: 'nav-bronnen', label: 'Bronnen', icon: TrendingUp, path: '/content-studio', tabIndex: 0, section: 'Navigatie', shortcut: 'G B', keywords: 'bronnen sources trending zoektermen' },
+  { id: 'nav-ideeen', label: 'Ideeën', icon: Lightbulb, path: '/content-studio', tabIndex: 1, section: 'Navigatie', shortcut: 'G I', keywords: 'suggesties ideeen voorstellen' },
+  { id: 'nav-items', label: 'Items', icon: ViewList, path: '/content-studio', tabIndex: 2, section: 'Navigatie', shortcut: 'G T', keywords: 'items tabel lijst concepts' },
   { id: 'nav-kalender', label: 'Kalender', icon: CalendarMonth, path: '/content-studio', tabIndex: 3, section: 'Navigatie', shortcut: 'G K', keywords: 'calendar planning schedule' },
   { id: 'nav-analyse', label: 'Analyse', icon: BarChart, path: '/content-studio', tabIndex: 4, section: 'Navigatie', shortcut: 'G A', keywords: 'analytics prestaties performance' },
   { id: 'nav-media', label: 'Mediabibliotheek', icon: PhotoLibrary, path: '/media', section: 'Navigatie', shortcut: 'G M', keywords: 'media library afbeeldingen fotos videos' },

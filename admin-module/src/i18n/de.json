@@ -1341,9 +1341,9 @@
   "contentStudio": {
     "title": "Content Studio",
     "tabs": {
-      "trending": "Content-Quellen",
-      "suggestions": "Content-Ideen",
-      "content": "Content-Elemente",
+      "trending": "Quellen",
+      "suggestions": "Ideen",
+      "content": "Elemente",
       "calendar": "Kalender",
       "analyse": "Analyse",
       "seasons": "Jahreszeiten",

@@ -19,7 +19,8 @@ import useAuthStore from '../stores/authStore.js';
 import useDestinationStore from '../stores/destinationStore.js';
 import client from '../api/client.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { isStudioMode } from '../utils/studioMode.js';
 
 // Status colors for content items
 const STATUS_COLORS = {
@@ -40,6 +41,11 @@ export default function DashboardPage() {
     ? allDestinations.find(d => userAllowed.includes(d.code))
     : null;
   const isContentOnly = userDest?.destinationType === 'content_only';
+
+  // Studio mode: redirect to Content Studio (PubliQio users should never see Platform Dashboard)
+  if (isStudioMode() || isContentOnly) {
+    return <Navigate to="/content-studio" replace />;
+  }
 
   // Fetch action-oriented dashboard data
   const { data, isLoading, error, refetch } = useQuery({
@@ -170,7 +176,8 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* Recent Content */}
+      {/* Recent Content — div spacer to match gap above Snelkoppelingen */}
+      <div style={{ height: 24 }} />
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, textTransform: 'uppercase', letterSpacing: 1, color: 'text.secondary' }}>
         {t('dashboard.recentContent', 'Recente content')}
       </Typography>
