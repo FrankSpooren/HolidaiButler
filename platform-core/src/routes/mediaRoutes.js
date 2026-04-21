@@ -12,6 +12,7 @@ import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger.js';
 import mediaService from '../services/media/mediaService.js';
 import { mediaProcessingQueue } from '../services/orchestrator/queues.js';
+import { getTopPerformers, getMediaPerformance } from '../services/media/mediaPerformanceService.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -127,6 +128,34 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     } catch (error) {
       logger.error('[Media] Batch embed error:', error);
       res.status(500).json({ success: false, error: { code: 'EMBED_ERROR', message: error.message } });
+    }
+  });
+
+  // ── W1: Media Performance endpoints (MUST be before /:id catch-all) ──
+
+  // GET /media/top-performers — Top performing media for a destination
+  router.get("/top-performers", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const days = parseInt(req.query.days) || 90;
+      const results = await getTopPerformers(destId, limit, days);
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Top performers error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch top performers" } });
+    }
+  });
+
+  // GET /media/:id/performance — Performance stats for a single media item
+  router.get("/:id/performance", adminAuth("editor"), async (req, res) => {
+    try {
+      const perf = await getMediaPerformance(parseInt(req.params.id));
+      if (!perf) return res.json({ success: true, data: { performance_score: 0, total_uses: 0, usedIn: [] } });
+      res.json({ success: true, data: perf });
+    } catch (err) {
+      console.error("[Media] Performance fetch error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch performance" } });
     }
   });
 
