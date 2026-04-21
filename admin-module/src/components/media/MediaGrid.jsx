@@ -40,7 +40,7 @@ function LoadingSkeleton({ view }) {
     );
   }
   return (
-    <ImageList cols={effectiveCols} gap={8} sx={{ m: 0 }}>
+    <ImageList cols={4} gap={8} sx={{ m: 0 }}>
       {items.map(i => (
         <ImageListItem key={i}>
           <Skeleton variant="rectangular" height={view === 'masonry' ? 120 + (i % 3) * 60 : 150} sx={{ borderRadius: 1 }} />
