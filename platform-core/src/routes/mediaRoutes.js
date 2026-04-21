@@ -133,6 +133,80 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     }
   });
 
+  // ── POI Afbeeldingen — Browse POI images from imageurls table ──
+
+  // GET /media/poi-images — Browse POI images with search, filter, pagination
+  router.get("/poi-images", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 24, 100);
+      const offset = (page - 1) * limit;
+      const search = req.query.search || '';
+      const category = req.query.category || '';
+      const poiId = req.query.poi_id || '';
+
+      const conditions = ["p.destination_id = ?", "i.local_path IS NOT NULL"];
+      const params = [destId];
+
+      if (search) {
+        conditions.push("(p.name LIKE ? OR i.keywords_visual LIKE ? OR i.visual_description LIKE ? OR p.category LIKE ?)");
+        const s = `%${search}%`;
+        params.push(s, s, s, s);
+      }
+      if (category) {
+        conditions.push("p.category = ?");
+        params.push(category);
+      }
+      if (poiId) {
+        conditions.push("i.poi_id = ?");
+        params.push(parseInt(poiId));
+      }
+
+      const where = conditions.join(" AND ");
+
+      // Count total
+      const [countRow] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total FROM imageurls i JOIN POI p ON p.id = i.poi_id WHERE ${where}`,
+        { replacements: params, type: QueryTypes.SELECT }
+      );
+
+      // Get images
+      const images = await mysqlSequelize.query(
+        `SELECT i.id, i.poi_id, p.name as poi_name, p.category as poi_category,
+                i.local_path, i.keywords_visual, i.visual_description, i.visual_mood,
+                i.display_order, i.source,
+                CONCAT('/poi-images', SUBSTRING(i.local_path, LOCATE('/poi-images', i.local_path) + LENGTH('/poi-images'))) as thumbnail_url
+         FROM imageurls i
+         JOIN POI p ON p.id = i.poi_id
+         WHERE ${where}
+         ORDER BY p.name, i.display_order
+         LIMIT ? OFFSET ?`,
+        { replacements: [...params, limit, offset], type: QueryTypes.SELECT }
+      );
+
+      // Get categories for filter
+      const categories = await mysqlSequelize.query(
+        `SELECT DISTINCT p.category, COUNT(*) as cnt
+         FROM imageurls i JOIN POI p ON p.id = i.poi_id
+         WHERE p.destination_id = ? AND i.local_path IS NOT NULL
+         GROUP BY p.category ORDER BY cnt DESC`,
+        { replacements: [destId], type: QueryTypes.SELECT }
+      );
+
+      res.json({
+        success: true,
+        data: images,
+        meta: { page, limit, total: parseInt(countRow.total), totalPages: Math.ceil(countRow.total / limit) },
+        filters: { categories }
+      });
+    } catch (err) {
+      console.error("[Media] POI images error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch POI images" } });
+    }
+  });
+
+
   // ── W2: Context Intelligence Search ──
 
   // POST /media/search/context — Context-aware media search
