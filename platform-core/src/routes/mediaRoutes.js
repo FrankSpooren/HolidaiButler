@@ -131,6 +131,35 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     }
   });
 
+  // ── W2: Context Intelligence Search ──
+
+  // POST /media/search/context — Context-aware media search
+  router.post("/search/context", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.body.destination_id || req.headers["x-destination-id"]);
+      const { weather_conditions, seasons, time_of_day, persona_fit, content_purposes, event_relevance } = req.body;
+      const lim = parseInt(req.body.limit) || 12;
+      const conditions = ["m.destination_id = ?"];
+      const params = [destId];
+      if (weather_conditions && weather_conditions.length) { conditions.push("JSON_CONTAINS(m.weather_conditions, ?)"); params.push(JSON.stringify(weather_conditions)); }
+      if (seasons && seasons.length) { conditions.push("JSON_CONTAINS(m.seasons, ?)"); params.push(JSON.stringify(seasons)); }
+      if (time_of_day) { conditions.push("m.time_of_day = ?"); params.push(time_of_day); }
+      if (persona_fit && persona_fit.length) { conditions.push("JSON_CONTAINS(m.persona_fit, ?)"); params.push(JSON.stringify(persona_fit)); }
+      if (content_purposes && content_purposes.length) { conditions.push("JSON_CONTAINS(m.content_purposes, ?)"); params.push(JSON.stringify(content_purposes)); }
+      if (event_relevance && event_relevance.length) { conditions.push("JSON_CONTAINS(m.event_relevance, ?)"); params.push(JSON.stringify(event_relevance)); }
+      conditions.push("m.media_type = 'image'");
+      conditions.push("m.ai_processed = 1");
+      params.push(lim);
+      const sql = `SELECT m.id as media_id, m.filename, m.alt_text_en, m.weather_conditions, m.seasons, m.time_of_day, m.persona_fit, m.content_purposes, CONCAT('/media-files/', m.destination_id, '/', m.filename) as thumbnail_url FROM media m WHERE ${conditions.join(" AND ")} ORDER BY m.id DESC LIMIT ?`;
+      const results = await mysqlSequelize.query(sql, { replacements: params, type: QueryTypes.SELECT });
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Context search error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Context search failed" } });
+    }
+  });
+
+
   // ── W1: Media Performance endpoints (MUST be before /:id catch-all) ──
 
   // GET /media/top-performers — Top performing media for a destination
