@@ -397,6 +397,12 @@ export async function initializeScheduler() {
     removeOnComplete: true,
   });
 
+  // W5: Media Revenue Attribution — monthly 1st of month 04:00
+  await scheduledQueue.add('media-revenue-attribution', { type: 'media-revenue-attribution' }, {
+    repeat: { cron: '0 4 1 * *', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

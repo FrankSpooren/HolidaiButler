@@ -1301,6 +1301,23 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           break;
         }
 
+        case 'media-revenue-attribution': {
+          const { attributeRevenue } = await import('../media/mediaAttributionService.js');
+          const revDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          const now = new Date();
+          const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+          const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+          let revTotal = 0;
+          for (const dest of revDests) {
+            const r = await attributeRevenue(dest.id, prevYear, prevMonth);
+            revTotal += r.attributedMedia;
+          }
+          console.log('[Orchestrator] Revenue attribution: ' + revTotal + ' media attributed for ' + prevYear + '-' + prevMonth);
+          result = { type: 'media-revenue-attribution', attributed: revTotal, period: prevYear + '-' + prevMonth };
+          break;
+        }
+
+
         case 'content-readiness-analyzer': {
           const { getReadinessReport, storeReport } = await import('../media/contentReadinessService.js');
           const rdDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
