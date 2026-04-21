@@ -194,10 +194,10 @@ async function aiTag(media, filePath) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
-            { type: 'text', text: 'Analyze this image and return a JSON object with these exact keys: 1) "tags": array of 5-15 descriptive tags in English (objects, scene, mood, colors, setting). 2) "alt_text_en": concise alt-text in English (max 120 chars). 3) "alt_text_nl": same in Dutch. 4) "alt_text_de": same in German. 5) "alt_text_es": same in Spanish. 6) "alt_text_fr": same in French. Return ONLY valid JSON like: {"tags":["beach","sunset"],"alt_text_en":"Sandy beach at sunset","alt_text_nl":"Zandstrand bij zonsondergang","alt_text_de":"Sandstrand bei Sonnenuntergang","alt_text_es":"Playa al atardecer","alt_text_fr":"Plage au coucher du soleil"}' }
+            { type: 'text', text: 'Analyze this image and return a JSON object with these exact keys: 1) "tags": array of 5-15 descriptive tags in English. 2) "alt_text_en": concise alt-text in English (max 120 chars). 3) "alt_text_nl": same in Dutch. 4) "alt_text_de": same in German. 5) "alt_text_es": same in Spanish. 6) "alt_text_fr": same in French. 7) "weather_conditions": array from [sunny,partly_cloudy,cloudy,rainy,stormy,snowy,foggy] or null if indoor/unclear. 8) "seasons": array from [spring,early_summer,summer,late_summer,autumn,winter] or null. 9) "time_of_day": one of [dawn,morning,midday,afternoon,golden_hour,dusk,night,unknown]. 10) "persona_fit": array from [families_with_kids,couples,active_50plus,solo_travelers,groups,business_travelers,luxury_seekers,budget_travelers]. 11) "content_purposes": array from [blog_hero,social_post,email_header,booking_page,destination_overview,poi_detail,event_promotion]. Return null for any field where uncertain. Return ONLY valid JSON.' }
           ]
         }],
-        max_tokens: 500,
+        max_tokens: 800,
         temperature: 0.1
       })
     });
@@ -235,6 +235,12 @@ async function aiTag(media, filePath) {
     if (parsed.alt_text_de) { updates.push('alt_text_de = ?'); params.push(parsed.alt_text_de.substring(0, 500)); }
     if (parsed.alt_text_es) { updates.push('alt_text_es = ?'); params.push(parsed.alt_text_es.substring(0, 500)); }
     if (parsed.alt_text_fr) { updates.push('alt_text_fr = ?'); params.push(parsed.alt_text_fr.substring(0, 500)); }
+    if (parsed.weather_conditions) { updates.push('weather_conditions = ?'); params.push(JSON.stringify(parsed.weather_conditions)); }
+    if (parsed.seasons) { updates.push('seasons = ?'); params.push(JSON.stringify(parsed.seasons)); }
+    if (parsed.time_of_day && parsed.time_of_day !== 'unknown') { updates.push('time_of_day = ?'); params.push(parsed.time_of_day); }
+    if (parsed.persona_fit) { updates.push('persona_fit = ?'); params.push(JSON.stringify(parsed.persona_fit)); }
+    if (parsed.content_purposes) { updates.push('content_purposes = ?'); params.push(JSON.stringify(parsed.content_purposes)); }
+    if (parsed.event_relevance) { updates.push('event_relevance = ?'); params.push(JSON.stringify(parsed.event_relevance)); }
     updates.push('ai_processed = 1');
     params.push(media.id);
 
@@ -243,7 +249,7 @@ async function aiTag(media, filePath) {
         `UPDATE media SET ${updates.join(', ')} WHERE id = ?`,
         { replacements: params }
       );
-      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags + alt-text 5 langs`);
+      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags + alt-text 5 langs + context`);
     }
   } catch (err) {
     console.warn(`[MediaProcessing] AI tagging failed for ${media.id}:`, err.message);
