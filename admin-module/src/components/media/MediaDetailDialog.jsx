@@ -1,4 +1,4 @@
-import { useState, forwardRef, useCallback } from 'react';
+import { useState, useEffect, useRef, forwardRef, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, Box, Typography, IconButton, Tabs, Tab,
   TextField, Chip, Select, MenuItem, FormControl, InputLabel, Switch,
@@ -78,6 +78,64 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
     saveMutation.mutate({ [field]: value });
   }, [saveMutation, mediaId, destId]);
 
+  // X2: Inline editing + auto-save
+  const [editingField, setEditingField] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [saveStatus, setSaveStatus] = useState('saved'); // saved | editing | saving
+  const saveTimer = useRef(null);
+
+  const startEdit = (field, value) => {
+    setEditingField(field);
+    setEditValue(value || '');
+    setSaveStatus('editing');
+  };
+
+  const handleEditChange = (val) => {
+    setEditValue(val);
+    setSaveStatus('editing');
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => autoSave(editingField, val), 10000);
+  };
+
+  const autoSave = async (field, value) => {
+    if (!media?.id || !field) return;
+    setSaveStatus('saving');
+    try {
+      await client.patch(`/media/${media.id}`, { [field]: value });
+      setSaveStatus('saved');
+      if (onUpdate) onUpdate();
+    } catch { setSaveStatus('editing'); }
+  };
+
+  const commitEdit = async () => {
+    if (editingField && editValue !== (media?.[editingField] || '')) {
+      await autoSave(editingField, editValue);
+    }
+    setEditingField(null);
+    clearTimeout(saveTimer.current);
+  };
+
+  // beforeunload warning
+  useEffect(() => {
+    const handler = (e) => { if (saveStatus === 'editing') { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', handler);
+    return () => { window.removeEventListener('beforeunload', handler); clearTimeout(saveTimer.current); };
+  }, [saveStatus]);
+
+  // X2: Focus Mode (F-key)
+  const [focusMode, setFocusMode] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setFocusMode(prev => !prev); }
+      if (e.key === 'Escape' && focusMode) { e.preventDefault(); e.stopPropagation(); setFocusMode(false); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, focusMode]);
+
   const isImage = media?.mime_type?.startsWith('image/');
   const isVideo = media?.mime_type?.startsWith('video/');
   const isAudio = media?.mime_type?.startsWith('audio/');
@@ -101,6 +159,10 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
           {media?.mime_type?.startsWith('image/') && (
             <IconButton onClick={() => setEditorOpen(true)} size="small" title={t('media.edit', 'Bewerken')}><EditIcon /></IconButton>
           )}
+          {saveStatus !== 'saved' && (
+            <Chip size="small" label={saveStatus === 'saving' ? 'Opslaan...' : 'Bewerkt'} color={saveStatus === 'saving' ? 'info' : 'warning'} sx={{ mr: 0.5, height: 22, fontSize: '0.7rem' }} />
+          )}
+          <Tooltip title="Focus Mode (F)"><IconButton onClick={() => setFocusMode(true)} size="small" sx={{ mr: 0.5 }}><span style={{fontSize: 14, fontWeight: 700}}>F</span></IconButton></Tooltip>
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </Box>
       </DialogTitle>
@@ -255,6 +317,30 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
           onSaved={() => { queryClient.invalidateQueries({ queryKey: ['media-detail', mediaId] }); onUpdate?.(); }}
         />
       </Suspense>
+    )}
+
+    {/* X2: Focus Mode — fullscreen lightbox */}
+    {focusMode && media && (
+      <Box
+        onClick={() => setFocusMode(false)}
+        sx={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          bgcolor: 'rgba(0,0,0,0.95)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'zoom-out',
+        }}
+      >
+        {isImage ? (
+          <Box component="img" src={fileUrl} alt={media?.alt_text || ''} sx={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain' }} onClick={(e) => e.stopPropagation()} />
+        ) : isVideo ? (
+          <Box component="video" src={fileUrl} controls sx={{ maxWidth: '95vw', maxHeight: '95vh' }} onClick={(e) => e.stopPropagation()} />
+        ) : (
+          <Typography color="white" variant="h5">Focus Mode niet beschikbaar voor dit bestandstype</Typography>
+        )}
+        <Typography sx={{ position: 'absolute', bottom: 16, color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
+          Druk Esc of klik om te sluiten
+        </Typography>
+      </Box>
     )}
     </>
   );
