@@ -353,44 +353,131 @@ async function processAudio(media, filePath) {
 
 async function processGpx(media, filePath) {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const gpxContent = fs.readFileSync(filePath, 'utf-8');
 
     // Extract lat/lng coordinates from GPX XML
-    const latMatches = content.match(/lat="([^"]+)"/g) || [];
-    const lonMatches = content.match(/lon="([^"]+)"/g) || [];
+    const latMatches = gpxContent.match(/lat="([^"]+)"/g) || [];
+    const lonMatches = gpxContent.match(/lon="([^"]+)"/g) || [];
 
-    if (latMatches.length > 0 && lonMatches.length > 0) {
-      const lats = latMatches.map(m => parseFloat(m.match(/lat="([^"]+)"/)[1]));
-      const lons = lonMatches.map(m => parseFloat(m.match(/lon="([^"]+)"/)[1]));
-
-      const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-      const centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
-
-      // Build GeoJSON LineString for Leaflet rendering
-      const coordinates = [];
-      for (let i = 0; i < Math.min(lats.length, lons.length); i++) {
-        coordinates.push([lons[i], lats[i]]);
-      }
-      const geojson = JSON.stringify({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates },
-        properties: {
-          name: media.original_name || media.filename,
-          points: coordinates.length,
-          bounds: {
-            minLat: Math.min(...lats), maxLat: Math.max(...lats),
-            minLng: Math.min(...lons), maxLng: Math.max(...lons)
-          }
-        }
-      });
-
-      await mysqlSequelize.query(
-        'UPDATE media SET location_lat = ?, location_lng = ?, route_geojson = ? WHERE id = ?',
-        { replacements: [centerLat, centerLng, geojson, media.id] }
-      );
-
-      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${coordinates.length} waypoints, GeoJSON stored, media ${media.id}`);
+    if (latMatches.length < 2) {
+      console.warn(`[MediaProcessing] GPX has < 2 waypoints, skipping: media ${media.id}`);
+      return;
     }
+
+    const lats = latMatches.map(m => parseFloat(m.match(/lat="([^"]+)"/)[1]));
+    const lons = lonMatches.map(m => parseFloat(m.match(/lon="([^"]+)"/)[1]));
+
+    const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
+
+    // Build GeoJSON LineString
+    const coordinates = [];
+    for (let i = 0; i < Math.min(lats.length, lons.length); i++) {
+      coordinates.push([lons[i], lats[i]]);
+    }
+
+    // Calculate route distance (Haversine)
+    let totalDistKm = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+      const [lon1, lat1] = coordinates[i - 1];
+      const [lon2, lat2] = coordinates[i];
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      totalDistKm += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+    totalDistKm = Math.round(totalDistKm * 10) / 10;
+
+    // Extract GPX metadata (track name, type)
+    const trackNameMatch = gpxContent.match(/<name>([^<]+)<\/name>/);
+    const trackName = trackNameMatch ? trackNameMatch[1].trim() : (media.original_name || '').replace('.gpx', '');
+    const typeMatch = gpxContent.match(/<type>([^<]+)<\/type>/);
+    const gpxType = typeMatch ? typeMatch[1].toLowerCase() : '';
+
+    // Reverse geocode center point via Nominatim (free, no API key)
+    let locationName = '', region = '', country = '';
+    try {
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${centerLat}&lon=${centerLng}&format=json&zoom=12&accept-language=nl`, {
+        headers: { 'User-Agent': 'HolidaiButler/1.0 (info@holidaibutler.com)' }
+      });
+      if (geoRes.ok) {
+        const geo = await geoRes.json();
+        const addr = geo.address || {};
+        locationName = addr.town || addr.city || addr.village || addr.municipality || addr.hamlet || '';
+        region = addr.state || addr.province || addr.county || '';
+        country = addr.country || '';
+      }
+    } catch (geoErr) {
+      console.warn(`[MediaProcessing] Reverse geocode failed for GPX ${media.id}:`, geoErr.message);
+    }
+
+    // Determine route type from distance + name
+    let routeType = 'route';
+    if (gpxType.includes('cycling') || gpxType.includes('biking') || totalDistKm > 30) routeType = 'cycling';
+    else if (gpxType.includes('hiking') || gpxType.includes('walking') || totalDistKm <= 15) routeType = 'hiking';
+    else if (gpxType.includes('running') || gpxType.includes('trail')) routeType = 'trail_running';
+    // Check name for hints
+    const nameLower = trackName.toLowerCase();
+    if (nameLower.includes('fiets') || nameLower.includes('cycling') || nameLower.includes('bike')) routeType = 'cycling';
+    if (nameLower.includes('wandel') || nameLower.includes('hike') || nameLower.includes('walk')) routeType = 'hiking';
+
+    // Distance category
+    let distCategory = '';
+    if (totalDistKm < 5) distCategory = 'short_walk';
+    else if (totalDistKm < 10) distCategory = 'medium_hike';
+    else if (totalDistKm < 25) distCategory = 'long_hike';
+    else if (totalDistKm < 50) distCategory = 'short_cycle';
+    else distCategory = 'long_cycle';
+
+    // Build tags
+    const tags = [routeType, distCategory, 'gpx', 'outdoor', 'nature'];
+    if (locationName) tags.push(locationName.toLowerCase().replace(/\s+/g, '_'));
+    if (region) tags.push(region.toLowerCase().replace(/\s+/g, '_'));
+    if (country) tags.push(country.toLowerCase().replace(/\s+/g, '_'));
+    tags.push(`${totalDistKm}km`);
+    // Extract keywords from track name
+    trackName.split(/[\s_-]+/).forEach(word => {
+      if (word.length > 3) tags.push(word.toLowerCase());
+    });
+    // Deduplicate
+    const uniqueTags = [...new Set(tags)].slice(0, 20);
+
+    // Build alt-text
+    const distStr = totalDistKm < 1 ? `${Math.round(totalDistKm * 1000)}m` : `${totalDistKm}km`;
+    const locStr = [locationName, region].filter(Boolean).join(', ');
+    const routeLabel = { hiking: 'Wandelroute', cycling: 'Fietsroute', trail_running: 'Trailroute', route: 'Route' }[routeType] || 'Route';
+    const altNl = `${routeLabel} "${trackName}" — ${distStr}${locStr ? ` bij ${locStr}` : ''}`;
+    const altEn = `${routeType === 'hiking' ? 'Hiking trail' : routeType === 'cycling' ? 'Cycling route' : 'Route'} "${trackName}" — ${distStr}${locStr ? ` near ${locStr}` : ''}`;
+    const altDe = `${routeType === 'hiking' ? 'Wanderweg' : routeType === 'cycling' ? 'Radroute' : 'Route'} "${trackName}" — ${distStr}${locStr ? ` bei ${locStr}` : ''}`;
+    const altEs = `${routeType === 'hiking' ? 'Ruta de senderismo' : routeType === 'cycling' ? 'Ruta ciclista' : 'Ruta'} "${trackName}" — ${distStr}${locStr ? ` cerca de ${locStr}` : ''}`;
+    const altFr = `${routeType === 'hiking' ? 'Sentier de randonnée' : routeType === 'cycling' ? 'Piste cyclable' : 'Itinéraire'} "${trackName}" — ${distStr}${locStr ? ` près de ${locStr}` : ''}`;
+
+    const geojson = JSON.stringify({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates },
+      properties: {
+        name: trackName, points: coordinates.length, distance_km: totalDistKm,
+        route_type: routeType, location: locStr,
+        bounds: { minLat: Math.min(...lats), maxLat: Math.max(...lats), minLng: Math.min(...lons), maxLng: Math.max(...lons) }
+      }
+    });
+
+    await mysqlSequelize.query(
+      `UPDATE media SET location_lat = ?, location_lng = ?, location_name = ?, route_geojson = ?,
+        tags_ai = ?, alt_text_en = ?, alt_text_nl = ?, alt_text_de = ?, alt_text_es = ?, alt_text_fr = ?,
+        duration_seconds = ?, ai_processed = 1
+       WHERE id = ?`,
+      { replacements: [
+        centerLat, centerLng, locStr || null, geojson,
+        JSON.stringify(uniqueTags), altEn.substring(0, 500), altNl.substring(0, 500),
+        altDe.substring(0, 500), altEs.substring(0, 500), altFr.substring(0, 500),
+        totalDistKm * 60, // rough estimate: 1 km ≈ 1 min for display purposes
+        media.id
+      ] }
+    );
+
+    console.log(`[MediaProcessing] GPX auto-tagged: ${trackName}, ${distStr}, ${routeType}, ${locStr || 'unknown location'}, ${uniqueTags.length} tags, media ${media.id}`);
   } catch (err) {
     console.warn(`[MediaProcessing] GPX processing failed for ${media.id}:`, err.message);
   }
