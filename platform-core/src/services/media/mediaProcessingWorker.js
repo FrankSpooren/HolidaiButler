@@ -279,12 +279,43 @@ async function processVideo(media, filePath) {
       { timeout: 60000 }
     );
 
+    // Aspect ratio detection: 9:16 portrait → reel
+    let mediaType = 'video';
+    if (width && height && height > width && (height / width) >= 1.5) {
+      mediaType = 'reel';
+    }
+
     await mysqlSequelize.query(
-      'UPDATE media SET width = ?, height = ?, duration_seconds = ? WHERE id = ?',
-      { replacements: [width, height, duration, media.id] }
+      'UPDATE media SET width = ?, height = ?, duration_seconds = ?, media_type = ? WHERE id = ?',
+      { replacements: [width, height, duration, mediaType, media.id] }
     );
 
-    console.log(`[MediaProcessing] Video processed: ${width}x${height}, ${Math.round(duration)}s, media ${media.id}`);
+    // MOV/WebM → MP4 normalization (H.264 baseline for universal playback)
+    const ext = path.extname(filePath).toLowerCase();
+    if (['.mov', '.webm', '.avi', '.mkv'].includes(ext)) {
+      const mp4Path = filePath.replace(/\.[^.]+$/, '.mp4');
+      try {
+        await execAsync(
+          `ffmpeg -y -i "${filePath}" -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -c:a aac -movflags +faststart "${mp4Path}"`,
+          { timeout: 300000 }
+        );
+        // Update filename in DB
+        const newFilename = media.filename.replace(/\.[^.]+$/, '.mp4');
+        await mysqlSequelize.query(
+          'UPDATE media SET filename = ?, mime_type = ? WHERE id = ?',
+          { replacements: [newFilename, 'video/mp4', media.id] }
+        );
+        // Remove original if different path
+        if (mp4Path !== filePath && fs.existsSync(mp4Path)) {
+          fs.unlinkSync(filePath);
+        }
+        console.log(`[MediaProcessing] Video normalized: ${ext} → .mp4, media ${media.id}`);
+      } catch (normErr) {
+        console.warn(`[MediaProcessing] Video normalization failed for ${media.id}:`, normErr.message);
+      }
+    }
+
+    console.log(`[MediaProcessing] Video processed: ${width}x${height}, ${Math.round(duration)}s, type=${mediaType}, media ${media.id}`);
   } catch (err) {
     console.warn(`[MediaProcessing] Video processing failed for ${media.id}:`, err.message);
   }
@@ -329,12 +360,30 @@ async function processGpx(media, filePath) {
       const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
       const centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
 
+      // Build GeoJSON LineString for Leaflet rendering
+      const coordinates = [];
+      for (let i = 0; i < Math.min(lats.length, lons.length); i++) {
+        coordinates.push([lons[i], lats[i]]);
+      }
+      const geojson = JSON.stringify({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates },
+        properties: {
+          name: media.original_name || media.filename,
+          points: coordinates.length,
+          bounds: {
+            minLat: Math.min(...lats), maxLat: Math.max(...lats),
+            minLng: Math.min(...lons), maxLng: Math.max(...lons)
+          }
+        }
+      });
+
       await mysqlSequelize.query(
-        'UPDATE media SET location_lat = ?, location_lng = ? WHERE id = ?',
-        { replacements: [centerLat, centerLng, media.id] }
+        'UPDATE media SET location_lat = ?, location_lng = ?, route_geojson = ? WHERE id = ?',
+        { replacements: [centerLat, centerLng, geojson, media.id] }
       );
 
-      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${lats.length} waypoints, media ${media.id}`);
+      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${coordinates.length} waypoints, GeoJSON stored, media ${media.id}`);
     }
   } catch (err) {
     console.warn(`[MediaProcessing] GPX processing failed for ${media.id}:`, err.message);
