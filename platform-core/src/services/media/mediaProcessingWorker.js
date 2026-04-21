@@ -194,10 +194,10 @@ async function aiTag(media, filePath) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
-            { type: 'text', text: 'Analyze this image and return a JSON array of 5-15 descriptive tags in English. Include: objects, scene type, mood, colors, setting. Return ONLY a JSON array like ["beach","sunset","ocean","warm","tropical"]. No other text.' }
+            { type: 'text', text: 'Analyze this image and return a JSON object with these exact keys: 1) "tags": array of 5-15 descriptive tags in English (objects, scene, mood, colors, setting). 2) "alt_text_en": concise alt-text in English (max 120 chars). 3) "alt_text_nl": same in Dutch. 4) "alt_text_de": same in German. 5) "alt_text_es": same in Spanish. 6) "alt_text_fr": same in French. Return ONLY valid JSON like: {"tags":["beach","sunset"],"alt_text_en":"Sandy beach at sunset","alt_text_nl":"Zandstrand bij zonsondergang","alt_text_de":"Sandstrand bei Sonnenuntergang","alt_text_es":"Playa al atardecer","alt_text_fr":"Plage au coucher du soleil"}' }
           ]
         }],
-        max_tokens: 200,
+        max_tokens: 500,
         temperature: 0.1
       })
     });
@@ -206,16 +206,44 @@ async function aiTag(media, filePath) {
     const result = await response.json();
     const text = result.choices?.[0]?.message?.content || '[]';
 
-    // Parse tags from response
-    const match = text.match(/\[[\s\S]*\]/);
-    const tags = match ? JSON.parse(match[0]) : [];
+    // Parse structured response (tags + alt-text 5 languages)
+    let parsed;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch { parsed = null; }
 
-    if (tags.length > 0) {
+    // Fallback: if response is just an array (old format)
+    if (!parsed) {
+      const arrMatch = text.match(/\[[\s\S]*\]/);
+      const tags = arrMatch ? JSON.parse(arrMatch[0]) : [];
+      if (tags.length > 0) {
+        await mysqlSequelize.query(
+          'UPDATE media SET tags_ai = ?, ai_processed = 1 WHERE id = ?',
+          { replacements: [JSON.stringify(tags), media.id] }
+        );
+      }
+      return;
+    }
+
+    const tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+    const updates = [];
+    const params = [];
+    if (tags.length > 0) { updates.push('tags_ai = ?'); params.push(JSON.stringify(tags)); }
+    if (parsed.alt_text_en) { updates.push('alt_text_en = ?'); params.push(parsed.alt_text_en.substring(0, 500)); }
+    if (parsed.alt_text_nl) { updates.push('alt_text_nl = ?'); params.push(parsed.alt_text_nl.substring(0, 500)); }
+    if (parsed.alt_text_de) { updates.push('alt_text_de = ?'); params.push(parsed.alt_text_de.substring(0, 500)); }
+    if (parsed.alt_text_es) { updates.push('alt_text_es = ?'); params.push(parsed.alt_text_es.substring(0, 500)); }
+    if (parsed.alt_text_fr) { updates.push('alt_text_fr = ?'); params.push(parsed.alt_text_fr.substring(0, 500)); }
+    updates.push('ai_processed = 1');
+    params.push(media.id);
+
+    if (updates.length > 1) {
       await mysqlSequelize.query(
-        'UPDATE media SET tags_ai = ?, ai_processed = 1 WHERE id = ?',
-        { replacements: [JSON.stringify(tags), media.id] }
+        `UPDATE media SET ${updates.join(', ')} WHERE id = ?`,
+        { replacements: params }
       );
-      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags`);
+      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags + alt-text 5 langs`);
     }
   } catch (err) {
     console.warn(`[MediaProcessing] AI tagging failed for ${media.id}:`, err.message);
