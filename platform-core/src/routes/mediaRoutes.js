@@ -12,6 +12,9 @@ import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger.js';
 import mediaService from '../services/media/mediaService.js';
 import { mediaProcessingQueue } from '../services/orchestrator/queues.js';
+import { getTopPerformers, getMediaPerformance } from '../services/media/mediaPerformanceService.js';
+import { getReadinessReport } from '../services/media/contentReadinessService.js';
+import { getMediaRevenue, getRevenueTop } from '../services/media/mediaAttributionService.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -127,6 +130,212 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     } catch (error) {
       logger.error('[Media] Batch embed error:', error);
       res.status(500).json({ success: false, error: { code: 'EMBED_ERROR', message: error.message } });
+    }
+  });
+
+  // ── POI Afbeeldingen — Browse POI images from imageurls table ──
+
+  // GET /media/poi-images — Browse POI images with search, filter, pagination
+  router.get("/poi-images", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 24, 100);
+      const offset = (page - 1) * limit;
+      const search = req.query.search || '';
+      const category = req.query.category || '';
+      const poiId = req.query.poi_id || '';
+
+      const conditions = ["p.destination_id = ?", "i.local_path IS NOT NULL"];
+      const params = [destId];
+
+      if (search) {
+        conditions.push("(p.name LIKE ? OR i.keywords_visual LIKE ? OR i.visual_description LIKE ? OR p.category LIKE ?)");
+        const s = `%${search}%`;
+        params.push(s, s, s, s);
+      }
+      if (category) {
+        conditions.push("p.category = ?");
+        params.push(category);
+      }
+      if (poiId) {
+        conditions.push("i.poi_id = ?");
+        params.push(parseInt(poiId));
+      }
+
+      const where = conditions.join(" AND ");
+
+      // Count total
+      const [countRow] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as total FROM imageurls i JOIN POI p ON p.id = i.poi_id WHERE ${where}`,
+        { replacements: params, type: QueryTypes.SELECT }
+      );
+
+      // Get images
+      const images = await mysqlSequelize.query(
+        `SELECT i.id, i.poi_id, p.name as poi_name, p.category as poi_category,
+                i.local_path, i.keywords_visual, i.visual_description, i.visual_mood,
+                i.display_order, i.source,
+                CONCAT('/poi-images', SUBSTRING(i.local_path, LOCATE('/poi-images', i.local_path) + LENGTH('/poi-images'))) as thumbnail_url
+         FROM imageurls i
+         JOIN POI p ON p.id = i.poi_id
+         WHERE ${where}
+         ORDER BY p.name, i.display_order
+         LIMIT ? OFFSET ?`,
+        { replacements: [...params, limit, offset], type: QueryTypes.SELECT }
+      );
+
+      // Get categories for filter
+      const categories = await mysqlSequelize.query(
+        `SELECT DISTINCT p.category, COUNT(*) as cnt
+         FROM imageurls i JOIN POI p ON p.id = i.poi_id
+         WHERE p.destination_id = ? AND i.local_path IS NOT NULL
+         GROUP BY p.category ORDER BY cnt DESC`,
+        { replacements: [destId], type: QueryTypes.SELECT }
+      );
+
+      res.json({
+        success: true,
+        data: images,
+        meta: { page, limit, total: parseInt(countRow.total), totalPages: Math.ceil(countRow.total / limit) },
+        filters: { categories }
+      });
+    } catch (err) {
+      console.error("[Media] POI images error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch POI images" } });
+    }
+  });
+
+
+  // ── W2: Context Intelligence Search ──
+
+  // POST /media/search/context — Context-aware media search
+  router.post("/search/context", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.body.destination_id || req.headers["x-destination-id"]);
+      const { weather_conditions, seasons, time_of_day, persona_fit, content_purposes, event_relevance } = req.body;
+      const lim = parseInt(req.body.limit) || 12;
+      const conditions = ["m.destination_id = ?"];
+      const params = [destId];
+      if (weather_conditions && weather_conditions.length) { conditions.push("JSON_CONTAINS(m.weather_conditions, ?)"); params.push(JSON.stringify(weather_conditions)); }
+      if (seasons && seasons.length) { conditions.push("JSON_CONTAINS(m.seasons, ?)"); params.push(JSON.stringify(seasons)); }
+      if (time_of_day) { conditions.push("m.time_of_day = ?"); params.push(time_of_day); }
+      if (persona_fit && persona_fit.length) { conditions.push("JSON_CONTAINS(m.persona_fit, ?)"); params.push(JSON.stringify(persona_fit)); }
+      if (content_purposes && content_purposes.length) { conditions.push("JSON_CONTAINS(m.content_purposes, ?)"); params.push(JSON.stringify(content_purposes)); }
+      if (event_relevance && event_relevance.length) { conditions.push("JSON_CONTAINS(m.event_relevance, ?)"); params.push(JSON.stringify(event_relevance)); }
+      conditions.push("m.media_type = 'image'");
+      conditions.push("m.ai_processed = 1");
+      params.push(lim);
+      const sql = `SELECT m.id as media_id, m.filename, m.alt_text_en, m.weather_conditions, m.seasons, m.time_of_day, m.persona_fit, m.content_purposes, CONCAT('/media-files/', m.destination_id, '/', m.filename) as thumbnail_url FROM media m WHERE ${conditions.join(" AND ")} ORDER BY m.id DESC LIMIT ?`;
+      const results = await mysqlSequelize.query(sql, { replacements: params, type: QueryTypes.SELECT });
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Context search error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Context search failed" } });
+    }
+  });
+
+
+  // ── W3: Content-Gaps (from chatbot visual queries) ──
+
+  // GET /media/content-gaps — Top POIs with missing media from chatbot queries
+  router.get("/content-gaps", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const results = await mysqlSequelize.query(
+        `SELECT cvq.poi_id, p.name as poi_name, p.category,
+                COUNT(*) as query_count,
+                SUM(cvq.had_good_match = 0) as no_match_count,
+                ROUND(SUM(cvq.had_good_match = 0) / COUNT(*) * 100) as gap_percentage
+         FROM chatbot_visual_queries cvq
+         LEFT JOIN POI p ON p.id = cvq.poi_id
+         WHERE cvq.destination_id = ? AND cvq.poi_id IS NOT NULL
+         GROUP BY cvq.poi_id
+         HAVING no_match_count > 0
+         ORDER BY no_match_count DESC
+         LIMIT ?`,
+        { replacements: [destId, limit], type: QueryTypes.SELECT }
+      );
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Content-gaps error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch content gaps" } });
+    }
+  });
+
+
+  // ── W4: Content Readiness Report ──
+
+  // GET /media/readiness — 7-day content readiness timeline
+  router.get("/readiness", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const days = parseInt(req.query.days) || 7;
+      const report = await getReadinessReport(destId, Math.min(days, 30));
+      res.json({ success: true, data: report });
+    } catch (err) {
+      console.error("[Media] Readiness report error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Readiness report failed" } });
+    }
+  });
+
+
+  // ── W5: Revenue Attribution endpoints ──
+
+  // GET /media/revenue-top — Top revenue-generating media
+  router.get("/revenue-top", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const results = await getRevenueTop(destId, limit);
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Revenue top error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch revenue top" } });
+    }
+  });
+
+  // GET /media/:id/revenue — Revenue attribution for a single media item
+  router.get("/:id/revenue", adminAuth("editor"), async (req, res) => {
+    try {
+      const months = parseInt(req.query.months) || 12;
+      const data = await getMediaRevenue(parseInt(req.params.id), months);
+      const totalRevenue = data.reduce((sum, d) => sum + (d.revenue_cents || 0), 0);
+      const totalBookings = data.reduce((sum, d) => sum + (d.bookings || 0), 0);
+      res.json({ success: true, data: { months: data, total_revenue_cents: totalRevenue, total_bookings: totalBookings } });
+    } catch (err) {
+      console.error("[Media] Revenue fetch error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch revenue" } });
+    }
+  });
+
+
+  // ── W1: Media Performance endpoints (MUST be before /:id catch-all) ──
+
+  // GET /media/top-performers — Top performing media for a destination
+  router.get("/top-performers", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const days = parseInt(req.query.days) || 90;
+      const results = await getTopPerformers(destId, limit, days);
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Top performers error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch top performers" } });
+    }
+  });
+
+  // GET /media/:id/performance — Performance stats for a single media item
+  router.get("/:id/performance", adminAuth("editor"), async (req, res) => {
+    try {
+      const perf = await getMediaPerformance(parseInt(req.params.id));
+      if (!perf) return res.json({ success: true, data: { performance_score: 0, total_uses: 0, usedIn: [] } });
+      res.json({ success: true, data: perf });
+    } catch (err) {
+      console.error("[Media] Performance fetch error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch performance" } });
     }
   });
 

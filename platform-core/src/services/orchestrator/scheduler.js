@@ -385,6 +385,24 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-sources-health-check (monthly 1st 06:00)');
 
+  // W3: Content Gap Detector — weekly Monday 07:00
+  await scheduledQueue.add('content-gap-detector', { type: 'content-gap-detector' }, {
+    repeat: { cron: '0 7 * * 1', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+
+  // W4: Content Readiness Analyzer — daily 06:00
+  await scheduledQueue.add('content-readiness-analyzer', { type: 'content-readiness-analyzer' }, {
+    repeat: { cron: '0 6 * * *', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+
+  // W5: Media Revenue Attribution — monthly 1st of month 04:00
+  await scheduledQueue.add('media-revenue-attribution', { type: 'media-revenue-attribution' }, {
+    repeat: { cron: '0 4 1 * *', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);
