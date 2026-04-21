@@ -1301,6 +1301,19 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           break;
         }
 
+        case 'content-readiness-analyzer': {
+          const { getReadinessReport, storeReport } = await import('../media/contentReadinessService.js');
+          const rdDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          for (const dest of rdDests) {
+            const report = await getReadinessReport(dest.id, 7);
+            await storeReport(dest.id, report);
+          }
+          console.log('[Orchestrator] Content readiness reports generated for ' + rdDests.length + ' destinations');
+          result = { type: 'content-readiness-analyzer', destinations: rdDests.length };
+          break;
+        }
+
+
         case 'content-gap-detector': {
           const gapDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
           let gapTotal = 0;

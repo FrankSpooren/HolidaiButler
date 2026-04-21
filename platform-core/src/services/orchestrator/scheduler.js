@@ -391,6 +391,12 @@ export async function initializeScheduler() {
     removeOnComplete: true,
   });
 
+  // W4: Content Readiness Analyzer — daily 06:00
+  await scheduledQueue.add('content-readiness-analyzer', { type: 'content-readiness-analyzer' }, {
+    repeat: { cron: '0 6 * * *', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+
   // Verify all jobs are scheduled
   const jobs = await scheduledQueue.getRepeatableJobs();
   console.log('[Orchestrator] Total scheduled jobs:', jobs.length);

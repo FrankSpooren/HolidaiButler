@@ -13,6 +13,7 @@ import logger from '../utils/logger.js';
 import mediaService from '../services/media/mediaService.js';
 import { mediaProcessingQueue } from '../services/orchestrator/queues.js';
 import { getTopPerformers, getMediaPerformance } from '../services/media/mediaPerformanceService.js';
+import { getReadinessReport } from '../services/media/contentReadinessService.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -185,6 +186,22 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     } catch (err) {
       console.error("[Media] Content-gaps error:", err.message);
       res.status(500).json({ success: false, error: { message: "Failed to fetch content gaps" } });
+    }
+  });
+
+
+  // ── W4: Content Readiness Report ──
+
+  // GET /media/readiness — 7-day content readiness timeline
+  router.get("/readiness", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const days = parseInt(req.query.days) || 7;
+      const report = await getReadinessReport(destId, Math.min(days, 30));
+      res.json({ success: true, data: report });
+    } catch (err) {
+      console.error("[Media] Readiness report error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Readiness report failed" } });
     }
   });
 
