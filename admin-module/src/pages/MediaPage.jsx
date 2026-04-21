@@ -41,6 +41,7 @@ export default function MediaPage() {
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [view, setView] = useState('grid');
+  const [density, setDensity] = useState(() => localStorage.getItem('hb-media-density') || 'default');
   const [sort, setSort] = useState('created_at');
   const [order, setOrder] = useState('desc');
   const [tab, setTab] = useState(0);
@@ -200,6 +201,13 @@ export default function MediaPage() {
   const getUrl = (file) => `${apiUrl}${file.url}`;
   const isImageFile = (file) => file.mime_type?.startsWith('image/');
 
+  const handleDensityChange = (val) => {
+    setDensity(val);
+    localStorage.setItem('hb-media-density', val);
+  };
+
+  const densityCols = density === 'compact' ? 6 : density === 'comfortable' ? 3 : 4;
+
   // X1: Keyboard navigation for media grid
   const [focusIndex, setFocusIndex] = useState(-1);
   const mediaItems = data?.data?.files || data?.data || [];
@@ -328,6 +336,7 @@ export default function MediaPage() {
           {/* Media grid */}
           <MediaGrid
             focusIndex={focusIndex}
+            cols={densityCols}
             items={files}
             view={view}
             selected={selected}
