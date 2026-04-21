@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.57.0
-> **Laatst bijgewerkt**: 21 april 2026
+> **Versie**: 4.58.0
+> **Laatst bijgewerkt**: 22 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -356,7 +356,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Content Studio Redesign | v4.36.0 (Opdracht 1-4 + Blog + Kwaliteit) | ✅ COMPLEET | apr 2026 |
 | Studio Landing Upgrade | v4.42.0 (7 opdrachten dark theme redesign + i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | PubliQio Branding & Polish | v4.43.0 (10 opdrachten branding + mockup + dark popups + privacy + per-user taal) | ✅ COMPLEET | apr 2026 |
-| Corporate Landing Page | v4.44.0 (9 opdrachten: hero, badges, modules, stats, proces, showcase, EU-stack, CTA, i18n 5 talen, mobiel UX) | ✅ COMPLEET | apr 2026 |
+| Corporate Landing Page | v4.44.0 (9 opdrachten) + **v4.58.0 Enterprise Upgrade v5.1** (8 opdrachten: outcome-first CTA, 12 modules, 6 stats, flywheel, USP spotlight, EU-stack 8 providers, compliance, i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
@@ -368,7 +368,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.57.0 |
+| CLAUDE.md | v4.58.0 |
 | Master Strategie | v8.15 |
 
 ---
@@ -818,6 +818,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.58.0** | **2026-04-22** | **Corporate Landing Page Enterprise Upgrade — Command v5.1 (8 opdrachten)**. **Opdracht 1**: Outcome-first hero-CTA ("Van bezoeker tot beleving – volledig geautomatiseerd.") + subtekst met "media" in opsomming, 5 talen. **Opdracht 2**: Module-grid 9 → 12 cards, "Media Library" herschreven tot **"Tourism Media Intelligence"** met 5 USP’s als proof-points. Nieuwe cards: Commerce Suite, Page Builder, Merk Profiel & Knowledge Base, Merk-Branding, EU-First Infra, Enterprise Compliance. **Opdracht 3**: Stats-balk 5 → 6 stats met actuele waarden (303 endpoints, 78 jobs, 144k+ vectoren, 36+ blocks, 25 agents, 100+ talen). **Opdracht 4**: Lineair 3-fase proces vervangen door **HolidaiButler Flywheel** — 5 fasen + learning loop met 6 concrete cadence-mechanismen (Trendspotter, Content Feedback, Performance-Learning Media, Content-Gap Detector, Predictive Supply Chain, Revenue Attribution). Desktop horizontaal grid + mobile collapsible details. KPI’s uitsluitend in fase 4 met bronverwijzingen (HubSpot/Statista/ETC). **Opdracht 5**: USP Spotlight-sectie — 5 wereldwijd unieke Tourism Media Intelligence-capabilities + sales-punch. **Opdracht 6**: EU-Stack 6 → 8 providers (+Bugsink NL, +MailerLite LT). **Opdracht 7**: Enterprise Compliance sectie (4 pijlers: GDPR / EU AI Act / WCAG 2.1 AA / Beveiliging) + trust-signals balk. **Opdracht 8**: i18n ~244 keys × 5 talen compleet, QA, documentatie-sync. Bestanden: `index.html` (1.276 LOC), `i18n.js` (347 LOC). npm audit fix: 17 → 5 vulnerabilities (low only). Duplicate `platform-core/CLAUDE.md` verwijderd. |
 | **4.54.0** | **2026-04-20** | **Corporate UX Upgrade Command v4.0 — Opdracht 8+11-15 (7 opdrachten)**. **Opdracht 8**: Sidebar herstructurering (corporate grouping, badges, collapse icon-only mode). **Opdracht 11**: Kalender Corporate Polish (mini-kalender sidebar, keyboard nav t/arrows/1-2-3, workload indicator, platform/pillar/status filters, CSV/ICS export, print view). **Opdracht 12**: Analytics herstructurering (Content tab in Analytics, Rapport sub-tab verwijderd, Analytics sidebar-link hersteld). **Frank feedback**: Platform Dashboard (personaliseerbare KPI widgets, 7d/30d/90d delta badges, destination-scoped data, klikbare blokken). Conditional sidebar (adminOnly/studioOnly). **Opdracht 13**: Onboarding Widget Intercom-stijl (persistent cirkel rechtsonder, 6-10 context-afhankelijke stappen, NotificationsCenter integratie, toggle steps, session dismiss, createPortal). **Opdracht 14**: Performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB, Cache-Control headers, sourcemaps disabled). **Opdracht 15**: WCAG 2.1 AA (21 fixes: 16 aria-labels, 5 keyboard access). +6 endpoints (295 totaal), +4 onboarding endpoints, +1 content/report, +1 analytics/report. 74 BullMQ jobs. |
 | **4.53.0** | **2026-04-19** | **Content Items Enterprise Density + ConceptDialog Focus Mode (Command v4.0 Opdracht 9+10)**. **Opdracht 9**: Density toggle (3 modes, localStorage), column visibility popover, keyboard nav (j/k/Enter/x/Shift+A) met shortcuts popover + Ctrl+K link, sticky table header, 15-rij skeleton loading, enhanced empty state, inline titel editing (dubbelklik, PATCH /content/concepts/:id), row hover actie-iconen, status chips dark-mode-safe (Material 300-reeks), Type kolom toont content_type i.p.v. source_type, table-layout fixed. **Opdracht 10**: Full-screen toggle (F key + button), auto-save draft 10s, keyboard shortcuts (Ctrl+S/Enter/P, F, Esc), unsaved changes indicator (3-state chip), beforeunload warning, Dialog onClose met confirm. **CORS**: publiqio.com in Apache allowlist. +1 endpoint (289 totaal). 4 bestanden. Commit 35eadba. |
 | **4.44.2** | **2026-04-12** | **AI Vision model migratie: pixtral-12b-2409 (deprecated) → mistral-medium-latest**. Alle image tagging, alt-text generatie en visuele analyse draait nu op hetzelfde model als content generatie en vertalingen — single model strategy. Model-string via ENV variabele (MISTRAL_VISION_MODEL) zodat toekomstige wisselingen geen code-deploy vereisen. BullMQ media-processing queue fix: statische import stond in JSDoc comment block (nooit geëxecuteerd), upload triggerde geen automatische AI tagging pipeline. Nu dynamische import, full_pipeline (thumbnails + quality + pHash + AI tags) draait automatisch bij upload. 2 bestanden gewijzigd (mediaProcessingWorker.js, mediaRoutes.js) + .env. |
