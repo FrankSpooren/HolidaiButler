@@ -44,9 +44,9 @@ export default function MediaPage() {
   const [density, setDensity] = useState(() => localStorage.getItem('hb-media-density') || 'default');
   const [sort, setSort] = useState('created_at');
   const [order, setOrder] = useState('desc');
-  const [searchParams] = typeof useSearchParams === 'function' ? useSearchParams() : [new URLSearchParams()];
+  const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => {
-    const t = searchParams?.get?.('tab');
+    const t = searchParams.get('tab');
     return t ? parseInt(t) : 0;
   });
   const [page, setPage] = useState(1);
