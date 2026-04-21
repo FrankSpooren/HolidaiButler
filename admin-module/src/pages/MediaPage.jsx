@@ -44,7 +44,11 @@ export default function MediaPage() {
   const [density, setDensity] = useState(() => localStorage.getItem('hb-media-density') || 'default');
   const [sort, setSort] = useState('created_at');
   const [order, setOrder] = useState('desc');
-  const [tab, setTab] = useState(0);
+  const [searchParams] = typeof useSearchParams === 'function' ? useSearchParams() : [new URLSearchParams()];
+  const [tab, setTab] = useState(() => {
+    const t = searchParams?.get?.('tab');
+    return t ? parseInt(t) : 0;
+  });
   const [page, setPage] = useState(1);
   const [visualQuery, setVisualQuery] = useState('');
   const [selected, setSelected] = useState(new Set());
@@ -218,6 +222,7 @@ export default function MediaPage() {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
       const cols = 4; // grid columns
+      if (tab !== 0) return; // keyboard nav only on main grid tab
       const len = mediaItems.length;
       if (!len) return;
 
@@ -257,7 +262,7 @@ export default function MediaPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [focusIndex, mediaItems, selected]);
+  }, [focusIndex, mediaItems, selected, tab]);
 
     return (
     <Box sx={{ p: 3 }}>
@@ -294,6 +299,18 @@ export default function MediaPage() {
             onFilterClick={() => setFilterOpen(true)}
             onUploadClick={handleUploadClick}
           />
+
+          {/* Density toggle */}
+          <Box sx={{ display: 'flex', gap: 0.5, mb: 1, alignItems: 'center' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Weergave:</Typography>
+            {[{k:'compact',l:'Compact'},{k:'default',l:'Normaal'},{k:'comfortable',l:'Groot'}].map(d => (
+              <Chip key={d.k} label={d.l} size="small"
+                variant={density === d.k ? 'filled' : 'outlined'}
+                color={density === d.k ? 'primary' : 'default'}
+                onClick={() => handleDensityChange(d.k)}
+                sx={{ cursor: 'pointer', fontSize: '0.75rem' }} />
+            ))}
+          </Box>
 
           {/* Bulk actions bar */}
           {files.length > 0 && (
