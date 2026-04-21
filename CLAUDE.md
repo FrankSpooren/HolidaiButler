@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.54.0
-> **Laatst bijgewerkt**: 20 april 2026
+> **Versie**: 4.57.0
+> **Laatst bijgewerkt**: 21 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -361,15 +361,15 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 295 |
+| Admin endpoints | 303 |
 | adminPortal.js | v3.47.0 |
 | Agents | 25 |
-| BullMQ jobs | 74 |
+| BullMQ jobs | 78 |
 | Block types | 36 (+ aliassen, +blog_grid) |
 | Block editors | 37 (+BlogGridEditor) |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.54.0 |
-| Master Strategie | v8.14 |
+| CLAUDE.md | v4.57.0 |
+| Master Strategie | v8.15 |
 
 ---
 
@@ -844,7 +844,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.14 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.15 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

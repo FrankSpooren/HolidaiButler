@@ -141,23 +141,55 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
               <Box component="audio" src={fileUrl} controls sx={{ width: '100%', maxWidth: 400 }} />
             </Box>
           ) : (media?.media_type === 'gpx' || (media?.original_name || '').toLowerCase().endsWith('.gpx')) ? (
-            <Box sx={{ textAlign: 'center', p: 4 }}>
-              <Box sx={{ fontSize: 64, mb: 1 }}>🗺️</Box>
-              <Typography variant="h6" color="text.secondary">{media?.original_name || 'GPX Route'}</Typography>
-              {media?.location_lat && media?.location_lng && (
-                <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
-                  📍 {Number(media.location_lat).toFixed(4)}, {Number(media.location_lng).toFixed(4)}
-                </Typography>
+            <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+              {media?.route_geojson ? (() => {
+                let geojson;
+                try { geojson = typeof media.route_geojson === 'string' ? JSON.parse(media.route_geojson) : media.route_geojson; } catch { geojson = null; }
+                if (!geojson?.geometry?.coordinates?.length) return (
+                  <Box sx={{ textAlign: 'center', p: 4 }}>
+                    <Box sx={{ fontSize: 64, mb: 1 }}>🗺️</Box>
+                    <Typography color="text.secondary">Geen route data</Typography>
+                  </Box>
+                );
+                const coords = geojson.geometry.coordinates;
+                const bounds = geojson.properties?.bounds || {};
+                const centerLat = (bounds.minLat + bounds.maxLat) / 2 || coords[0][1];
+                const centerLng = (bounds.minLng + bounds.maxLng) / 2 || coords[0][0];
+                const leafletCoords = JSON.stringify(coords.map(c => [c[1], c[0]]));
+                const mapHtml = `<!DOCTYPE html><html><head>
+                  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+                  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+                  <style>html,body,#map{margin:0;padding:0;width:100%;height:100%}</style>
+                  </head><body><div id="map"></div><script>
+                  var map=L.map('map');
+                  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OSM'}).addTo(map);
+                  var coords=${leafletCoords};
+                  var line=L.polyline(coords,{color:'#02C39A',weight:4}).addTo(map);
+                  map.fitBounds(line.getBounds(),{padding:[20,20]});
+                  L.marker(coords[0]).addTo(map).bindPopup('Start');
+                  L.marker(coords[coords.length-1]).addTo(map).bindPopup('Einde');
+                  <\/script></body></html>`;
+                return <iframe srcDoc={mapHtml} style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }} title="GPX Route" />;
+              })() : (
+                <Box sx={{ textAlign: 'center', p: 4 }}>
+                  <Box sx={{ fontSize: 64, mb: 1 }}>🗺️</Box>
+                  <Typography variant="h6" color="text.secondary">{media?.original_name || 'GPX Route'}</Typography>
+                  {media?.location_lat && media?.location_lng && (
+                    <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>
+                      📍 {Number(media.location_lat).toFixed(4)}, {Number(media.location_lng).toFixed(4)}
+                    </Typography>
+                  )}
+                  <Chip label="GPX" size="small" color="info" sx={{ mt: 1 }} />
+                </Box>
               )}
-              <Chip label="GPX" size="small" color="info" sx={{ mt: 1 }} />
             </Box>
           ) : media?.media_type === 'pdf' ? (
-            <Box sx={{ textAlign: 'center', p: 4 }}>
-              <Box sx={{ fontSize: 64, mb: 1 }}>📄</Box>
-              <Typography variant="h6" color="text.secondary">{media?.original_name || 'PDF'}</Typography>
-              <Chip label="PDF" size="small" color="warning" sx={{ mt: 1 }} />
-              <Box sx={{ mt: 2 }}>
-                <a href={fileUrl} target="_blank" rel="noopener" style={{ color: 'inherit' }}>
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Box component="iframe" src={fileUrl} sx={{ flex: 1, width: '100%', border: 'none', borderRadius: 1, bgcolor: '#fff' }} title={media?.original_name || 'PDF'} />
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
+                <Chip label="PDF" size="small" color="warning" />
+                <Chip label={media?.original_name || 'Document'} size="small" variant="outlined" />
+                <a href={fileUrl} target="_blank" rel="noopener" style={{ color: 'inherit', fontSize: '0.75rem', textDecoration: 'underline', alignSelf: 'center' }}>
                   Openen in nieuw tabblad ↗
                 </a>
               </Box>
