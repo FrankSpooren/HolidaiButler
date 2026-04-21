@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 20 april 2026
-**Versie**: 8.14
+**Datum**: 21 april 2026
+**Versie**: 8.15
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1630,7 +1630,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **8.14** | **2026-04-20** | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 295 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
+| **8.14** | **2026-04-20** | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 303 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
 | 8.13 | 2026-04-18 | PubliQio Content Studio Polish v4.52.0: 12 opdrachten, Content Top 25 overzicht, 5 UX bugfixes, kalender dag/week, i18n 5 talen, health-check job. 282 endpoints, 74 jobs. |
 | 8.12 | 2026-04-15 | PubliQio Content Bronnen v4.51.0: 19 opdrachten, 6 sub-tabs, 7 BullMQ jobs, visual discovery pipeline, GSC integratie. 279 endpoints, 72 jobs. |
 | **8.04** | **09-04-2026** | **PubliQio Landing Page Polish & Branding (v4.43.0)**. PubliQioText component (9 locaties), 7e USP, ConceptMockup herbouwd, mobiele progressive disclosure, taalswitch vlaggen, login+demo dark theme, PrivacyPage GDPR, admin sidebar branding, per-user voorkeurstaal (preferred_language + PATCH endpoint). 252 endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.43.0. |
@@ -1741,4 +1741,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 20 april 2026 — Corporate UX Upgrade (v4.54.0): sidebar, kalender, analytics, dashboard, onboarding widget, performance, WCAG. 295 endpoints, adminPortal.js v3.47.0. 74 scheduled jobs. 25 agents. CLAUDE.md v4.54.0. MS v8.14.*
+*Laatst bijgewerkt: 21 april 2026 — Corporate UX Upgrade (v4.54.0): sidebar, kalender, analytics, dashboard, onboarding widget, performance, WCAG. 303 endpoints, adminPortal.js v3.47.0. 78 scheduled jobs. 25 agents. CLAUDE.md v4.57.0. MS v8.15.*
