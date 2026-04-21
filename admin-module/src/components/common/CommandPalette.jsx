@@ -78,6 +78,10 @@ const ALL_COMMANDS = [
   // MEDIA (2)
   { id: 'media-upload', label: 'Media uploaden', icon: CloudUpload, path: '/media?action=upload', section: 'Media', keywords: 'upload media afbeelding foto video' },
   { id: 'media-search', label: 'Zoek in media', icon: Search, path: '/media?focus=search', section: 'Media', keywords: 'zoek media afbeeldingen fotos' },
+  { id: 'media-poi', label: 'POI Afbeeldingen', icon: PhotoLibrary, path: '/media?tab=1', section: 'Media', keywords: 'poi afbeeldingen fotos locaties' },
+  { id: 'media-top', label: 'Top performers', icon: TrendingUp, path: '/media?view=top', section: 'Media', keywords: 'top presterende media performance' },
+  { id: 'media-gaps', label: 'Content-gaps', icon: Search, path: '/media?view=gaps', section: 'Media', keywords: 'gaps ontbrekende media chatbot' },
+  { id: 'media-readiness', label: 'Content readiness', icon: CalendarMonth, path: '/media?view=readiness', section: 'Media', keywords: 'readiness planning voorraad' },
 
   // VISUEEL (2)
   { id: 'vis-analyse', label: 'AI Analyse starten', icon: AutoFixHigh, path: '/content-studio', tabIndex: 0, section: 'Visueel', keywords: 'visual trend analyse ai starten' },
