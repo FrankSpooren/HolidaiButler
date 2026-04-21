@@ -14,6 +14,7 @@ import mediaService from '../services/media/mediaService.js';
 import { mediaProcessingQueue } from '../services/orchestrator/queues.js';
 import { getTopPerformers, getMediaPerformance } from '../services/media/mediaPerformanceService.js';
 import { getReadinessReport } from '../services/media/contentReadinessService.js';
+import { getMediaRevenue, getRevenueTop } from '../services/media/mediaAttributionService.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -202,6 +203,36 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
     } catch (err) {
       console.error("[Media] Readiness report error:", err.message);
       res.status(500).json({ success: false, error: { message: "Readiness report failed" } });
+    }
+  });
+
+
+  // ── W5: Revenue Attribution endpoints ──
+
+  // GET /media/revenue-top — Top revenue-generating media
+  router.get("/revenue-top", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const results = await getRevenueTop(destId, limit);
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Revenue top error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch revenue top" } });
+    }
+  });
+
+  // GET /media/:id/revenue — Revenue attribution for a single media item
+  router.get("/:id/revenue", adminAuth("editor"), async (req, res) => {
+    try {
+      const months = parseInt(req.query.months) || 12;
+      const data = await getMediaRevenue(parseInt(req.params.id), months);
+      const totalRevenue = data.reduce((sum, d) => sum + (d.revenue_cents || 0), 0);
+      const totalBookings = data.reduce((sum, d) => sum + (d.bookings || 0), 0);
+      res.json({ success: true, data: { months: data, total_revenue_cents: totalRevenue, total_bookings: totalBookings } });
+    } catch (err) {
+      console.error("[Media] Revenue fetch error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch revenue" } });
     }
   });
 
