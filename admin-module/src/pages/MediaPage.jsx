@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, Chip, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Snackbar, TextField, FormControl, InputLabel,
@@ -200,7 +200,58 @@ export default function MediaPage() {
   const getUrl = (file) => `${apiUrl}${file.url}`;
   const isImageFile = (file) => file.mime_type?.startsWith('image/');
 
-  return (
+  // X1: Keyboard navigation for media grid
+  const [focusIndex, setFocusIndex] = useState(-1);
+  const mediaItems = data?.data?.files || data?.data || [];
+
+  useEffect(() => {
+    const handler = (e) => {
+      // Don't capture when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+      const cols = 4; // grid columns
+      const len = mediaItems.length;
+      if (!len) return;
+
+      switch (e.key) {
+        case 'ArrowRight': case 'j':
+          e.preventDefault();
+          setFocusIndex(prev => Math.min(prev + 1, len - 1));
+          break;
+        case 'ArrowLeft': case 'k':
+          e.preventDefault();
+          setFocusIndex(prev => Math.max(prev - 1, 0));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setFocusIndex(prev => Math.min(prev + cols, len - 1));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setFocusIndex(prev => Math.max(prev - cols, 0));
+          break;
+        case 'Enter':
+          if (focusIndex >= 0 && focusIndex < len) {
+            setDetailOpen(mediaItems[focusIndex]);
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          if (focusIndex >= 0 && focusIndex < len) {
+            toggleSelect(mediaItems[focusIndex].id);
+          }
+          break;
+        case 'Escape':
+          if (selected.length > 0) { setSelected ? setSelected([]) : null; }
+          else { setFocusIndex(-1); }
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [focusIndex, mediaItems, selected]);
+
+    return (
     <Box sx={{ p: 3 }}>
       {/* Page title + destination selector */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -276,6 +327,7 @@ export default function MediaPage() {
 
           {/* Media grid */}
           <MediaGrid
+            focusIndex={focusIndex}
             items={files}
             view={view}
             selected={selected}
