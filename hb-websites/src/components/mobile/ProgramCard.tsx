@@ -616,11 +616,11 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm md:hidden">
+      <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm md:hidden" style={{ minHeight: 340 }}>
         <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mb-4" />
-        {[1, 2, 3].map(i => (
-          <div key={i} className="flex gap-3 mb-4">
-            <div className="w-16 h-16 bg-gray-200 rounded-xl animate-pulse flex-shrink-0" />
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="flex gap-3 mb-3">
+            <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse flex-shrink-0" />
             <div className="flex-1">
               <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse mb-2" />
               <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
@@ -635,7 +635,7 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
 
   return (
     <div ref={sectionRef} className={forceShow ? '' : 'md:hidden'}>
-      <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left">
+      <div className="bg-white rounded-2xl p-5 mx-4 shadow-sm w-[calc(100%-2rem)] text-left" style={{ minHeight: 340 }}>
         <h3
           className="text-sm font-bold tracking-wider mb-4"
           style={{ fontFamily: "var(--hb-font-body), sans-serif", color: '#5E8B7E', fontStyle: 'normal', textTransform: 'uppercase' }}

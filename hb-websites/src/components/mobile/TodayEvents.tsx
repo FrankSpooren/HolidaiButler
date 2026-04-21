@@ -134,11 +134,11 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
 
   if (loading) {
     return (
-      <div className="md:hidden px-4">
+      <div className="md:hidden px-4" style={{ minHeight: 120 }}>
         <div className="h-5 w-40 bg-gray-200 rounded animate-pulse mb-3" />
         <div className="flex gap-3 overflow-hidden">
           {[1, 2, 3].map(i => (
-            <div key={i} className="flex-shrink-0 w-36 h-24 bg-gray-200 rounded-xl animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-40 h-24 bg-gray-200 rounded-xl animate-pulse" />
           ))}
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function TodayEvents({ locale, destinationName = 'Calpe', destina
   }
 
   return (
-    <div ref={sectionRef} className="md:hidden">
+    <div ref={sectionRef} className="md:hidden" style={{ minHeight: 120 }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-3">
         <h3 className="text-base font-bold text-gray-800">
