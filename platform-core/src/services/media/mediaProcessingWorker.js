@@ -194,10 +194,10 @@ async function aiTag(media, filePath) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
-            { type: 'text', text: 'Analyze this image and return a JSON array of 5-15 descriptive tags in English. Include: objects, scene type, mood, colors, setting. Return ONLY a JSON array like ["beach","sunset","ocean","warm","tropical"]. No other text.' }
+            { type: 'text', text: 'Analyze this image and return a JSON object with these exact keys: 1) "tags": array of 5-15 descriptive tags in English (objects, scene, mood, colors, setting). 2) "alt_text_en": concise alt-text in English (max 120 chars). 3) "alt_text_nl": same in Dutch. 4) "alt_text_de": same in German. 5) "alt_text_es": same in Spanish. 6) "alt_text_fr": same in French. Return ONLY valid JSON like: {"tags":["beach","sunset"],"alt_text_en":"Sandy beach at sunset","alt_text_nl":"Zandstrand bij zonsondergang","alt_text_de":"Sandstrand bei Sonnenuntergang","alt_text_es":"Playa al atardecer","alt_text_fr":"Plage au coucher du soleil"}' }
           ]
         }],
-        max_tokens: 200,
+        max_tokens: 500,
         temperature: 0.1
       })
     });
@@ -206,16 +206,44 @@ async function aiTag(media, filePath) {
     const result = await response.json();
     const text = result.choices?.[0]?.message?.content || '[]';
 
-    // Parse tags from response
-    const match = text.match(/\[[\s\S]*\]/);
-    const tags = match ? JSON.parse(match[0]) : [];
+    // Parse structured response (tags + alt-text 5 languages)
+    let parsed;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    } catch { parsed = null; }
 
-    if (tags.length > 0) {
+    // Fallback: if response is just an array (old format)
+    if (!parsed) {
+      const arrMatch = text.match(/\[[\s\S]*\]/);
+      const tags = arrMatch ? JSON.parse(arrMatch[0]) : [];
+      if (tags.length > 0) {
+        await mysqlSequelize.query(
+          'UPDATE media SET tags_ai = ?, ai_processed = 1 WHERE id = ?',
+          { replacements: [JSON.stringify(tags), media.id] }
+        );
+      }
+      return;
+    }
+
+    const tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+    const updates = [];
+    const params = [];
+    if (tags.length > 0) { updates.push('tags_ai = ?'); params.push(JSON.stringify(tags)); }
+    if (parsed.alt_text_en) { updates.push('alt_text_en = ?'); params.push(parsed.alt_text_en.substring(0, 500)); }
+    if (parsed.alt_text_nl) { updates.push('alt_text_nl = ?'); params.push(parsed.alt_text_nl.substring(0, 500)); }
+    if (parsed.alt_text_de) { updates.push('alt_text_de = ?'); params.push(parsed.alt_text_de.substring(0, 500)); }
+    if (parsed.alt_text_es) { updates.push('alt_text_es = ?'); params.push(parsed.alt_text_es.substring(0, 500)); }
+    if (parsed.alt_text_fr) { updates.push('alt_text_fr = ?'); params.push(parsed.alt_text_fr.substring(0, 500)); }
+    updates.push('ai_processed = 1');
+    params.push(media.id);
+
+    if (updates.length > 1) {
       await mysqlSequelize.query(
-        'UPDATE media SET tags_ai = ?, ai_processed = 1 WHERE id = ?',
-        { replacements: [JSON.stringify(tags), media.id] }
+        `UPDATE media SET ${updates.join(', ')} WHERE id = ?`,
+        { replacements: params }
       );
-      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags`);
+      console.log(`[MediaProcessing] AI tagged media ${media.id}: ${tags.length} tags + alt-text 5 langs`);
     }
   } catch (err) {
     console.warn(`[MediaProcessing] AI tagging failed for ${media.id}:`, err.message);
@@ -251,12 +279,43 @@ async function processVideo(media, filePath) {
       { timeout: 60000 }
     );
 
+    // Aspect ratio detection: 9:16 portrait → reel
+    let mediaType = 'video';
+    if (width && height && height > width && (height / width) >= 1.5) {
+      mediaType = 'reel';
+    }
+
     await mysqlSequelize.query(
-      'UPDATE media SET width = ?, height = ?, duration_seconds = ? WHERE id = ?',
-      { replacements: [width, height, duration, media.id] }
+      'UPDATE media SET width = ?, height = ?, duration_seconds = ?, media_type = ? WHERE id = ?',
+      { replacements: [width, height, duration, mediaType, media.id] }
     );
 
-    console.log(`[MediaProcessing] Video processed: ${width}x${height}, ${Math.round(duration)}s, media ${media.id}`);
+    // MOV/WebM → MP4 normalization (H.264 baseline for universal playback)
+    const ext = path.extname(filePath).toLowerCase();
+    if (['.mov', '.webm', '.avi', '.mkv'].includes(ext)) {
+      const mp4Path = filePath.replace(/\.[^.]+$/, '.mp4');
+      try {
+        await execAsync(
+          `ffmpeg -y -i "${filePath}" -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -c:a aac -movflags +faststart "${mp4Path}"`,
+          { timeout: 300000 }
+        );
+        // Update filename in DB
+        const newFilename = media.filename.replace(/\.[^.]+$/, '.mp4');
+        await mysqlSequelize.query(
+          'UPDATE media SET filename = ?, mime_type = ? WHERE id = ?',
+          { replacements: [newFilename, 'video/mp4', media.id] }
+        );
+        // Remove original if different path
+        if (mp4Path !== filePath && fs.existsSync(mp4Path)) {
+          fs.unlinkSync(filePath);
+        }
+        console.log(`[MediaProcessing] Video normalized: ${ext} → .mp4, media ${media.id}`);
+      } catch (normErr) {
+        console.warn(`[MediaProcessing] Video normalization failed for ${media.id}:`, normErr.message);
+      }
+    }
+
+    console.log(`[MediaProcessing] Video processed: ${width}x${height}, ${Math.round(duration)}s, type=${mediaType}, media ${media.id}`);
   } catch (err) {
     console.warn(`[MediaProcessing] Video processing failed for ${media.id}:`, err.message);
   }
@@ -301,12 +360,30 @@ async function processGpx(media, filePath) {
       const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
       const centerLng = (Math.min(...lons) + Math.max(...lons)) / 2;
 
+      // Build GeoJSON LineString for Leaflet rendering
+      const coordinates = [];
+      for (let i = 0; i < Math.min(lats.length, lons.length); i++) {
+        coordinates.push([lons[i], lats[i]]);
+      }
+      const geojson = JSON.stringify({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates },
+        properties: {
+          name: media.original_name || media.filename,
+          points: coordinates.length,
+          bounds: {
+            minLat: Math.min(...lats), maxLat: Math.max(...lats),
+            minLng: Math.min(...lons), maxLng: Math.max(...lons)
+          }
+        }
+      });
+
       await mysqlSequelize.query(
-        'UPDATE media SET location_lat = ?, location_lng = ? WHERE id = ?',
-        { replacements: [centerLat, centerLng, media.id] }
+        'UPDATE media SET location_lat = ?, location_lng = ?, route_geojson = ? WHERE id = ?',
+        { replacements: [centerLat, centerLng, geojson, media.id] }
       );
 
-      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${lats.length} waypoints, media ${media.id}`);
+      console.log(`[MediaProcessing] GPX processed: center ${centerLat.toFixed(4)},${centerLng.toFixed(4)}, ${coordinates.length} waypoints, GeoJSON stored, media ${media.id}`);
     }
   } catch (err) {
     console.warn(`[MediaProcessing] GPX processing failed for ${media.id}:`, err.message);

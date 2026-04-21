@@ -1,7 +1,6 @@
 /**
  * Media Library v2.0 — Express Router
  * 12 endpoints for media CRUD, bulk operations, stats, and duplicate detection.
-import { mediaProcessingQueue } from "../services/orchestrator/queues.js";
  * Mounted from adminPortal.js as: router.use('/media', mediaRouter)
  */
 import express from 'express';
@@ -12,6 +11,7 @@ import { mysqlSequelize } from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import logger from '../utils/logger.js';
 import mediaService from '../services/media/mediaService.js';
+import { mediaProcessingQueue } from '../services/orchestrator/queues.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -423,7 +423,6 @@ router.post('/pexels/import/:pexels_id', adminAuth('editor'), async (req, res) =
 
     // Dispatch processing pipeline
     try {
-      const { mediaProcessingQueue } = await import('../services/orchestrator/queues.js');
       await mediaProcessingQueue.add('process-media', { mediaId: insertId, type: 'full_pipeline' }, { priority: 2 });
     } catch (qErr) { console.warn('[Media] Queue dispatch failed:', qErr.message); }
 
