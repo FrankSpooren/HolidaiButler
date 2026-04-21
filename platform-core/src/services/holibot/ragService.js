@@ -1481,8 +1481,45 @@ class RAGService {
       // Build temporal/location context for context-aware responses (Fase II A.2)
       const contextData = opts.destinationConfig ? contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
       const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null, contextData);
+      const poiCards = this.extractPOICards(combined);
+
+      // W3: Chatbot-Native Media Loop — attach best media for first matched POI
+      let mediaPayload = null;
+      const destId = opts.destinationConfig?.destination?.id || 1;
+      if (poiCards.length > 0) {
+        try {
+          const firstPoiId = poiCards[0]?.id || poiCards[0]?.poiId;
+          if (firstPoiId) {
+            const { QueryTypes } = await import('sequelize');
+            const { mysqlSequelize } = await import('../../config/database.js');
+            // Find best-performing media linked to this POI's images
+            const [bestMedia] = await mysqlSequelize.query(
+              `SELECT m.id, m.filename, m.alt_text_en, m.alt_text_nl, m.destination_id,
+                      CONCAT('/media-files/', m.destination_id, '/', m.filename) as url
+               FROM media m
+               WHERE m.destination_id = ? AND m.ai_processed = 1 AND m.media_type = 'image'
+                 AND (m.tags_ai LIKE ? OR m.alt_text_en LIKE ?)
+               ORDER BY RAND() LIMIT 1`,
+              { replacements: [destId, `%${(poiCards[0]?.name || '').split(' ')[0]}%`, `%${(poiCards[0]?.name || '').split(' ')[0]}%`], type: QueryTypes.SELECT }
+            );
+            const hadGoodMatch = !!bestMedia;
+            mediaPayload = bestMedia ? {
+              media_id: bestMedia.id, url: bestMedia.url,
+              alt_text: bestMedia.alt_text_en, attribution: 'HolidaiButler Media Library'
+            } : null;
+            // Log visual query for gap detection
+            await mysqlSequelize.query(
+              'INSERT INTO chatbot_visual_queries (destination_id, query_text, poi_id, matched_media_id, had_good_match) VALUES (?, ?, ?, ?, ?)',
+              { replacements: [destId, base.substring(0, 500), firstPoiId, bestMedia?.id || null, hadGoodMatch ? 1 : 0] }
+            ).catch(() => {});
+          }
+        } catch (mediaErr) {
+          logger.warn('W3 media lookup failed:', mediaErr.message);
+        }
+      }
+
       return {
-        success: true, message: response, pois: this.extractPOICards(combined),
+        success: true, message: response, pois: poiCards, media: mediaPayload,
         source: isEvent ? "rag-events" : "rag", hasEvents: events.length > 0, searchTimeMs: Date.now()-start,
         fuzzyCorrection: fuzzy.wasCorrection ? fuzzy.suggestionMessage : null,
         spellCorrection: fuzzy.wasCorrection ? {original: fuzzy.originalQuery, corrected: fuzzy.correctedQuery} : null,

@@ -23,6 +23,7 @@ import MediaCollectionsDrawer from '../components/media/MediaCollectionsDrawer.j
 import MediaCollectionDetailDialog from '../components/media/MediaCollectionDetailDialog.jsx';
 import MediaCleanupTab from '../components/media/MediaCleanupTab.jsx';
 import PexelsSearchTab from '../components/media/PexelsSearchTab.jsx';
+import POIImagesTab from '../components/media/POIImagesTab.jsx';
 import useDestinationStore from '../stores/destinationStore.js';
 
 const CATEGORIES = ['all', 'branding', 'pages', 'pois', 'video', 'documents', 'other'];
@@ -289,11 +290,7 @@ export default function MediaPage() {
       )}
 
       {tab === 1 && (
-        <Box sx={{ textAlign: 'center', py: 6 }}>
-          <Typography variant="h6" color="text.secondary">
-            {t('media.poi.placeholder', 'Komt in volgende fase')}
-          </Typography>
-        </Box>
+        <POIImagesTab destId={destId} />
       )}
 
       {tab === 2 && (
