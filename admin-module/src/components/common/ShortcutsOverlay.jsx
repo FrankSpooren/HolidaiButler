@@ -30,6 +30,16 @@ const SHORTCUT_SECTIONS = [
     ],
   },
   {
+    title: 'Media Library',
+    shortcuts: [
+      { keys: ['←', '→'], label: 'Navigeer in media grid' },
+      { keys: ['↑', '↓'], label: 'Rij omhoog/omlaag' },
+      { keys: ['Enter'], label: 'Open media detail' },
+      { keys: ['Space'], label: 'Selecteer/deselecteer' },
+      { keys: ['Esc'], label: 'Wis selectie' },
+    ],
+  },
+  {
     title: 'Systeem',
     shortcuts: [
       { keys: ['\u2318/Ctrl', 'K'], label: 'Command Palette openen' },
