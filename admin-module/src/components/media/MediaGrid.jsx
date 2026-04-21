@@ -40,7 +40,7 @@ function LoadingSkeleton({ view }) {
     );
   }
   return (
-    <ImageList cols={4} gap={8} sx={{ m: 0 }}>
+    <ImageList cols={effectiveCols} gap={8} sx={{ m: 0 }}>
       {items.map(i => (
         <ImageListItem key={i}>
           <Skeleton variant="rectangular" height={view === 'masonry' ? 120 + (i % 3) * 60 : 150} sx={{ borderRadius: 1 }} />
@@ -90,7 +90,7 @@ function ThumbnailItem({ file, isSelected, onSelect, onClick, apiBase }) {
         sx={{
           position: 'absolute', top: 2, left: 2, zIndex: 2,
           bgcolor: 'rgba(255,255,255,0.8)', borderRadius: 0.5,
-          p: 0.25, '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
+          p: 0.25, 'transition': 'transform 200ms ease, box-shadow 200ms ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4, bgcolor: 'rgba(255,255,255,0.95)' },
         }}
       />
       {isImage(file) ? (
@@ -175,7 +175,7 @@ function ListViewRow({ file, isSelected, onSelect, onClick, apiBase, t }) {
 }
 
 export default function MediaGrid({
-  items, view, selected, onSelect, onItemClick, loading, apiBase, onLoadMore, onUploadClick
+  items, view, selected, onSelect, onItemClick, loading, apiBase, onLoadMore, onUploadClick, cols = 4, focusIndex = -1
 }) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -196,7 +196,7 @@ export default function MediaGrid({
   if (loading) return <LoadingSkeleton view={view} />;
   if (!items?.length) return <EmptyState onUpload={onUploadClick} t={t} />;
 
-  const cols = isMobile ? 2 : 4;
+  const effectiveCols = isMobile ? 2 : cols;
   const selectedSet = selected instanceof Set ? selected : new Set(selected || []);
 
   if (view === 'list') {
@@ -241,7 +241,7 @@ export default function MediaGrid({
 
   return (
     <>
-      <ImageList variant={variant} cols={cols} gap={8} sx={{ m: 0 }}>
+      <ImageList variant={variant} cols={effectiveCols} gap={8} sx={{ m: 0 }}>
         {items.map(file => (
           <ThumbnailItem
             key={file.id}
