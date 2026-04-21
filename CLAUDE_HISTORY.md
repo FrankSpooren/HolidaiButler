@@ -7366,3 +7366,33 @@ Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
 - admin-module/src/components/onboarding/OnboardingWidget.jsx (scroll-lock fix)
 - CLAUDE.md (tellingen sync)
 - CLAUDE_HISTORY.md (deze entry)
+
+---
+
+## Media Library v3.0 (21 april 2026)
+
+### Fase V — Basis Verificatie + Media-Types
+- V1: Verificatierapport 20 items (15 PASS, 4 NON-BLOK → herclassificeerd als BLOK)
+- V2: AI pipeline fix (import uit JSDoc!), alt-text 5 talen (135/161 coverage), backfill 94 items
+- V3: Video reel-detectie (9:16→reel), MOV→MP4, GPX GeoJSON, CRITICAL import fix
+- V4: GPX Leaflet map + PDF iframe in MediaDetailDialog
+
+### Fase W — 5 Differentiërende USP's
+- W1: Performance-Learning Loop (media_performance tabel, score 0-10, 2 endpoints)
+- W2: Context Intelligence Engine (6 kolommen: weather/season/time/persona/purpose/event, search endpoint)
+- W3: Chatbot-Native Media Loop (chatbot_visual_queries, media in chat response, content-gap detector)
+- W4: Predictive Content Supply Chain (7-day readiness, gap_level per dag, seasonal matching)
+- W5: Revenue Attribution (engagement-weighted, monthly cron, revenue-top endpoint)
+
+### POI Afbeeldingen Tab
+- Placeholder Komt in volgende fase vervangen door werkende POI image browser
+- 15.660 afbeeldingen, 9 categorie-filters, zoeken op naam/sfeer/beschrijving
+- GET /media/poi-images endpoint (search, category, pagination)
+
+### Tellingen
+- Endpoints: 303 (+8 vs v4.54.0)
+- BullMQ jobs: 78 (+4)
+- 4 nieuwe tabellen: media_performance, chatbot_visual_queries, content_readiness_reports, media_revenue_attribution
+- 6 nieuwe media kolommen: weather_conditions, seasons, time_of_day, persona_fit, content_purposes, event_relevance
+- 5 nieuwe services: mediaPerformanceService, contextReadinessService, mediaAttributionService, contentGapDetector worker, POI images endpoint
+- CLAUDE.md v4.57.0, MS v8.15

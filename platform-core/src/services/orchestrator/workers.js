@@ -1291,6 +1291,70 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           }
           break;
 
+        case 'media-performance-aggregator': {
+          const { aggregatePerformance } = await import('../media/mediaPerformanceService.js');
+          const mpDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          let mpTotal = 0;
+          for (const dest of mpDests) { const r = await aggregatePerformance(dest.id, 90); mpTotal += r.count; }
+          console.log('[Orchestrator] Media performance aggregated: ' + mpTotal);
+          result = { type: 'media-performance-aggregator', aggregated: mpTotal };
+          break;
+        }
+
+        case 'media-revenue-attribution': {
+          const { attributeRevenue } = await import('../media/mediaAttributionService.js');
+          const revDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          const now = new Date();
+          const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+          const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+          let revTotal = 0;
+          for (const dest of revDests) {
+            const r = await attributeRevenue(dest.id, prevYear, prevMonth);
+            revTotal += r.attributedMedia;
+          }
+          console.log('[Orchestrator] Revenue attribution: ' + revTotal + ' media attributed for ' + prevYear + '-' + prevMonth);
+          result = { type: 'media-revenue-attribution', attributed: revTotal, period: prevYear + '-' + prevMonth };
+          break;
+        }
+
+
+        case 'content-readiness-analyzer': {
+          const { getReadinessReport, storeReport } = await import('../media/contentReadinessService.js');
+          const rdDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          for (const dest of rdDests) {
+            const report = await getReadinessReport(dest.id, 7);
+            await storeReport(dest.id, report);
+          }
+          console.log('[Orchestrator] Content readiness reports generated for ' + rdDests.length + ' destinations');
+          result = { type: 'content-readiness-analyzer', destinations: rdDests.length };
+          break;
+        }
+
+
+        case 'content-gap-detector': {
+          const gapDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
+          let gapTotal = 0;
+          for (const dest of gapDests) {
+            const gaps = await mysqlSequelize.query(
+              'SELECT poi_id, COUNT(*) as cnt FROM chatbot_visual_queries WHERE destination_id = ? AND had_good_match = 0 AND poi_id IS NOT NULL AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY poi_id HAVING cnt >= 3 ORDER BY cnt DESC LIMIT 10',
+              { replacements: [dest.id], type: QueryTypes.SELECT }
+            );
+            for (const gap of gaps) {
+              const [existing] = await mysqlSequelize.query("SELECT id FROM content_suggestions WHERE destination_id = ? AND source = 'chatbot_gap' AND title LIKE ? AND status != 'deleted'", { replacements: [dest.id, '%POI ' + gap.poi_id + '%'], type: QueryTypes.SELECT });
+              if (!existing) {
+                const [poi] = await mysqlSequelize.query('SELECT name FROM POI WHERE id = ?', { replacements: [gap.poi_id], type: QueryTypes.SELECT });
+                const title = 'Content-gap: ' + (poi ? poi.name : 'POI ' + gap.poi_id) + ' — ' + gap.cnt + ' vragen zonder match';
+                await mysqlSequelize.query("INSERT INTO content_suggestions (destination_id, title, summary, content_type, source, status, engagement_score) VALUES (?, ?, 'Bezoekers vragen via chatbot maar geen goede media beschikbaar', 'social_post', 'chatbot_gap', 'pending', ?)", { replacements: [dest.id, title, gap.cnt] });
+                gapTotal++;
+              }
+            }
+          }
+          console.log('[Orchestrator] Content gap detector: ' + gapTotal + ' suggestions');
+          result = { type: 'content-gap-detector', newSuggestions: gapTotal };
+          break;
+        }
+
+
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
