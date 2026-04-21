@@ -160,6 +160,35 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
   });
 
 
+  // ── W3: Content-Gaps (from chatbot visual queries) ──
+
+  // GET /media/content-gaps — Top POIs with missing media from chatbot queries
+  router.get("/content-gaps", adminAuth("editor"), async (req, res) => {
+    try {
+      const destId = resolveDestinationId(req.query.destinationId || req.headers["x-destination-id"]);
+      const limit = parseInt(req.query.limit) || 10;
+      const results = await mysqlSequelize.query(
+        `SELECT cvq.poi_id, p.name as poi_name, p.category,
+                COUNT(*) as query_count,
+                SUM(cvq.had_good_match = 0) as no_match_count,
+                ROUND(SUM(cvq.had_good_match = 0) / COUNT(*) * 100) as gap_percentage
+         FROM chatbot_visual_queries cvq
+         LEFT JOIN POI p ON p.id = cvq.poi_id
+         WHERE cvq.destination_id = ? AND cvq.poi_id IS NOT NULL
+         GROUP BY cvq.poi_id
+         HAVING no_match_count > 0
+         ORDER BY no_match_count DESC
+         LIMIT ?`,
+        { replacements: [destId, limit], type: QueryTypes.SELECT }
+      );
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error("[Media] Content-gaps error:", err.message);
+      res.status(500).json({ success: false, error: { message: "Failed to fetch content gaps" } });
+    }
+  });
+
+
   // ── W1: Media Performance endpoints (MUST be before /:id catch-all) ──
 
   // GET /media/top-performers — Top performing media for a destination
