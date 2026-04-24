@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 21 april 2026
-**Versie**: 8.15
+**Datum**: 24 april 2026
+**Versie**: 8.16
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1330,7 +1330,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D+E+F) |
 | **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder + Stabilisatie** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
 | **VI** | **UX Revolution + WarreWijzer** | **Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant** | **6-8 wkn** | **MIDDEL** | **🟡 IN PROGRESS (VI-A COMPLEET)** |
-| VII | Polish, Scale & Launch | E2E testing, load testing, DR, go-live multi-tenant platform | 3-4 wkn | MIDDEL | GEPLAND |
+| **VII** | **Page Builder Enterprise Upgrade + Scale & Launch** | **Block-level UX upgrade (35 blocks), schema.org, container queries, E2E testing, load testing** | **8-12 wkn** | **HOOG** | **🟡 IN PROGRESS (VII-B1 COMPLEET)** |
 | CM | AI Content Generatie Module (Trending, Content Engine, Publishing, Analytics) | 🟡 IN PROGRESS (Fase A+B COMPLEET) | 12 wkn |
 | CUX | Corporate UX Upgrade (Sidebar, Kalender, Analytics, Dashboard, Onboarding, Performance, WCAG) | ✅ COMPLEET (v4.52-v4.54) | apr 2026 |
 
@@ -1430,13 +1430,29 @@ Nu de Next.js frontend en component library er staan (Fase V), focust Fase VI op
 - **UX-features uit Deel 11**: Geïntegreerd in de Next.js block library (filter patterns, navigation patterns, card interactions).
 - **A11y audit**: WCAG AA op alle blocks, keyboard navigatie, screen reader testing.
 
-**Fase VII — Polish, Scale & Launch (3-4 weken):**
-- **E2E test suite**: Playwright tests voor alle blocks × alle tenants × alle locales.
-- **Load testing**: k6/Artillery 10.000 concurrent users op Next.js + API.
-- **CDN**: Cloudflare/BunnyCDN voor POI-images (12.4 GB) en Next.js static assets.
-- **Disaster recovery**: RTO < 4h, RPO < 1h. Database read replica voor analytics.
-- **Go-live**: Migratie van Vite SPA naar Next.js SSR per bestemming (geleidelijk, met 301 redirects).
-- **Monitoring**: Lighthouse CI in pipeline, Core Web Vitals tracking, Sentry voor Next.js.
+**Fase VII — Page Builder Enterprise Upgrade + Scale & Launch (8-12 weken):**
+Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-upgrade van alle 35+ Page Builder blocks. Doel: tourism-native intelligente blokken die HB's unieke data-stack (HoliBot, POI-Tier, multi-tenant, PubliQio) uitspelen.
+
+**VII-A: Pre-flight Audit + Block Registry Inventarisatie** — ✅ COMPLEET (24-04-2026)
+- 38 registry entries, 30 unieke components, 28 editors
+- Design-tokens audit (40 CSS custom properties)
+- CLAUDE.md v4.60.0 sync
+
+**VII-B1: Hero + PoiGrid + SchemaInjector** — ✅ COMPLEET (24-04-2026)
+- ProgramCard Texel kwaliteit: 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie bugs, is_active check)
+- PoiGrid enterprise: tier-badges (goud/zilver/brons), CSS @container queries, inline rating, hover ghost button, card 3/2 aspect-ratio
+- SchemaInjector `src/lib/schema.ts`: 4 generator functies. ItemList + TouristAttraction schema.org live op dev.texelmaps.nl
+- Admin PoiGridEditor: +3 velden (tierFilter, sortOrder, showTierBadge)
+- Backend publicPOI.js: +3 API velden (tier, google_rating, google_review_count)
+
+**VII-B2: EventCalendar + Map** — GEPLAND
+**VII-B3: Cta + Footer** — GEPLAND
+**VII-B4: RichText** — GEPLAND
+**VII-C: Cluster B — 7 conversie-blokken** — GEPLAND
+**VII-D: Cluster D — 7 content-blokken** — GEPLAND
+**VII-E: Cluster D — 5-7 nieuwe USP-blokken** — GEPLAND (feature-flag staged rollout)
+
+Oorspronkelijke "Scale & Launch" scope (E2E testing, load testing, CDN, DR) is geïntegreerd in VII-E/post-VII.
 
 ### 9.5 State-of-the-Art Vervolgstappen
 
@@ -1630,7 +1646,8 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
-| **8.14** | **2026-04-20** | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 303 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
+| **8.16** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. ProgramCard 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie NL, is_active). PoiGrid enterprise (tier-badges, @container queries, inline rating, hover ghost button, aspect-ratio 3/2). SchemaInjector `schema.ts` (4 functies: ItemList, TouristAttraction, TouristDestination). Admin PoiGridEditor +3 velden. Backend publicPOI.js +3 API velden. Zombie POI rapport Texel. Fase VII roadmap herschreven (5 sub-fases, approval gates). CLAUDE.md v4.61.0. |
+| 8.15 | 2026-04-21 | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 303 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
 | 8.13 | 2026-04-18 | PubliQio Content Studio Polish v4.52.0: 12 opdrachten, Content Top 25 overzicht, 5 UX bugfixes, kalender dag/week, i18n 5 talen, health-check job. 282 endpoints, 74 jobs. |
 | 8.12 | 2026-04-15 | PubliQio Content Bronnen v4.51.0: 19 opdrachten, 6 sub-tabs, 7 BullMQ jobs, visual discovery pipeline, GSC integratie. 279 endpoints, 72 jobs. |
 | **8.04** | **09-04-2026** | **PubliQio Landing Page Polish & Branding (v4.43.0)**. PubliQioText component (9 locaties), 7e USP, ConceptMockup herbouwd, mobiele progressive disclosure, taalswitch vlaggen, login+demo dark theme, PrivacyPage GDPR, admin sidebar branding, per-user voorkeurstaal (preferred_language + PATCH endpoint). 252 endpoints. adminPortal.js v3.44.0. CLAUDE.md v4.43.0. |
@@ -1741,4 +1758,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 21 april 2026 — Corporate UX Upgrade (v4.54.0): sidebar, kalender, analytics, dashboard, onboarding widget, performance, WCAG. 303 endpoints, adminPortal.js v3.47.0. 78 scheduled jobs. 25 agents. CLAUDE.md v4.57.0. MS v8.15.*
+*Laatst bijgewerkt: 24 april 2026 — Fase VII-B1 ProgramCard + PoiGrid Enterprise + SchemaInjector COMPLEET. 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.61.0. MS v8.16.*
