@@ -385,6 +385,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: content-sources-health-check (monthly 1st 06:00)');
 
+  // W2: Media Performance Aggregator — daily 02:00
+  await scheduledQueue.add('media-performance-aggregator', { type: 'media-performance-aggregator' }, {
+    repeat: { cron: '0 2 * * *', tz: 'Europe/Amsterdam' },
+    removeOnComplete: true,
+  });
+  console.log('[Orchestrator] Scheduled: media-performance-aggregator (Daily 02:00)');
+
   // W3: Content Gap Detector — weekly Monday 07:00
   await scheduledQueue.add('content-gap-detector', { type: 'content-gap-detector' }, {
     repeat: { cron: '0 7 * * 1', tz: 'Europe/Amsterdam' },

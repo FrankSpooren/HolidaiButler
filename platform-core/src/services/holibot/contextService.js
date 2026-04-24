@@ -43,7 +43,100 @@ class ContextService {
    * @param {string} language
    * @returns {object} Context object with temporal, location, and session data
    */
-  buildContext(sessionId, destinationId, destinationConfig, language = 'nl') {
+
+  // --- Weather context (OpenWeatherMap, cached 30min per destination) ---
+  _weatherCache = {};
+
+  async _getWeatherContext(destinationId) {
+    const cacheKey = `weather_${destinationId}`;
+    const cached = this._weatherCache[cacheKey];
+    if (cached && Date.now() - cached.ts < 30 * 60 * 1000) return cached.data;
+
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) return null;
+
+    try {
+      const { mysqlSequelize } = await import('../../config/database.js');
+      const { QueryTypes } = await import('sequelize');
+      const [dest] = await mysqlSequelize.query(
+        "SELECT JSON_EXTRACT(branding, '$.lat') as lat, JSON_EXTRACT(branding, '$.lng') as lng FROM destinations WHERE id = ?",
+        { replacements: [destinationId], type: QueryTypes.SELECT }
+      );
+      if (!dest?.lat || !dest?.lng) return null;
+
+      const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${dest.lat}&lon=${dest.lng}&units=metric&appid=${apiKey}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+
+      const weather = {
+        temp: Math.round(data.main?.temp),
+        feels_like: Math.round(data.main?.feels_like),
+        condition: data.weather?.[0]?.main?.toLowerCase() || 'unknown',
+        description: data.weather?.[0]?.description || '',
+        humidity: data.main?.humidity,
+        wind_speed: Math.round((data.wind?.speed || 0) * 3.6),  // m/s -> km/h
+        icon: data.weather?.[0]?.icon || ''
+      };
+
+      this._weatherCache[cacheKey] = { data: weather, ts: Date.now() };
+      return weather;
+    } catch (e) {
+      console.error('[ContextService] Weather fetch failed:', e.message);
+      return null;
+    }
+  }
+
+  _formatWeatherForPrompt(weather, language) {
+    if (!weather) return '';
+    const t = weather.temp;
+    const c = weather.condition;
+    const w = weather.wind_speed;
+    const labels = {
+      nl: { clear: 'helder/zonnig', clouds: 'bewolkt', rain: 'regen', drizzle: 'motregen', thunderstorm: 'onweer', snow: 'sneeuw', mist: 'mist', fog: 'mist', haze: 'wazig' },
+      en: { clear: 'clear/sunny', clouds: 'cloudy', rain: 'rain', drizzle: 'drizzle', thunderstorm: 'thunderstorm', snow: 'snow', mist: 'mist', fog: 'fog', haze: 'haze' },
+      de: { clear: 'klar/sonnig', clouds: 'bewolkt', rain: 'Regen', drizzle: 'Nieselregen', thunderstorm: 'Gewitter', snow: 'Schnee', mist: 'Nebel', fog: 'Nebel', haze: 'dunstig' },
+      es: { clear: 'despejado/soleado', clouds: 'nublado', rain: 'lluvia', drizzle: 'llovizna', thunderstorm: 'tormenta', snow: 'nieve', mist: 'niebla', fog: 'niebla', haze: 'calima' },
+      fr: { clear: 'clair/ensoleill\u00e9', clouds: 'nuageux', rain: 'pluie', drizzle: 'bruine', thunderstorm: 'orage', snow: 'neige', mist: 'brume', fog: 'brouillard', haze: 'brumeux' }
+    };
+    const l = labels[language] || labels.en;
+    const condLabel = l[c] || c;
+
+    const isOutdoorFriendly = ['clear', 'clouds'].includes(c) && t > 12 && w < 40;
+    const isRainy = ['rain', 'drizzle', 'thunderstorm'].includes(c);
+
+    if (language === 'nl') {
+      let line = `- Huidig weer: ${condLabel}, ${t}\u00b0C (voelt als ${weather.feels_like}\u00b0C), wind ${w} km/u`;
+      if (isRainy) line += '\n- WEER-TIP: Het regent \u2014 adviseer indoor activiteiten, musea, of restaurants';
+      else if (isOutdoorFriendly) line += '\n- WEER-TIP: Goed weer voor buitenactiviteiten, stranden, terrassen';
+      else if (t < 10) line += '\n- WEER-TIP: Koud \u2014 adviseer warme binnenlocaties, caf\u00e9s';
+      else if (w >= 40) line += '\n- WEER-TIP: Harde wind \u2014 buitenactiviteiten kunnen onaangenaam zijn';
+      return line;
+    } else if (language === 'de') {
+      let line = `- Aktuelles Wetter: ${condLabel}, ${t}\u00b0C (gef\u00fchlt ${weather.feels_like}\u00b0C), Wind ${w} km/h`;
+      if (isRainy) line += '\n- WETTER-TIPP: Es regnet \u2014 empfehlen Sie Indoor-Aktivit\u00e4ten, Museen oder Restaurants';
+      else if (isOutdoorFriendly) line += '\n- WETTER-TIPP: Gutes Wetter f\u00fcr Au\u00dfenaktivit\u00e4ten, Str\u00e4nde, Terrassen';
+      return line;
+    } else if (language === 'es') {
+      let line = `- Clima actual: ${condLabel}, ${t}\u00b0C (sensaci\u00f3n ${weather.feels_like}\u00b0C), viento ${w} km/h`;
+      if (isRainy) line += '\n- CONSEJO CLIMA: Est\u00e1 lloviendo \u2014 recomienda actividades interiores, museos o restaurantes';
+      else if (isOutdoorFriendly) line += '\n- CONSEJO CLIMA: Buen tiempo para actividades al aire libre, playas, terrazas';
+      return line;
+    } else if (language === 'fr') {
+      let line = `- M\u00e9t\u00e9o actuelle: ${condLabel}, ${t}\u00b0C (ressenti ${weather.feels_like}\u00b0C), vent ${w} km/h`;
+      if (isRainy) line += '\n- CONSEIL M\u00c9T\u00c9O: Il pleut \u2014 recommandez activit\u00e9s int\u00e9rieures, mus\u00e9es ou restaurants';
+      else if (isOutdoorFriendly) line += '\n- CONSEIL M\u00c9T\u00c9O: Beau temps pour activit\u00e9s ext\u00e9rieures, plages, terrasses';
+      return line;
+    } else {
+      let line = `- Current weather: ${condLabel}, ${t}\u00b0C (feels like ${weather.feels_like}\u00b0C), wind ${w} km/h`;
+      if (isRainy) line += '\n- WEATHER TIP: It is raining \u2014 suggest indoor activities, museums, or restaurants';
+      else if (isOutdoorFriendly) line += '\n- WEATHER TIP: Good weather for outdoor activities, beaches, terraces';
+      else if (t < 10) line += '\n- WEATHER TIP: Cold \u2014 suggest warm indoor venues, caf\u00e9s';
+      else if (w >= 40) line += '\n- WEATHER TIP: Strong wind \u2014 outdoor activities may be unpleasant';
+      return line;
+    }
+  }
+
+  async buildContext(sessionId, destinationId, destinationConfig, language = 'nl') {
     const timezone = destinationConfig?.destination?.timezone || 'Europe/Amsterdam';
     const now = new Date();
 
@@ -66,8 +159,9 @@ class ContextService {
 
     const location = this._getLocationContext(destinationId, destinationConfig, language);
     const session = this._getSessionContext(sessionId);
+    const weather = await this._getWeatherContext(destinationId);
 
-    return { temporal, location, session };
+    return { temporal, location, session, weather };
   }
 
   /**
@@ -85,16 +179,22 @@ class ContextService {
       lines.push('HUIDIGE CONTEXT:');
       lines.push(`- Het is nu ${temporal.dayOfWeek} ${temporal.date}, ${this._getPeriodLabel(temporal.period, 'nl')} (${temporal.hour}:00 lokale tijd)`);
       lines.push(`- Seizoen: ${this._getSeasonLabel(temporal.season, 'nl')}`);
+      const weatherLine = this._formatWeatherForPrompt(context.weather, 'nl');
+      if (weatherLine) lines.push(weatherLine);
       if (temporal.isWeekend) lines.push('- Het is weekend — meer mensen zijn vrij, restaurants en activiteiten zijn drukker');
     } else if (language === 'de') {
       lines.push('AKTUELLER KONTEXT:');
       lines.push(`- Es ist jetzt ${temporal.dayOfWeek} ${temporal.date}, ${this._getPeriodLabel(temporal.period, 'de')} (${temporal.hour}:00 Ortszeit)`);
       lines.push(`- Jahreszeit: ${this._getSeasonLabel(temporal.season, 'de')}`);
+      const weatherLineDE = this._formatWeatherForPrompt(context.weather, 'de');
+      if (weatherLineDE) lines.push(weatherLineDE);
       if (temporal.isWeekend) lines.push('- Es ist Wochenende — mehr Besucher, Restaurants und Aktivitaten sind belebter');
     } else if (language === 'es') {
       lines.push('CONTEXTO ACTUAL:');
       lines.push(`- Es ${temporal.dayOfWeek} ${temporal.date}, ${this._getPeriodLabel(temporal.period, 'es')} (${temporal.hour}:00 hora local)`);
       lines.push(`- Estacion: ${this._getSeasonLabel(temporal.season, 'es')}`);
+      const weatherLineES = this._formatWeatherForPrompt(context.weather, 'es');
+      if (weatherLineES) lines.push(weatherLineES);
       if (temporal.isWeekend) lines.push('- Es fin de semana — mas visitantes, restaurantes y actividades estan mas concurridos');
     } else {
       // English (default)
