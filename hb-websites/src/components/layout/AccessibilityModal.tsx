@@ -10,7 +10,7 @@ interface AccessibilityModalProps {
 
 const translations: Record<string, Record<string, string>> = {
   nl: {
-    title: 'Toegankelijkheidsinstellingen',
+    title: 'Toegankelijkheid',
     fontSize: 'Lettergrootte',
     letterSpacing: 'Letterafstand',
     lineHeight: 'Regelhoogte',
@@ -116,15 +116,15 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
       onClick={onClose}
     >
       <div
-        className="bg-white w-[min(480px,calc(100vw-32px))] max-h-[calc(100vh-32px)] rounded-2xl shadow-2xl flex flex-col my-auto"
+        className="bg-white w-[calc(100vw-1rem)] sm:w-[min(480px,calc(100vw-2rem))] max-h-[calc(100vh-2rem)] rounded-xl sm:rounded-2xl shadow-2xl flex flex-col my-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b-2 border-gray-200 gap-3">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800 break-words leading-tight">{t.title}</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b-2 border-gray-200">
+          <h2 className="text-sm sm:text-xl font-bold text-gray-800 leading-tight truncate pr-2">{t.title}</h2>
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-3xl leading-none"
+            className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-2xl leading-none"
             aria-label="Close"
           >
             &times;
@@ -132,7 +132,7 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6">
           {/* Font Size */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -229,7 +229,7 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 px-6 py-5 border-t-2 border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-5 border-t-2 border-gray-200">
           <button
             onClick={resetToDefault}
             className="flex-1 py-3 px-6 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-all"
