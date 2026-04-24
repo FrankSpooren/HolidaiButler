@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.59.0
+> **Versie**: 4.60.0
 > **Laatst bijgewerkt**: 24 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -405,11 +405,11 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 303 |
 | adminPortal.js | v3.47.0 |
 | Agents | 25 |
-| BullMQ jobs | 78 |
+| BullMQ jobs | 79 |
 | Block types | 35 (30 uniek + 5 aliassen) |
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.59.0 |
+| CLAUDE.md | v4.60.0 |
 | Master Strategie | v8.15 |
 
 ---
@@ -859,6 +859,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.60.0** | **2026-04-24** | **Corporate Landing Page Enterprise Upgrade v5.1 (8 opdrachten) + Media Library Activatie + Weather Chatbot**. **Corporate Upgrade**: Outcome-first hero-CTA ("Van bezoeker tot beleving"), 12 module cards (Tourism Media Intelligence, Commerce Suite, etc.), 6-stat balk (303/100+/36+/25/144k+/78), HolidaiButler Flywheel (5 fasen + 6 learning loops, collapsible desktop+mobile), EU-Stack 8 providers (+Bugsink NL, +MailerLite LT), Enterprise Compliance sectie (4 pijlers: GDPR/EU AI Act/WCAG/Security), i18n ~244 keys x 5 talen. **12 module detail-pagina's** (`/modules/*.html`) met SEO meta, volledige nav/footer, specificaties + differentiator per module. **Browser taaldetectie** (navigator.language fallback). **npm audit fix**: 17 \u2192 5 vulnerabilities (low only). **Duplicate CLAUDE.md** verwijderd uit platform-core/. **Media Library Activatie**: `media-performance-aggregator` cron job toegevoegd (dagelijks 02:00, 79 jobs totaal), `OPENWEATHER_API_KEY` geconfigureerd, lat/lng voor Calpe (38.6447, 0.0458) + Texel (53.0548, 4.7979), batch retag 168 media items (context-dimensies: weather/seasons/persona/content_purposes/time_of_day). **Weather Chatbot**: contextService.js uitgebreid met live OpenWeather integratie (async fetch, 30min cache per destination, weer-tips in 5 talen), ragService.js await fix. Werkt voor CalpeTrip.com + Texel Page Builder chatbot. |
 | **4.58.0** | **2026-04-22** | **Corporate Landing Page Enterprise Upgrade — Command v5.1 (8 opdrachten)**. **Opdracht 1**: Outcome-first hero-CTA ("Van bezoeker tot beleving – volledig geautomatiseerd.") + subtekst met "media" in opsomming, 5 talen. **Opdracht 2**: Module-grid 9 → 12 cards, "Media Library" herschreven tot **"Tourism Media Intelligence"** met 5 USP’s als proof-points. Nieuwe cards: Commerce Suite, Page Builder, Merk Profiel & Knowledge Base, Merk-Branding, EU-First Infra, Enterprise Compliance. **Opdracht 3**: Stats-balk 5 → 6 stats met actuele waarden (303 endpoints, 78 jobs, 144k+ vectoren, 36+ blocks, 25 agents, 100+ talen). **Opdracht 4**: Lineair 3-fase proces vervangen door **HolidaiButler Flywheel** — 5 fasen + learning loop met 6 concrete cadence-mechanismen (Trendspotter, Content Feedback, Performance-Learning Media, Content-Gap Detector, Predictive Supply Chain, Revenue Attribution). Desktop horizontaal grid + mobile collapsible details. KPI’s uitsluitend in fase 4 met bronverwijzingen (HubSpot/Statista/ETC). **Opdracht 5**: USP Spotlight-sectie — 5 wereldwijd unieke Tourism Media Intelligence-capabilities + sales-punch. **Opdracht 6**: EU-Stack 6 → 8 providers (+Bugsink NL, +MailerLite LT). **Opdracht 7**: Enterprise Compliance sectie (4 pijlers: GDPR / EU AI Act / WCAG 2.1 AA / Beveiliging) + trust-signals balk. **Opdracht 8**: i18n ~244 keys × 5 talen compleet, QA, documentatie-sync. Bestanden: `index.html` (1.276 LOC), `i18n.js` (347 LOC). npm audit fix: 17 → 5 vulnerabilities (low only). Duplicate `platform-core/CLAUDE.md` verwijderd. |
 | **4.54.0** | **2026-04-20** | **Corporate UX Upgrade Command v4.0 — Opdracht 8+11-15 (7 opdrachten)**. **Opdracht 8**: Sidebar herstructurering (corporate grouping, badges, collapse icon-only mode). **Opdracht 11**: Kalender Corporate Polish (mini-kalender sidebar, keyboard nav t/arrows/1-2-3, workload indicator, platform/pillar/status filters, CSV/ICS export, print view). **Opdracht 12**: Analytics herstructurering (Content tab in Analytics, Rapport sub-tab verwijderd, Analytics sidebar-link hersteld). **Frank feedback**: Platform Dashboard (personaliseerbare KPI widgets, 7d/30d/90d delta badges, destination-scoped data, klikbare blokken). Conditional sidebar (adminOnly/studioOnly). **Opdracht 13**: Onboarding Widget Intercom-stijl (persistent cirkel rechtsonder, 6-10 context-afhankelijke stappen, NotificationsCenter integratie, toggle steps, session dismiss, createPortal). **Opdracht 14**: Performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB, Cache-Control headers, sourcemaps disabled). **Opdracht 15**: WCAG 2.1 AA (21 fixes: 16 aria-labels, 5 keyboard access). +6 endpoints (295 totaal), +4 onboarding endpoints, +1 content/report, +1 analytics/report. 74 BullMQ jobs. |
 | **4.53.0** | **2026-04-19** | **Content Items Enterprise Density + ConceptDialog Focus Mode (Command v4.0 Opdracht 9+10)**. **Opdracht 9**: Density toggle (3 modes, localStorage), column visibility popover, keyboard nav (j/k/Enter/x/Shift+A) met shortcuts popover + Ctrl+K link, sticky table header, 15-rij skeleton loading, enhanced empty state, inline titel editing (dubbelklik, PATCH /content/concepts/:id), row hover actie-iconen, status chips dark-mode-safe (Material 300-reeks), Type kolom toont content_type i.p.v. source_type, table-layout fixed. **Opdracht 10**: Full-screen toggle (F key + button), auto-save draft 10s, keyboard shortcuts (Ctrl+S/Enter/P, F, Esc), unsaved changes indicator (3-state chip), beforeunload warning, Dialog onClose met confirm. **CORS**: publiqio.com in Apache allowlist. +1 endpoint (289 totaal). 4 bestanden. Commit 35eadba. |
