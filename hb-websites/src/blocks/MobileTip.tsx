@@ -8,7 +8,7 @@ interface MobileTipBlockProps {
 
 export default function MobileTip({ locale = 'nl' }: MobileTipBlockProps) {
   return (
-    <div className="md:hidden" style={{ backgroundColor: '#F5F2EC' }}>
+    <div className="md:hidden pt-4" style={{ backgroundColor: '#F5F2EC' }}>
       <TipOfTheDay locale={locale} />
     </div>
   );
