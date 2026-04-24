@@ -10,7 +10,7 @@ interface AccessibilityModalProps {
 
 const translations: Record<string, Record<string, string>> = {
   nl: {
-    title: 'Toegankelijkheidsinstellingen',
+    title: 'Toegankelijkheid',
     fontSize: 'Lettergrootte',
     letterSpacing: 'Letterafstand',
     lineHeight: 'Regelhoogte',
@@ -121,7 +121,7 @@ export default function AccessibilityModal({ isOpen, onClose, locale }: Accessib
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b-2 border-gray-200 gap-3">
-          <h2 className="text-base sm:text-xl font-bold text-gray-800 break-words leading-tight">{t.title}</h2>
+          <h2 className="text-base sm:text-xl font-bold text-gray-800 break-words leading-tight max-w-[calc(100%-3rem)]">{t.title}</h2>
           <button
             onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-3xl leading-none"
