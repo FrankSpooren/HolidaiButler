@@ -1385,7 +1385,7 @@ class RAGService {
         }
       }
       // Build temporal/location context for context-aware responses (Fase II A.2)
-      const contextData = opts.destinationConfig ? contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
+      const contextData = opts.destinationConfig ? await contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
 
       return {
         success: true, searchTimeMs: Date.now()-start, pois: this.extractPOICards(combined),
@@ -1479,7 +1479,7 @@ class RAGService {
         }
       }
       // Build temporal/location context for context-aware responses (Fase II A.2)
-      const contextData = opts.destinationConfig ? contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
+      const contextData = opts.destinationConfig ? await contextService.buildContext(opts.sessionId || null, opts.destinationConfig?.destination?.id || 1, opts.destinationConfig, lang) : null;
       const response = await this.generateResponse(queryForLLM, combined, lang, opts.userPreferences || {}, history, unknownEntity, opts.destinationConfig || null, contextData);
       const poiCards = this.extractPOICards(combined);
 

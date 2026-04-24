@@ -50,6 +50,12 @@ interface DayPartRule {
   excludeNames?: string[];
   /** Max food/drink POIs in this daypart */
   maxFood: number;
+  /** Minimum Google rating for this daypart (default 4.2) */
+  minRating?: number;
+  /** Minimum review count for this daypart (default 3) */
+  minReviews?: number;
+  /** For evening: minimum rating for fine-dine priority selection */
+  fineDineMinRating?: number;
 }
 
 interface DestinationConfig {
@@ -134,6 +140,9 @@ const CALPE_CONFIG: DestinationConfig = {
       excludeSubcats: ['fastfood', 'breakfast'],
       excludeNames: [],
       maxFood: 3,
+      minRating: 4.3,
+      minReviews: 5,
+      fineDineMinRating: 4.5,
     },
   },
 };
@@ -165,7 +174,8 @@ const TEXEL_CONFIG: DestinationConfig = {
         // Winkelen (Mode & Lifestyle ONLY — NOT Doe-het-zelf, Huisdieren, Supermarkten, Speciaalzaken)
         'mode & lifestyle',
         // Cultuur & Historie (all)
-        'monuments', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        'monumenten', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        'galerie', 'atelier', 'kunst',
         // Recreatief
         'indoor',
         // Eten & Drinken (Strandpaviljoens, Ontbijt & Lunch ONLY)
@@ -174,6 +184,8 @@ const TEXEL_CONFIG: DestinationConfig = {
       excludeSubcats: [],
       excludeNames: [],
       maxFood: 1,
+      minRating: 4.0,
+      minReviews: 3,
     },
     afternoon: {
       categories: 'Actief,Natuur,Winkelen,Cultuur & Historie,Recreatief,Eten & Drinken',
@@ -185,7 +197,8 @@ const TEXEL_CONFIG: DestinationConfig = {
         // Winkelen (Mode & Lifestyle)
         'mode & lifestyle',
         // Cultuur & Historie (all)
-        'monuments', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        'monumenten', 'musea', 'religieuze gebouwen', 'sociaal-culturele centra', 'texels schaap',
+        'galerie', 'atelier', 'kunst',
         // Recreatief
         'indoor',
         // Eten & Drinken (Strandpaviljoens, Specialties, Ijs & Desserts, Wijndomein)
@@ -194,6 +207,8 @@ const TEXEL_CONFIG: DestinationConfig = {
       excludeSubcats: [],
       excludeNames: [],
       maxFood: 1,
+      minRating: 4.0,
+      minReviews: 3,
     },
     evening: {
       categories: 'Eten & Drinken',
@@ -204,6 +219,9 @@ const TEXEL_CONFIG: DestinationConfig = {
       excludeSubcats: ['fastfood', 'cafetaria', 'foodtrucks', 'ontbijt', 'ijs', 'speciaalzaken', 'strandkiosk'],
       excludeNames: [],
       maxFood: 3,
+      minRating: 4.3,
+      minReviews: 5,
+      fineDineMinRating: 4.5,
     },
   },
 };
@@ -279,8 +297,8 @@ const CLOSED_KEYWORDS = [
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isPOISuitable(poi: any, rule: DayPartRule): boolean {
-  // Closed check
-  if (poi.is_active === false) return false;
+  // Closed check — robust: handles 0, false, null
+  if (poi.is_active === false || poi.is_active === 0) return false;
   if (poi.status === 'closed' || poi.status === 'inactive') return false;
   const fullText = `${poi.name || ''} ${poi.description || ''}`.toLowerCase();
   if (CLOSED_KEYWORDS.some(kw => fullText.includes(kw))) return false;
@@ -500,6 +518,46 @@ function getLocalizedString(val: unknown, locale: string): string {
   return '';
 }
 
+/**
+ * Sort program items: activities/culture/nature first, food/drink as finale.
+ * For evening with fineDineMinRating: premium restaurants come before casual ones.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sortProgramOrder(items: any[], dayPart: DayPart, config: DestinationConfig): any[] {
+  const rule = config.rules[dayPart];
+
+  if (dayPart === 'evening' && rule.fineDineMinRating) {
+    // Evening: fine-dine (>= threshold) first, then casual, sorted by rating desc
+    return [...items].sort((a, b) => {
+      const rA = a.google_rating || a.rating || 0;
+      const rB = b.google_rating || b.rating || 0;
+      const isPremiumA = rA >= (rule.fineDineMinRating || 4.5);
+      const isPremiumB = rB >= (rule.fineDineMinRating || 4.5);
+      if (isPremiumA && !isPremiumB) return -1;
+      if (!isPremiumA && isPremiumB) return 1;
+      return rB - rA;
+    });
+  }
+
+  // Morning/afternoon: non-food first, food last. Highlight stays at position 0.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nonFood: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const food: any[] = [];
+
+  items.forEach((item, idx) => {
+    if (idx === 0 && isHighlight(item, config.highlights)) {
+      nonFood.unshift(item);
+    } else if (isFood(item)) {
+      food.push(item);
+    } else {
+      nonFood.push(item);
+    }
+  });
+
+  return [...nonFood, ...food];
+}
+
 /* ─────────────────────────────────────────────
  * COMPONENT
  * ───────────────────────────────────────────── */
@@ -526,7 +584,7 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
 
         // Fetch more than needed to have room after filtering
         const [poisRes, eventsRes] = await Promise.all([
-          fetch(`/api/pois?limit=${poiLimit * 8}&sort=rating:desc&min_rating=4.2&min_reviews=3&categories=${encodeURIComponent(rule.categories)}`),
+          fetch(`/api/pois?limit=${poiLimit * 8}&sort=rating:desc&min_rating=${rule.minRating || 4.2}&min_reviews=${rule.minReviews || 3}&categories=${encodeURIComponent(rule.categories)}`),
           fetch('/api/events?limit=10&distance=5'),
         ]);
 
@@ -548,7 +606,8 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
 
         // Calculate how many POIs we need: fill remaining slots, ensure minimum total
         const neededPois = Math.max(poiLimit, MIN_PROGRAM_ITEMS - events.length);
-        const pois = selectDiversePOIs(shuffled, neededPois, dayPart, config);
+        const poisRaw = selectDiversePOIs(shuffled, neededPois, dayPart, config);
+        const pois = sortProgramOrder(poisRaw, dayPart, config);
 
         const combined: ProgramItem[] = [];
         // Build items array with category info for duration-aware time slots

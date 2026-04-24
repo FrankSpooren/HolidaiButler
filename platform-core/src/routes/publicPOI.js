@@ -228,6 +228,9 @@ const formatPOIForPublic = (poi, lang = "en", images = null) => {
     email: data.email,
     verified: data.verified || false,
     featured: data.featured || false,
+    tier: data.tier || 4,
+    google_rating: data.google_rating ? parseFloat(data.google_rating) : null,
+    google_review_count: data.google_review_count || 0,
     popularity_score: data.popularity_score || 0,
     google_placeid: data.google_placeid,
     // Translated enriched content
