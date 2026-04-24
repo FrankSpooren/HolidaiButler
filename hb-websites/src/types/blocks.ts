@@ -99,6 +99,12 @@ export interface PoiGridProps {
   columns?: 2 | 3 | 4;
   layout?: 'grid' | 'list' | 'compact';
   title?: string;
+  /** Filter: show only POIs with tier <= this value (0 = all) */
+  tierFilter?: number;
+  /** Sort order: rating, alphabetical, newest, random, relevance */
+  sortOrder?: string;
+  /** Show tier badge overlay on POI images (default: true) */
+  showTierBadge?: boolean;
 }
 
 export interface EventCalendarProps {
