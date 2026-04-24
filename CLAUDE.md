@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.58.0
-> **Laatst bijgewerkt**: 22 april 2026
+> **Versie**: 4.59.0
+> **Laatst bijgewerkt**: 24 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -172,7 +172,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 - **Next.js 15**: SSR voor SEO + tenant-theming via CSS Custom Properties + aansluiting op bestaande React codebase
 - **Bestaande HB API**: dezelfde /api/v1/* endpoints, X-Destination-ID header scoping
 - **Admin Portal uitbreiden**: Branding Editor, Page Layout Editor, Navigation Editor
-- **Block-based page builder**: 35 blocks live (incl. 4 mobile + 7 desktop homepage + aliassen), 36 admin editors (100% coverage), configureerbare layouts per pagina per tenant
+- **Block-based page builder**: 35 registry entries (30 unieke components + 5 aliassen), 28 admin editors, configureerbare layouts per pagina per tenant
 - **Geautomatiseerde tenant onboarding**: nieuwe bestemming = configuratie in Admin Portal, geen development
 - **Wildcard DNS**: `*.holidaibutler.com` → automatische subdomain-based tenant detectie via middleware
 
@@ -188,7 +188,48 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 
 **Technische blauwdruk**: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
-### 🚨 CalpeTrip.com — Hybride Architectuur (KRITIEK)
+### 🚨 ### Page Builder Block Registry (Fase VII-A Audit — 24 april 2026)
+
+| # | Registry Key | Type | Editor | Status |
+|---|-------------|------|--------|--------|
+| 1 | hero | Core | HeroEditor | live |
+| 2 | poi_grid | Core | PoiGridEditor | live |
+| 3 | poi_grid_filtered | Variant | (via PoiGridEditor) | live |
+| 4 | event_calendar | Core | EventCalendarEditor | live |
+| 5 | event_calendar_filtered | Variant | (via EventCalendarEditor) | live |
+| 6 | rich_text | Core | RichTextEditor | live |
+| 7 | card_group | Core | CardGroupEditor | live |
+| 8 | map | Core | MapEditor | live |
+| 9 | testimonials | Core | TestimonialsEditor | live |
+| 10 | cta | Core | CtaEditor | live |
+| 11 | gallery | Core | GalleryEditor | live |
+| 12 | faq | Core | FaqEditor | live |
+| 13 | ticket_shop | Commerce | TicketShopEditor | live |
+| 14 | reservation_widget | Commerce | ReservationWidgetEditor | live |
+| 15 | video | Content | VideoEditor | live |
+| 16 | social_feed | Content | SocialFeedEditor | live |
+| 17 | contact_form | Conversie | ContactFormEditor | live |
+| 18 | newsletter | Conversie | NewsletterEditor | live |
+| 19 | weather_widget | Utility | WeatherWidgetEditor | live |
+| 20 | banner | Content | BannerEditor | live |
+| 21 | partners | Content | PartnersEditor | live |
+| 22 | downloads | Content | DownloadsEditor | live |
+| 23 | desktop_hero | Desktop | (via HeroEditor) | live |
+| 24 | desktop_program_tip | Desktop | — | live |
+| 25 | desktop_events | Desktop | — | live |
+| 26 | category_grid | Desktop | — | live |
+| 27 | mobile_program | Mobile | MobileProgramEditor | live |
+| 28 | mobile_tip | Mobile | MobileTipEditor | live |
+| 29 | mobile_events | Mobile | MobileEventsEditor | live |
+| 30 | mobile_map | Mobile | MobileMapEditor | live |
+
+**Aliassen**: hero_chatbot→DesktopHero, program_card→DesktopProgramTip, today_events→DesktopEvents, popular_pois→PoiGrid, map_preview→MapWrapper
+
+**Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection: gepland voor Fase VII-B1.C (SchemaInjector service).
+
+**Design Tokens**: 40 CSS custom properties (--hb-*), alle tenant-overridable via destinations.branding.
+
+CalpeTrip.com — Hybride Architectuur (KRITIEK)
 
 > **CalpeTrip.com is GEEN Page Builder site. CalpeTrip.com is GEEN customer-portal.**
 > **CalpeTrip.com draait op hb-websites (Next.js) met een STANDALONE mobiele + desktop template.**
@@ -365,10 +406,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | adminPortal.js | v3.47.0 |
 | Agents | 25 |
 | BullMQ jobs | 78 |
-| Block types | 36 (+ aliassen, +blog_grid) |
-| Block editors | 37 (+BlogGridEditor) |
+| Block types | 35 (30 uniek + 5 aliassen) |
+| Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.58.0 |
+| CLAUDE.md | v4.59.0 |
 | Master Strategie | v8.15 |
 
 ---
