@@ -7,6 +7,67 @@
 
 ---
 
+## v4.61.0 — Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector (24 april 2026)
+
+### Scope
+Eerste tranche Fase VII Page Builder Enterprise Upgrade: ProgramCard Texel kwaliteitsverbetering, PoiGrid enterprise-upgrade met tier-badges en container queries, SchemaInjector gedeelde service.
+
+### ProgramCard Texel Kwaliteit (5 fixes)
+| # | Fix | Detail |
+|---|-----|--------|
+| 1 | Subcategorie-volgorde | `sortProgramOrder()`: activiteiten/cultuur/natuur eerst, eten & drinken als afsluiter per dagdeel |
+| 2 | POI-bestaan verificatie | `is_active === 0` check toegevoegd naast `=== false` |
+| 3 | Fine-dine vs casual | Avondprogramma sorteert premium restaurants (>=4.5) vóór casual via `fineDineMinRating` config |
+| 4 | Rating per dagdeel | `DayPartRule.minRating/minReviews`: ochtend/middag 4.0/3, avond 4.3/5. API fetch dynamisch |
+| 5 | Subcategorie bug | `monuments`→`monumenten` (NL), `galerie`/`atelier`/`kunst` toegevoegd aan Texel whitelist |
+
+### PoiGrid Enterprise-Upgrade
+| Feature | Implementatie |
+|---------|--------------|
+| Tier-badges | Goud T1 (#D4AF37), zilver T2 (#C0C0C0), brons T3 (#CD7F32). Overlay op afbeelding, 28px cirkel, WCAG contrast. T4 verborgen |
+| Container queries | CSS `@container` i.p.v. media queries. 1-kolom <600px, 2-kolom 600-900px, 3-kolom 900px+. Responsive op block-breedte |
+| Inline rating | Compact `★ 4.7 · 156` in card header naast categorie-tag |
+| Desktop hover | `translateY(-4px)`, shadow-toename, "Ontdek meer" ghost button (4 talen) |
+| Card aspect-ratio | `3/2` voor foto-area (was `4/3`) |
+| Admin uitbreiding | PoiGridEditor +3 velden: tierFilter (dropdown T1/T1-2/T1-3/alle), sortOrder (5 opties), showTierBadge (switch) |
+
+### SchemaInjector (VII-B1.C)
+- Nieuwe service `src/lib/schema.ts` — 4 generator functies
+- `generatePoiGridSchema(pois)` → ItemList met TouristAttraction items
+- `generateTouristAttractionSchema(poi)` → individuele POI met aggregateRating
+- `generateTouristDestinationSchema(destination)` → Hero/destination
+- `schemaToJsonLd(schema)` → JSON string voor dangerouslySetInnerHTML
+- PoiGrid rendert eigen inline `<script type="application/ld+json">`
+- Verificatie: 4 JSON-LD scripts op dev.texelmaps.nl homepage (WebSite, BreadcrumbList, TouristDestination, ItemList 6 items)
+
+### Backend
+- `publicPOI.js` formatPOIForPublic: +3 velden (tier, google_rating, google_review_count)
+- `types/blocks.ts` PoiGridProps: +3 velden (tierFilter, sortOrder, showTierBadge)
+
+### Zombie POI Rapport Texel
+- 456 POIs zonder rating EN zonder reviews (meest Praktisch 202, Dienstverlening 58, Uncategorized 55)
+- 11 POIs met rating < 3.0 (laadpunten, zakelijke diensten, 1 restaurant)
+- 0 POIs met "gesloten" in naam
+- Rapport: `/root/programcard_texel_kwaliteit_rapport.md`
+
+### Bestanden
+| Bestand | Actie |
+|---------|-------|
+| `hb-websites/src/lib/schema.ts` | NIEUW (SchemaInjector) |
+| `hb-websites/src/blocks/PoiGrid.tsx` | HERSCHREVEN (enterprise) |
+| `hb-websites/src/types/blocks.ts` | GEWIJZIGD (+3 props) |
+| `hb-websites/src/components/mobile/ProgramCard.tsx` | GEWIJZIGD (5 fixes) |
+| `platform-core/src/routes/publicPOI.js` | GEWIJZIGD (+3 API velden) |
+| `admin-module/src/components/blocks/editors/PoiGridEditor.jsx` | GEWIJZIGD (+3 admin velden) |
+
+### Tellingen
+- CLAUDE.md v4.61.0, MS v8.16
+- 303 admin endpoints (ongewijzigd)
+- adminPortal.js v3.47.0 (ongewijzigd)
+- 79 BullMQ jobs (ongewijzigd)
+
+---
+
 ## v4.50.0 — Media Library v2.1 Visual Search (13 april 2026)
 
 ### Scope
