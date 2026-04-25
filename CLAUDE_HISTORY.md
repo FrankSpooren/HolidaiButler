@@ -7,6 +7,73 @@
 
 ---
 
+## v4.64.0 — Fase VII-D COMPLEET + P0/P1 Enterprise Fixes (25 april 2026)
+
+### Scope
+Cluster C (7 content-blokken) + P0/P1 enterprise-audit met systematische fixes op alle 22+ blokken.
+
+### VII-D: Cluster C — 7 content-blokken
+| Blok | ARIA | Container | Schema.org | Extra |
+|------|------|-----------|-----------|-------|
+| Gallery | dialog+modal lightbox | @container grid 1/2/3/4 | — | srcset via image.ts |
+| Video | region | containerType | VideoObject | YouTube-nocookie |
+| SocialFeed | region | — | — | Cookie consent |
+| Downloads | list+listitem+region | containerType | — | min-h-[48px] touch |
+| Banner | alert/status + aria-live | containerType | — | min-w/h-[44px] dismiss |
+| CardGroup | region | @container grid 1/2/3/4 | — | — |
+| WeatherWidget | region | @container forecast | — | — |
+
+### P0 Enterprise Fixes (kritiek)
+| Fix | Blocks | Detail |
+|-----|--------|--------|
+| **Image srcset/Resize Proxy** | PoiGrid, EventCalendar, Gallery | Nieuw `src/lib/image.ts`: generateSrcSet() via /api/v1/img/ (400/600/800/1200w webp) |
+| **ARIA landmarks** | Hero, DesktopHero, EventCalendar, DesktopEvents, CategoryGrid, PoiGrid, Testimonials, CardGroup | role=banner/region/navigation + aria-label op alle primaire sections |
+| **Touch targets >=44px** | ContactForm, Newsletter, Banner, Downloads, Gallery | min-h-[44px]/min-h-[48px] op inputs, buttons, links |
+| **Container queries** | Downloads, Banner | containerType: inline-size toegevoegd |
+
+### P1 Enterprise Fixes
+| Fix | Blocks | Detail |
+|-----|--------|--------|
+| **i18n hardcoded strings** | ContactForm, Newsletter | 7 EN-only strings → NL/EN dual (document.lang detect) |
+
+### Enterprise Audit Eindscores
+| Criterium | Score |
+|-----------|-------|
+| ARIA landmarks | 22/24 (92%) — wrappers/helpers delegeren |
+| Container queries | 16/24 (67%) — full-width blocks bewust uitgesloten |
+| Image srcset | 3/3 (100%) — alle image-zware blocks |
+| Touch targets | 7/7 (100%) — alle interactieve blocks |
+| Schema.org | 6/6 (100%) — alle relevante blocks |
+| Admin editors | 30/30 in registry, eigen SVG thumbnails |
+| i18n | ContactForm+Newsletter gefixt |
+
+### Bestanden
+| Bestand | Actie |
+|---------|-------|
+| `hb-websites/src/lib/image.ts` | NIEUW (Image Resize Proxy helper) |
+| `hb-websites/src/blocks/Gallery.tsx` | GEWIJZIGD (srcset, ARIA dialog, @container) |
+| `hb-websites/src/blocks/Video.tsx` | GEWIJZIGD (VideoObject, ARIA, container) |
+| `hb-websites/src/blocks/SocialFeed.tsx` | GEWIJZIGD (ARIA) |
+| `hb-websites/src/blocks/Downloads.tsx` | GEWIJZIGD (ARIA list, container, touch) |
+| `hb-websites/src/blocks/Banner.tsx` | GEWIJZIGD (ARIA alert/status, container, touch) |
+| `hb-websites/src/blocks/CardGroup.tsx` | GEWIJZIGD (ARIA, @container) |
+| `hb-websites/src/blocks/WeatherWidget.tsx` | GEWIJZIGD (ARIA, @container) |
+| `hb-websites/src/blocks/PoiGrid.tsx` | GEWIJZIGD (srcset, ARIA region) |
+| `hb-websites/src/blocks/EventCalendar.tsx` | GEWIJZIGD (srcset, ARIA region) |
+| `hb-websites/src/blocks/Hero.tsx` | GEWIJZIGD (ARIA banner) |
+| `hb-websites/src/blocks/DesktopHero.tsx` | GEWIJZIGD (ARIA banner) |
+| `hb-websites/src/blocks/DesktopEvents.tsx` | GEWIJZIGD (ARIA region) |
+| `hb-websites/src/blocks/CategoryGrid.tsx` | GEWIJZIGD (ARIA navigation) |
+| `hb-websites/src/blocks/ContactForm.tsx` | GEWIJZIGD (touch, i18n) |
+| `hb-websites/src/blocks/Newsletter.tsx` | GEWIJZIGD (touch, i18n) |
+| `hb-websites/src/blocks/Testimonials.tsx` | GEWIJZIGD (ARIA region) |
+
+### Tellingen
+- CLAUDE.md v4.64.0, MS v8.19
+- 303 admin endpoints (ongewijzigd), 79 BullMQ jobs (ongewijzigd)
+
+---
+
 ## v4.63.0 — Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise (25 april 2026)
 
 ### Scope
