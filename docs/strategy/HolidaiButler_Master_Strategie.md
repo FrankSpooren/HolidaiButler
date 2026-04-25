@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 24 april 2026
-**Versie**: 8.16
+**Datum**: 25 april 2026
+**Versie**: 8.17
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1440,14 +1440,20 @@ Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-up
 
 **VII-B1: Hero + PoiGrid + SchemaInjector** — ✅ COMPLEET (24-04-2026)
 - ProgramCard Texel kwaliteit: 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie bugs, is_active check)
-- PoiGrid enterprise: tier-badges (goud/zilver/brons), CSS @container queries, inline rating, hover ghost button, card 3/2 aspect-ratio
-- SchemaInjector `src/lib/schema.ts`: 4 generator functies. ItemList + TouristAttraction schema.org live op dev.texelmaps.nl
-- Admin PoiGridEditor: +3 velden (tierFilter, sortOrder, showTierBadge)
-- Backend publicPOI.js: +3 API velden (tier, google_rating, google_review_count)
+- PoiGrid enterprise: tier-badges (default OFF), CSS @container queries, inline rating, hover ghost button
+- SchemaInjector `src/lib/schema.ts`: 6 generator functies. Tenant-aware URLs (texelmaps.nl/holidaibutler.com)
 
-**VII-B2: EventCalendar + Map** — GEPLAND
-**VII-B3: Cta + Footer** — GEPLAND
-**VII-B4: RichText** — GEPLAND
+**VII-B2: EventCalendar + Map** — ✅ COMPLEET (25-04-2026)
+- EventCalendar: schema.org Event JSON-LD, @container queries, time display, categorie badges
+- Map: tier rings op markers, configureerbare markerLimit/showLegend/height, ARIA
+
+**VII-B3: Cta + Footer** — ✅ COMPLEET (25-04-2026)
+- Cta: container queries, backgroundImage, dark/light styles, ARIA region
+- Footer: schema.org Organization, ARIA nav landmark, privacy link
+
+**VII-B4: RichText** — ✅ COMPLEET (25-04-2026)
+- Auto POI-link op naammatch (server-side top-200 POIs, client-side drawer open)
+- Container queries responsive typography
 **VII-C: Cluster B — 7 conversie-blokken** — GEPLAND
 **VII-D: Cluster D — 7 content-blokken** — GEPLAND
 **VII-E: Cluster D — 5-7 nieuwe USP-blokken** — GEPLAND (feature-flag staged rollout)
@@ -1646,6 +1652,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **8.17** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken enterprise-geüpgraded**. VII-B2: EventCalendar (schema.org Event, @container, time, badges) + Map (tier rings, markerLimit, ARIA). VII-B3: Cta (backgroundImage, dark/light, ARIA) + Footer (schema.org Organization, ARIA nav, privacy). VII-B4: RichText auto POI-link. Fixes: tier-badges default OFF, tenant-aware schema.org URLs. SchemaInjector 6 generators. 5 JSON-LD op homepage. CLAUDE.md v4.62.0. |
 | **8.16** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. ProgramCard 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie NL, is_active). PoiGrid enterprise (tier-badges, @container queries, inline rating, hover ghost button, aspect-ratio 3/2). SchemaInjector `schema.ts` (4 functies: ItemList, TouristAttraction, TouristDestination). Admin PoiGridEditor +3 velden. Backend publicPOI.js +3 API velden. Zombie POI rapport Texel. Fase VII roadmap herschreven (5 sub-fases, approval gates). CLAUDE.md v4.61.0. |
 | 8.15 | 2026-04-21 | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 303 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
 | 8.13 | 2026-04-18 | PubliQio Content Studio Polish v4.52.0: 12 opdrachten, Content Top 25 overzicht, 5 UX bugfixes, kalender dag/week, i18n 5 talen, health-check job. 282 endpoints, 74 jobs. |
@@ -1758,4 +1765,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 24 april 2026 — Fase VII-B1 ProgramCard + PoiGrid Enterprise + SchemaInjector COMPLEET. 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.61.0. MS v8.16.*
+*Laatst bijgewerkt: 25 april 2026 — Fase VII-B Cluster A COMPLEET (8 blokken). 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.62.0. MS v8.17.*
