@@ -718,10 +718,12 @@ function GenerateContentDialog({ open, onClose, suggestion, onGenerate, destinat
               if (onGenerate) await onGenerate({});
               onClose();
             } else {
-              const phase = attempts < 6 ? 'AI schrijft content...'
-                : attempts < 12 ? 'SEO-analyse en optimalisatie...'
-                : attempts < 20 ? 'Vertalingen genereren...'
-                : 'Bijna klaar, nog even geduld...';
+              const phase = attempts < 4 ? 'AI analyseert je onderwerp en schrijft content...'
+                : attempts < 8 ? 'SEO-analyse en optimalisatie van tekst...'
+                : attempts < 14 ? 'Vertalen naar alle beschikbare talen (NL/DE/ES/FR)...'
+                : attempts < 20 ? 'Afbeeldingen selecteren en kwaliteitscontrole...'
+                : attempts < 30 ? 'Bijna klaar — laatste afrondingen...'
+                : 'Dit duurt langer dan verwacht — je kunt dit dialoog sluiten, het concept verschijnt automatisch in de lijst.';
               setGenProgress(phase);
             }
           } catch {
@@ -997,12 +999,18 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
   const toggleManualPlatform = (p) => setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState('');
+  const [detectedLang, setDetectedLang] = useState(null);
 
   const handleCreate = async () => {
     if (!title.trim()) return;
     setSaving(true);
+    setSaveProgress(t('contentStudio.manual.detectingLanguage', 'Taal detecteren...'));
     try {
-      await contentService.generateItem({
+      setSaveProgress(platforms.length > 1
+        ? t('contentStudio.manual.creatingMulti', `${platforms.length} platform-versies aanmaken...`)
+        : t('contentStudio.manual.creating', 'Content item aanmaken...'));
+      const result = await contentService.generateItem({
         destination_id: destinationId,
         content_type: contentType,
         platforms,
@@ -1010,14 +1018,22 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
         body_en: body,
         manual: true,
       });
+      const lang = result?.data?.detected_language;
+      if (lang && lang !== 'en') {
+        setDetectedLang(lang);
+        setSaveProgress(t('contentStudio.manual.languageDetected', `Taal gedetecteerd: ${lang.toUpperCase()}`));
+        await new Promise(r => setTimeout(r, 800));
+      }
       setTitle('');
       setBody('');
+      setDetectedLang(null);
       onClose();
       if (onCreated) onCreated();
     } catch (err) {
       alert(err.message || t('contentStudio.actions.createFailed', 'Aanmaken mislukt'));
     } finally {
       setSaving(false);
+      setSaveProgress('');
     }
   };
 
@@ -1059,8 +1075,17 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
           placeholder={t('contentStudio.form.bodyPlaceholder', 'Schrijf je content hier, of laat leeg en gebruik later de AI Verbeter functie...')}
         />
       </DialogContent>
+      {saving && saveProgress && (
+        <Box sx={{ px: 3, pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <CircularProgress size={16} />
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>{saveProgress}</Typography>
+          </Box>
+          <LinearProgress sx={{ height: 3, borderRadius: 2 }} />
+        </Box>
+      )}
       <DialogActions>
-        <Button onClick={onClose}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
+        <Button onClick={onClose} disabled={saving}>{t('contentStudio.actions.cancel', 'Annuleren')}</Button>
         <Button onClick={handleCreate} variant="contained" disabled={!title.trim() || platforms.length === 0 || saving} startIcon={saving ? <CircularProgress size={16} /> : <NoteAddIcon />}>
           {saving ? t('contentStudio.actions.creating', 'Aanmaken...') : t('contentStudio.actions.create', 'Aanmaken')}
         </Button>
@@ -1596,7 +1621,7 @@ function ContentImageSection_REMOVED({ itemId, item, onUpdate, isContentOnlyDest
   );
 }
 
-function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isContentOnlyDest = false, defaultLanguage = 'en' }) {
+function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isContentOnlyDest = false, defaultLanguage = 'en', supportedLanguages = [] }) {
   const { t } = useTranslation();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1686,7 +1711,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
 
   const handleLangChange = (lang) => {
     setLangTab(lang);
-    if (item) setEditBody(item[`body_${lang}`] || '');
+    if (item) setEditBody(item[`body_${lang}`] || item.body_en || item.body_nl || '');
   };
 
   const handleSave = async () => {
@@ -1909,7 +1934,9 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
 
   if (!open) return null;
 
-  const LANGS = ['en', 'nl', 'de', 'es', 'fr'];
+  const ALL_LANGS = ['en', 'nl', 'de', 'es', 'fr'];
+  // Filter languages based on destination supportedLanguages prop
+  const LANGS = (Array.isArray(supportedLanguages) && supportedLanguages.length > 0) ? ALL_LANGS.filter(l => supportedLanguages.includes(l)) : ALL_LANGS;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -4122,6 +4149,7 @@ export default function ContentStudioPage() {
         onTranslate={loadItems}
         isContentOnlyDest={isContentOnlyDest}
         defaultLanguage={currentDest?.defaultLanguage || 'en'}
+        supportedLanguages={currentDest?.supportedLanguages || []}
       />
 
       <ConceptDialog

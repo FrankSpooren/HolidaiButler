@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.64.0
+> **Versie**: 4.65.0
 > **Laatst bijgewerkt**: 24 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -402,14 +402,15 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 303 |
+| Admin endpoints | 303 (backend), ~220 met frontend UI (73%) |
 | adminPortal.js | v3.47.0 |
 | Agents | 25 |
 | BullMQ jobs | 79 |
 | Block types | 35 (30 uniek + 5 aliassen) |
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.64.0 |
+| Media Library endpoints | 31 (22 met UI, 9 nieuw deze sessie) |
+| CLAUDE.md | v4.65.0 |
 | Master Strategie | v8.19 |
 
 ---
@@ -859,6 +860,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.65.0** | **2026-04-25** | **Content Studio Bug Fixes + Media Library Enterprise Upgrade + Backend-Frontend Gap Analyse**. **5 Content Studio bugs gefixt**: (1) Manual content social post werd blog (backend las `platform` enkelvoud i.p.v. `platforms` array, nu per-platform items), (2) Nederlandse tekst werd als Engels opgeslagen (taaldetectie NL/ES/DE/FR + juiste body_xx kolom), (3) Verwachtingsmanagement bij aanmaken (progress bar + fasebeschrijvingen), (4) MUI chunk splitting (vendor-mui 4.3MB gesplitst in core 445KB + icons 3.8MB), (5) Interactieve crop UI (canvas-based, 6 aspect presets, drag handles, auto-80% selectie, viewport-fit voor portrait images). **Media Library upgrade**: AI Tools tab (Auto Enhance + Alt-tekst 5 talen + AI Hertaggen), GDPR consent verzoek knop, Media Analytics tab (content-gaps, readiness, top-performers, revenue-top). **Backend-Frontend Gap Analyse**: 113 van 330 endpoints (34%) hadden GEEN frontend UI. Van 39 "bewust backend-only" bleken slechts 7 terecht. 8-fasen actieplan opgesteld (project_gap_actieplan.md). Fase 1 Media Library COMPLEET. **Bestanden**: 1 nieuw (MediaAnalyticsTab.jsx) + 7 gewijzigd (adminPortal.js, contentGenerator.js, ContentStudioPage.jsx, MediaDetailDialog.jsx, MediaImageEditor.jsx, MediaSourceTabs.jsx, vite.config.js, MediaPage.jsx). |
 | **4.64.0** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. **VII-D**: 7 content-blokken (Gallery, Video, SocialFeed, Downloads, Banner, CardGroup, WeatherWidget) — ARIA, container queries, schema.org VideoObject. **P0 fixes**: Image Resize Proxy integratie via `src/lib/image.ts` (srcset 400/600/800/1200w webp) op PoiGrid+EventCalendar+Gallery. ARIA op 22/24 blocks. Touch targets >=44px op 7 interactieve blocks. Container queries op 16 blocks. **P1 fixes**: i18n NL/EN voor ContactForm+Newsletter (7 strings). ARIA op Hero, DesktopHero, EventCalendar, DesktopEvents, CategoryGrid. |
 | **4.63.0** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. **Faq**: schema.org FAQPage, ARIA accordion (aria-expanded/controls/labelledby), container queries. **Testimonials**: schema.org AggregateRating + Review, container queries, blockquote/cite, title i18n, eigen SVG thumbnail. **Newsletter**: ARIA region, GDPR privacy link. **ContactForm**: ARIA, GDPR privacy link, container queries. **Partners**: ARIA, container queries. **TicketShop**: container query grid, ARIA + aria-busy skeleton. **ReservationWidget**: ARIA region. **Admin fixes**: TestimonialsEditor +title veld, EventCalendarEditor +categoryFilter, Testimonials eigen SVG thumbnail. 7 frontend + 3 admin bestanden. |
 | **4.62.0** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken + SchemaInjector enterprise-geüpgraded**. **VII-B2**: EventCalendar (schema.org Event JSON-LD, @container queries, time display, categorie badges) + Map (tier rings, markerLimit, showLegend, ARIA). **VII-B3**: Cta (container queries, backgroundImage, dark/light styles, ARIA region) + Footer (schema.org Organization, ARIA nav landmark, privacy link). **VII-B4**: RichText auto POI-link op naammatch (server-side fetch top-200 POIs, regex word boundary, client-side hb:poi:open dispatch). **Fixes**: tier-badges default OFF (consument ziet ze niet), tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). SchemaInjector nu 6 generators. 5 JSON-LD schema's op homepage. 3 nieuwe + 12 gewijzigde bestanden. |
