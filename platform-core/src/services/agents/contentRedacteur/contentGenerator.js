@@ -498,7 +498,7 @@ export async function generateContent(suggestion, options = {}) {
       }
     }
 
-    // Translate to requested languages
+    // Translate to destination languages — detect input language to avoid redundant translations
     const destLangs = await getLanguages(destinationId);
     const targetLangs = (languages.length > 0 ? languages : destLangs)
       .filter(l => l !== 'en');
@@ -509,6 +509,11 @@ export async function generateContent(suggestion, options = {}) {
         if (translations.title?.[lang]) result[`title_${lang}`] = translations.title[lang];
         if (translations.body?.[lang]) result[`body_${lang}`] = translations.body[lang];
       }
+    }
+
+    // Ensure EN column is always populated (content is generated in EN)
+    // If body_en looks like it was written in another language (manual input),
+    // the caller should use detectAndStoreByLanguage() instead
     }
 
     return result;

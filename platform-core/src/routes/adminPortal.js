@@ -12013,13 +12013,18 @@ Verrijk deze suggestie. Geef alleen de JSON terug.`;
  */
 router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { suggestion_id, content_type, platform = 'website', languages = [], manual, title, body_en, destination_id, persona_id } = req.body;
+    const { suggestion_id, content_type, platform, platforms, languages = [], manual, title, body_en, destination_id, persona_id } = req.body;
 
     // === Manual content creation (TO DO 4g) — no AI generation ===
     if (manual && title) {
       const destId = Number(destination_id) || Number(req.query.destination_id) || 1;
       const cType = content_type || 'blog';
-      // Step 1: Create concept (parent row — required for listing)
+      // Resolve platforms: accept both 'platforms' (array) and 'platform' (string)
+      const targetPlatforms = Array.isArray(platforms) && platforms.length > 0
+        ? platforms
+        : (platform ? [platform] : ['website']);
+
+      // Step 1: Create concept (parent row)
       const [conceptResult] = await mysqlSequelize.query(
         `INSERT INTO content_concepts
          (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
@@ -12027,23 +12032,58 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
         { replacements: { destId, title: title.trim(), cType } }
       );
       const conceptId = conceptResult;
-      // Step 2: Create content item linked to concept
-      const [insertResult] = await mysqlSequelize.query(
-        `INSERT INTO content_items
-         (destination_id, concept_id, content_type, title, body_en, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
-         VALUES (:destId, :conceptId, :cType, :title, :bodyEn, :platform, 'draft', NULL, false, NOW(), NOW())`,
-        {
-          replacements: {
-            destId,
-            conceptId,
-            cType,
-            title: title.trim(),
-            bodyEn: body_en || '',
-            platform,
-          },
+
+      // Step 2: Detect input language and prepare multi-language columns
+      let bodyColumns = { body_en: body_en || '' };
+      let detectedLang = 'en';
+      if (body_en && body_en.trim().length > 20) {
+        // Simple heuristic: detect Dutch/Spanish/German/French by common words
+        const text = body_en.toLowerCase();
+        const langSignals = {
+          nl: ['de ', 'het ', 'een ', 'van ', 'voor ', 'met ', 'ook ', 'maar ', 'niet ', 'naar ', 'zijn ', 'wordt ', 'deze ', 'dit '],
+          es: ['el ', 'la ', 'los ', 'las ', 'del ', 'una ', 'con ', 'por ', 'para ', 'como ', 'pero ', 'este ', 'esta '],
+          de: ['der ', 'die ', 'das ', 'ein ', 'eine ', 'und ', 'mit ', 'von ', 'auf ', 'auch ', 'sich ', 'nicht ', 'oder '],
+          fr: ['le ', 'la ', 'les ', 'des ', 'une ', 'pour ', 'avec ', 'dans ', 'qui ', 'que ', 'sur ', 'mais ', 'sont '],
+        };
+        let bestLang = 'en';
+        let bestScore = 0;
+        for (const [lang, words] of Object.entries(langSignals)) {
+          const score = words.filter(w => text.includes(w)).length;
+          if (score > bestScore && score >= 3) { bestScore = score; bestLang = lang; }
         }
-      );
-      return res.json({ success: true, data: { id: insertResult, concept_id: conceptId, title, manual: true } });
+        detectedLang = bestLang;
+        if (detectedLang !== 'en') {
+          bodyColumns = { [`body_${detectedLang}`]: body_en || '' };
+          // Also store in body_en for backwards compat (will be overwritten by translation if needed)
+          bodyColumns.body_en = body_en || '';
+        }
+      }
+
+      // Step 3: Create one content item PER selected platform
+      const createdItems = [];
+      for (const plat of targetPlatforms) {
+        const [insertResult] = await mysqlSequelize.query(
+          `INSERT INTO content_items
+           (destination_id, concept_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+           VALUES (:destId, :conceptId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr, :platform, 'draft', NULL, false, NOW(), NOW())`,
+          {
+            replacements: {
+              destId,
+              conceptId,
+              cType,
+              title: title.trim(),
+              bodyEn: bodyColumns.body_en || '',
+              bodyNl: bodyColumns.body_nl || null,
+              bodyDe: bodyColumns.body_de || null,
+              bodyEs: bodyColumns.body_es || null,
+              bodyFr: bodyColumns.body_fr || null,
+              platform: plat,
+            },
+          }
+        );
+        createdItems.push({ id: insertResult, platform: plat });
+      }
+      return res.json({ success: true, data: { id: createdItems[0]?.id, concept_id: conceptId, title, manual: true, detected_language: detectedLang, items: createdItems } });
     }
 
     // === AI-generated content from suggestion ===
