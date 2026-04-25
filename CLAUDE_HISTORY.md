@@ -7,6 +7,76 @@
 
 ---
 
+## v4.62.0 — Fase VII-B COMPLEET: Cluster A Enterprise Upgrade (25 april 2026)
+
+### Scope
+Fase VII-B: alle 8 Cluster A blokken enterprise-geüpgraded + SchemaInjector uitgebreid. Tier-badge fix + tenant-aware URLs.
+
+### VII-B2: EventCalendar + Map
+| Feature | Block | Detail |
+|---------|-------|--------|
+| Schema.org Event JSON-LD | EventCalendar | `generateEventListSchema()` — ItemList met Event items |
+| @container queries | EventCalendar | 1/2/3 koloms responsive op block-breedte |
+| Time display | EventCalendar | Kloktijd naast datum (skip midnight = all-day) |
+| Category badge colors | EventCalendar | 12 categorie-keyword → kleur mappings |
+| Title prop | EventCalendar | Configureerbaar via admin (i18n), fallback per locale |
+| Tier rings | Map | T1 goud, T2 zilver, T3 brons marker border |
+| Configurable | Map | markerLimit (default 20), showLegend toggle, height CSS |
+| ARIA | Map | role="application", aria-label legend, role="alert" errors |
+
+### VII-B3: Cta + Footer
+| Feature | Block | Detail |
+|---------|-------|--------|
+| Container queries | Cta | Responsive padding 3rem/4rem/5rem |
+| Background image | Cta | Optioneel via admin, zwarte overlay voor leesbaarheid |
+| Dark/Light styles | Cta | 2 nieuwe achtergrondstijlen |
+| ARIA region | Cta | role="region", aria-label |
+| Schema.org Organization | Footer | JSON-LD met naam, logo, email, social links |
+| ARIA nav landmark | Footer | `<nav aria-label>` op navigatiekolom |
+| Privacy link | Footer | /privacy link in copyright balk |
+| role="contentinfo" | Footer | Semantische footer landmark |
+
+### VII-B4: RichText
+| Feature | Detail |
+|---------|--------|
+| Auto POI-link | POI-namen worden automatisch klikbare links (dotted underline) |
+| Server-side matching | Fetcht top-200 POIs (rating >= 4.0), matcht namen >= 4 chars |
+| Client handler | RichTextPoiLinks.tsx: intercept clicks, dispatch hb:poi:open |
+| Regex | Langste naam eerst, skip bestaande <a> tags, word boundary |
+| Container queries | Responsive typography op smalle containers |
+| enablePoiLinks | Toggle (default true, uitschakelbaar per blok) |
+
+### Fixes (Frank's feedback)
+| Fix | Detail |
+|-----|--------|
+| Tier-badges default OFF | showTierBadge=false — tier is intern, niet voor consumenten |
+| Tenant-aware URLs | Schema.org URLs nu texelmaps.nl voor Texel, holidaibutler.com voor Calpe |
+| page.tsx baseUrl | generatePageMetadata ontvangt tenant-aware baseUrl |
+
+### Bestanden
+| Bestand | Actie |
+|---------|-------|
+| `hb-websites/src/blocks/EventCalendar.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/Map.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/Cta.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/RichText.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/PoiGrid.tsx` | GEWIJZIGD (tier default, tenant URL) |
+| `hb-websites/src/components/layout/Footer.tsx` | GEWIJZIGD (Organization, ARIA, privacy) |
+| `hb-websites/src/components/ui/RichTextPoiLinks.tsx` | NIEUW |
+| `hb-websites/src/lib/schema.ts` | GEWIJZIGD (+Event generators) |
+| `hb-websites/src/types/blocks.ts` | GEWIJZIGD (+props) |
+| `hb-websites/src/app/[[...slug]]/page.tsx` | GEWIJZIGD (tenant baseUrl) |
+| `admin-module/src/components/blocks/editors/MapEditor.jsx` | GEWIJZIGD (+markerLimit, showLegend) |
+| `admin-module/src/components/blocks/editors/CtaEditor.jsx` | GEWIJZIGD (+backgroundImage, dark/light) |
+
+### Tellingen
+- CLAUDE.md v4.62.0, MS v8.17
+- SchemaInjector: 6 generators (was 4)
+- Homepage JSON-LD: 5 schema's (WebSite, BreadcrumbList, TouristDestination, Organization, ItemList)
+- 303 admin endpoints (ongewijzigd), 79 BullMQ jobs (ongewijzigd)
+
+---
+
 ## v4.61.0 — Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector (24 april 2026)
 
 ### Scope
