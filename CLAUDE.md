@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.61.0
+> **Versie**: 4.62.0
 > **Laatst bijgewerkt**: 24 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -195,13 +195,13 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 | 1 | hero | Core | HeroEditor | live |
 | 2 | poi_grid | Core | PoiGridEditor | live (VII-B1 enterprise: tier-badges, container queries, schema.org, fine-dine sort) |
 | 3 | poi_grid_filtered | Variant | (via PoiGridEditor) | live |
-| 4 | event_calendar | Core | EventCalendarEditor | live |
+| 4 | event_calendar | Core | EventCalendarEditor | live (VII-B2: schema.org Event, @container, time display) |
 | 5 | event_calendar_filtered | Variant | (via EventCalendarEditor) | live |
-| 6 | rich_text | Core | RichTextEditor | live |
+| 6 | rich_text | Core | RichTextEditor | live (VII-B4: auto POI-link naammatch, @container typography) |
 | 7 | card_group | Core | CardGroupEditor | live |
-| 8 | map | Core | MapEditor | live |
+| 8 | map | Core | MapEditor | live (VII-B2: tier rings, markerLimit, ARIA) |
 | 9 | testimonials | Core | TestimonialsEditor | live |
-| 10 | cta | Core | CtaEditor | live |
+| 10 | cta | Core | CtaEditor | live (VII-B3: @container, backgroundImage, dark/light, ARIA) |
 | 11 | gallery | Core | GalleryEditor | live |
 | 12 | faq | Core | FaqEditor | live |
 | 13 | ticket_shop | Commerce | TicketShopEditor | live |
@@ -225,7 +225,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 
 **Aliassen**: hero_chatbot→DesktopHero, program_card→DesktopProgramTip, today_events→DesktopEvents, popular_pois→PoiGrid, map_preview→MapWrapper
 
-**Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection via `src/lib/schema.ts` (SchemaInjector service, Fase VII-B1.C): `generatePoiGridSchema()` (ItemList+TouristAttraction), `generateTouristAttractionSchema()`, `generateTouristDestinationSchema()`. PoiGrid rendert inline JSON-LD.
+**Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection via `src/lib/schema.ts` (SchemaInjector, VII-B1.C): 6 generators (PoiGrid ItemList, TouristAttraction, TouristDestination, Event, EventList, Organization). PoiGrid + EventCalendar + Footer renderen inline JSON-LD. 5 schema's op homepage.
 
 **Design Tokens**: 40 CSS custom properties (--hb-*), alle tenant-overridable via destinations.branding.
 
@@ -409,8 +409,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Block types | 35 (30 uniek + 5 aliassen) |
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.61.0 |
-| Master Strategie | v8.16 |
+| CLAUDE.md | v4.62.0 |
+| Master Strategie | v8.17 |
 
 ---
 
@@ -859,6 +859,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.62.0** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken + SchemaInjector enterprise-geüpgraded**. **VII-B2**: EventCalendar (schema.org Event JSON-LD, @container queries, time display, categorie badges) + Map (tier rings, markerLimit, showLegend, ARIA). **VII-B3**: Cta (container queries, backgroundImage, dark/light styles, ARIA region) + Footer (schema.org Organization, ARIA nav landmark, privacy link). **VII-B4**: RichText auto POI-link op naammatch (server-side fetch top-200 POIs, regex word boundary, client-side hb:poi:open dispatch). **Fixes**: tier-badges default OFF (consument ziet ze niet), tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). SchemaInjector nu 6 generators. 5 JSON-LD schema's op homepage. 3 nieuwe + 12 gewijzigde bestanden. |
 | **4.61.0** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. **ProgramCard**: sortProgramOrder() (activiteiten eerst, eten als afsluiter), fine-dine prioriteit avondprogramma (fineDineMinRating 4.5), per-dagdeel rating drempels (ochtend/middag 4.0, avond 4.3), subcategorie bug fix (monuments->monumenten, +galerie/atelier/kunst), is_active check versterkt. **PoiGrid Enterprise**: tier-badges (goud T1/zilver T2/brons T3), CSS @container queries (1/2/3 koloms op block-breedte), inline rating (compact), desktop hover ghost button "Ontdek meer", card aspect-ratio 3/2. Admin PoiGridEditor +3 velden (tierFilter, sortOrder, showTierBadge). **SchemaInjector**: `src/lib/schema.ts` — 4 generator functies (TouristDestination, ItemList, TouristAttraction, schemaToJsonLd). PoiGrid rendert inline JSON-LD. **Backend**: publicPOI.js +3 velden (tier, google_rating, google_review_count). Zombie POI rapport Texel (456 no-rating, 11 rating<3.0). 6 bestanden gewijzigd + 1 nieuw. |
 | **4.60.0** | **2026-04-24** | **Corporate Landing Page Enterprise Upgrade v5.1 (8 opdrachten) + Media Library Activatie + Weather Chatbot**. **Corporate Upgrade**: Outcome-first hero-CTA ("Van bezoeker tot beleving"), 12 module cards (Tourism Media Intelligence, Commerce Suite, etc.), 6-stat balk (303/100+/36+/25/144k+/78), HolidaiButler Flywheel (5 fasen + 6 learning loops, collapsible desktop+mobile), EU-Stack 8 providers (+Bugsink NL, +MailerLite LT), Enterprise Compliance sectie (4 pijlers: GDPR/EU AI Act/WCAG/Security), i18n ~244 keys x 5 talen. **12 module detail-pagina's** (`/modules/*.html`) met SEO meta, volledige nav/footer, specificaties + differentiator per module. **Browser taaldetectie** (navigator.language fallback). **npm audit fix**: 17 \u2192 5 vulnerabilities (low only). **Duplicate CLAUDE.md** verwijderd uit platform-core/. **Media Library Activatie**: `media-performance-aggregator` cron job toegevoegd (dagelijks 02:00, 79 jobs totaal), `OPENWEATHER_API_KEY` geconfigureerd, lat/lng voor Calpe (38.6447, 0.0458) + Texel (53.0548, 4.7979), batch retag 168 media items (context-dimensies: weather/seasons/persona/content_purposes/time_of_day). **Weather Chatbot**: contextService.js uitgebreid met live OpenWeather integratie (async fetch, 30min cache per destination, weer-tips in 5 talen), ragService.js await fix. Werkt voor CalpeTrip.com + Texel Page Builder chatbot. |
 | **4.58.0** | **2026-04-22** | **Corporate Landing Page Enterprise Upgrade — Command v5.1 (8 opdrachten)**. **Opdracht 1**: Outcome-first hero-CTA ("Van bezoeker tot beleving – volledig geautomatiseerd.") + subtekst met "media" in opsomming, 5 talen. **Opdracht 2**: Module-grid 9 → 12 cards, "Media Library" herschreven tot **"Tourism Media Intelligence"** met 5 USP’s als proof-points. Nieuwe cards: Commerce Suite, Page Builder, Merk Profiel & Knowledge Base, Merk-Branding, EU-First Infra, Enterprise Compliance. **Opdracht 3**: Stats-balk 5 → 6 stats met actuele waarden (303 endpoints, 78 jobs, 144k+ vectoren, 36+ blocks, 25 agents, 100+ talen). **Opdracht 4**: Lineair 3-fase proces vervangen door **HolidaiButler Flywheel** — 5 fasen + learning loop met 6 concrete cadence-mechanismen (Trendspotter, Content Feedback, Performance-Learning Media, Content-Gap Detector, Predictive Supply Chain, Revenue Attribution). Desktop horizontaal grid + mobile collapsible details. KPI’s uitsluitend in fase 4 met bronverwijzingen (HubSpot/Statista/ETC). **Opdracht 5**: USP Spotlight-sectie — 5 wereldwijd unieke Tourism Media Intelligence-capabilities + sales-punch. **Opdracht 6**: EU-Stack 6 → 8 providers (+Bugsink NL, +MailerLite LT). **Opdracht 7**: Enterprise Compliance sectie (4 pijlers: GDPR / EU AI Act / WCAG 2.1 AA / Beveiliging) + trust-signals balk. **Opdracht 8**: i18n ~244 keys × 5 talen compleet, QA, documentatie-sync. Bestanden: `index.html` (1.276 LOC), `i18n.js` (347 LOC). npm audit fix: 17 → 5 vulnerabilities (low only). Duplicate `platform-core/CLAUDE.md` verwijderd. |
