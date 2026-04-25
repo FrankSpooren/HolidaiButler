@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 25 april 2026
-**Versie**: 8.18
+**Versie**: 8.19
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1462,7 +1462,11 @@ Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-up
 - TicketShop: container query grid, ARIA + aria-busy
 - ReservationWidget: ARIA
 - Admin fixes: TestimonialsEditor +title, EventCalendarEditor +categoryFilter, Testimonials eigen SVG
-**VII-D: Cluster D — 7 content-blokken** — GEPLAND
+**VII-D: Cluster C — 7 content-blokken** — ✅ COMPLEET (25-04-2026)
+- Gallery: ARIA lightbox, @container, srcset via image.ts
+- Video: schema.org VideoObject, ARIA, container queries
+- P0 Enterprise Fixes: Image srcset 3 blocks, ARIA 22/24, touch >=44px 7 blocks
+- P1 Fixes: i18n ContactForm+Newsletter 7 strings NL/EN
 **VII-E: Cluster D — 5-7 nieuwe USP-blokken** — GEPLAND (feature-flag staged rollout)
 
 Oorspronkelijke "Scale & Launch" scope (E2E testing, load testing, CDN, DR) is geïntegreerd in VII-E/post-VII.
@@ -1659,6 +1663,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **8.19** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. 7 content-blokken (Gallery/Video/SocialFeed/Downloads/Banner/CardGroup/WeatherWidget). P0: Image srcset (image.ts, 3 blocks), ARIA 22/24 blocks, touch >=44px 7 blocks, container queries 16 blocks. P1: i18n 7 strings. Enterprise audit: 92% ARIA, 100% srcset/touch/schema. CLAUDE.md v4.64.0. |
 | **8.18** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. Faq (FAQPage schema), Testimonials (AggregateRating+Review, eigen SVG), Newsletter+ContactForm (GDPR privacy links), Partners+TicketShop (container queries), ReservationWidget (ARIA). Admin: TestimonialsEditor +title, EventCalendarEditor +categoryFilter. CLAUDE.md v4.63.0. |
 | **8.17** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken enterprise-geüpgraded**. VII-B2: EventCalendar (schema.org Event, @container, time, badges) + Map (tier rings, markerLimit, ARIA). VII-B3: Cta (backgroundImage, dark/light, ARIA) + Footer (schema.org Organization, ARIA nav, privacy). VII-B4: RichText auto POI-link. Fixes: tier-badges default OFF, tenant-aware schema.org URLs. SchemaInjector 6 generators. 5 JSON-LD op homepage. CLAUDE.md v4.62.0. |
 | **8.16** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. ProgramCard 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie NL, is_active). PoiGrid enterprise (tier-badges, @container queries, inline rating, hover ghost button, aspect-ratio 3/2). SchemaInjector `schema.ts` (4 functies: ItemList, TouristAttraction, TouristDestination). Admin PoiGridEditor +3 velden. Backend publicPOI.js +3 API velden. Zombie POI rapport Texel. Fase VII roadmap herschreven (5 sub-fases, approval gates). CLAUDE.md v4.61.0. |
@@ -1773,4 +1778,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 25 april 2026 — Fase VII-B+C COMPLEET (15 blokken + SchemaInjector). 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.63.0. MS v8.18.*
+*Laatst bijgewerkt: 25 april 2026 — Fase VII-B+C+D COMPLEET + P0/P1 Enterprise (22 blokken + SchemaInjector). 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.64.0. MS v8.19.*

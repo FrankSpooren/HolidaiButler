@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.63.0
+> **Versie**: 4.64.0
 > **Laatst bijgewerkt**: 24 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -225,7 +225,7 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 
 **Aliassen**: hero_chatbot→DesktopHero, program_card→DesktopProgramTip, today_events→DesktopEvents, popular_pois→PoiGrid, map_preview→MapWrapper
 
-**Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection via `src/lib/schema.ts` (SchemaInjector, VII-B1.C): 6 generators + 2 auto-schema blocks (Faq→FAQPage, Testimonials→AggregateRating+Review). PoiGrid + EventCalendar + Footer + Faq + Testimonials renderen inline JSON-LD. 5+ schema's per pagina.
+**Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection via `src/lib/schema.ts` (SchemaInjector, VII-B1.C): 6 generators + 2 auto-schema blocks. Image Resize Proxy geintegreerd via src/lib/image.ts (srcset 400/600/800/1200w webp) (Faq→FAQPage, Testimonials→AggregateRating+Review). PoiGrid + EventCalendar + Footer + Faq + Testimonials renderen inline JSON-LD. 5+ schema's per pagina.
 
 **Design Tokens**: 40 CSS custom properties (--hb-*), alle tenant-overridable via destinations.branding.
 
@@ -409,8 +409,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Block types | 35 (30 uniek + 5 aliassen) |
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| CLAUDE.md | v4.63.0 |
-| Master Strategie | v8.18 |
+| CLAUDE.md | v4.64.0 |
+| Master Strategie | v8.19 |
 
 ---
 
@@ -859,6 +859,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.64.0** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. **VII-D**: 7 content-blokken (Gallery, Video, SocialFeed, Downloads, Banner, CardGroup, WeatherWidget) — ARIA, container queries, schema.org VideoObject. **P0 fixes**: Image Resize Proxy integratie via `src/lib/image.ts` (srcset 400/600/800/1200w webp) op PoiGrid+EventCalendar+Gallery. ARIA op 22/24 blocks. Touch targets >=44px op 7 interactieve blocks. Container queries op 16 blocks. **P1 fixes**: i18n NL/EN voor ContactForm+Newsletter (7 strings). ARIA op Hero, DesktopHero, EventCalendar, DesktopEvents, CategoryGrid. |
 | **4.63.0** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. **Faq**: schema.org FAQPage, ARIA accordion (aria-expanded/controls/labelledby), container queries. **Testimonials**: schema.org AggregateRating + Review, container queries, blockquote/cite, title i18n, eigen SVG thumbnail. **Newsletter**: ARIA region, GDPR privacy link. **ContactForm**: ARIA, GDPR privacy link, container queries. **Partners**: ARIA, container queries. **TicketShop**: container query grid, ARIA + aria-busy skeleton. **ReservationWidget**: ARIA region. **Admin fixes**: TestimonialsEditor +title veld, EventCalendarEditor +categoryFilter, Testimonials eigen SVG thumbnail. 7 frontend + 3 admin bestanden. |
 | **4.62.0** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken + SchemaInjector enterprise-geüpgraded**. **VII-B2**: EventCalendar (schema.org Event JSON-LD, @container queries, time display, categorie badges) + Map (tier rings, markerLimit, showLegend, ARIA). **VII-B3**: Cta (container queries, backgroundImage, dark/light styles, ARIA region) + Footer (schema.org Organization, ARIA nav landmark, privacy link). **VII-B4**: RichText auto POI-link op naammatch (server-side fetch top-200 POIs, regex word boundary, client-side hb:poi:open dispatch). **Fixes**: tier-badges default OFF (consument ziet ze niet), tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). SchemaInjector nu 6 generators. 5 JSON-LD schema's op homepage. 3 nieuwe + 12 gewijzigde bestanden. |
 | **4.61.0** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. **ProgramCard**: sortProgramOrder() (activiteiten eerst, eten als afsluiter), fine-dine prioriteit avondprogramma (fineDineMinRating 4.5), per-dagdeel rating drempels (ochtend/middag 4.0, avond 4.3), subcategorie bug fix (monuments->monumenten, +galerie/atelier/kunst), is_active check versterkt. **PoiGrid Enterprise**: tier-badges (goud T1/zilver T2/brons T3), CSS @container queries (1/2/3 koloms op block-breedte), inline rating (compact), desktop hover ghost button "Ontdek meer", card aspect-ratio 3/2. Admin PoiGridEditor +3 velden (tierFilter, sortOrder, showTierBadge). **SchemaInjector**: `src/lib/schema.ts` — 4 generator functies (TouristDestination, ItemList, TouristAttraction, schemaToJsonLd). PoiGrid rendert inline JSON-LD. **Backend**: publicPOI.js +3 velden (tier, google_rating, google_review_count). Zombie POI rapport Texel (456 no-rating, 11 rating<3.0). 6 bestanden gewijzigd + 1 nieuw. |
