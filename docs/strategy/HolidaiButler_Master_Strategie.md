@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 25 april 2026
-**Versie**: 8.17
+**Versie**: 8.18
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1454,7 +1454,14 @@ Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-up
 **VII-B4: RichText** — ✅ COMPLEET (25-04-2026)
 - Auto POI-link op naammatch (server-side top-200 POIs, client-side drawer open)
 - Container queries responsive typography
-**VII-C: Cluster B — 7 conversie-blokken** — GEPLAND
+**VII-C: Cluster B — 7 conversie-blokken** — ✅ COMPLEET (25-04-2026)
+- Faq: schema.org FAQPage, ARIA accordion, container queries
+- Testimonials: schema.org AggregateRating+Review, container queries, eigen SVG, title i18n
+- Newsletter + ContactForm: ARIA, GDPR privacy links
+- Partners: ARIA, container queries
+- TicketShop: container query grid, ARIA + aria-busy
+- ReservationWidget: ARIA
+- Admin fixes: TestimonialsEditor +title, EventCalendarEditor +categoryFilter, Testimonials eigen SVG
 **VII-D: Cluster D — 7 content-blokken** — GEPLAND
 **VII-E: Cluster D — 5-7 nieuwe USP-blokken** — GEPLAND (feature-flag staged rollout)
 
@@ -1652,6 +1659,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **8.18** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. Faq (FAQPage schema), Testimonials (AggregateRating+Review, eigen SVG), Newsletter+ContactForm (GDPR privacy links), Partners+TicketShop (container queries), ReservationWidget (ARIA). Admin: TestimonialsEditor +title, EventCalendarEditor +categoryFilter. CLAUDE.md v4.63.0. |
 | **8.17** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken enterprise-geüpgraded**. VII-B2: EventCalendar (schema.org Event, @container, time, badges) + Map (tier rings, markerLimit, ARIA). VII-B3: Cta (backgroundImage, dark/light, ARIA) + Footer (schema.org Organization, ARIA nav, privacy). VII-B4: RichText auto POI-link. Fixes: tier-badges default OFF, tenant-aware schema.org URLs. SchemaInjector 6 generators. 5 JSON-LD op homepage. CLAUDE.md v4.62.0. |
 | **8.16** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. ProgramCard 5 fixes (dagdeel-volgorde, fine-dine, rating drempels, subcategorie NL, is_active). PoiGrid enterprise (tier-badges, @container queries, inline rating, hover ghost button, aspect-ratio 3/2). SchemaInjector `schema.ts` (4 functies: ItemList, TouristAttraction, TouristDestination). Admin PoiGridEditor +3 velden. Backend publicPOI.js +3 API velden. Zombie POI rapport Texel. Fase VII roadmap herschreven (5 sub-fases, approval gates). CLAUDE.md v4.61.0. |
 | 8.15 | 2026-04-21 | **Corporate UX Upgrade (v4.52.0→v4.54.0)**. v4.52.0: Content Studio Polish (12 opdrachten, Content Top 25, kalender dag/week, i18n 5 talen, health-check job, 282 endpoints). v4.53.0: Content Items Enterprise Density + ConceptDialog Focus Mode (density toggle, keyboard nav j/k/Enter, inline titel editing, full-screen F-key, auto-save draft 10s, CORS publiqio.com, 289 endpoints). v4.54.0: Corporate UX Upgrade Command v4.0 — sidebar herstructurering, kalender corporate polish (mini-kalender, keyboard nav, workload indicator, CSV/ICS export, print view), analytics herstructurering, Platform Dashboard (personaliseerbare KPI widgets, delta badges), Onboarding Widget Intercom-stijl (persistent cirkel, 6-10 stappen, NotificationsCenter, createPortal), performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB), WCAG 2.1 AA (21 fixes). 303 endpoints. 74 BullMQ jobs. adminPortal.js v3.47.0. |
@@ -1765,4 +1773,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 25 april 2026 — Fase VII-B Cluster A COMPLEET (8 blokken). 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.62.0. MS v8.17.*
+*Laatst bijgewerkt: 25 april 2026 — Fase VII-B+C COMPLEET (15 blokken + SchemaInjector). 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.63.0. MS v8.18.*
