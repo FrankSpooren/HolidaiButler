@@ -7,6 +7,50 @@
 
 ---
 
+## v4.63.0 — Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise (25 april 2026)
+
+### Scope
+Cluster B: alle 7 conversie-blokken enterprise-geüpgraded + admin editor gaps opgelost.
+
+### Frontend upgrades
+| Blok | Schema.org | ARIA | Container queries | Extra |
+|------|-----------|------|------------------|-------|
+| Faq | FAQPage | accordion (expanded/controls/labelledby) | responsive font | h3 heading wrap |
+| Testimonials | AggregateRating + Review (max 5) | — | responsive grid 1/2/3 col | blockquote/cite semantiek, title i18n, hover lift |
+| Newsletter | — | region, aria-label | wrapper | GDPR privacy link in consent |
+| ContactForm | — | region, aria-label | wrapper | GDPR privacy link in consent |
+| Partners | — | region, aria-label | wrapper | — |
+| TicketShop | — | region + aria-busy skeleton | grid (ticket-grid) 1/2/3 col | — |
+| ReservationWidget | — | region | — | — |
+
+### Admin editor fixes
+| Editor | Fix |
+|--------|-----|
+| TestimonialsEditor | +TranslatableField title (was: geen titel configureerbaar) |
+| EventCalendarEditor | +CategoryFilterField (was: geen event filtering op categorie) |
+| blockEditorRegistry | Testimonials eigen SVG thumbnail (was: fallback naar poi_grid SVG) |
+
+### Bestanden
+| Bestand | Actie |
+|---------|-------|
+| `hb-websites/src/blocks/Faq.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/Testimonials.tsx` | HERSCHREVEN |
+| `hb-websites/src/blocks/Newsletter.tsx` | GEWIJZIGD (ARIA + GDPR) |
+| `hb-websites/src/blocks/ContactForm.tsx` | GEWIJZIGD (ARIA + GDPR) |
+| `hb-websites/src/blocks/Partners.tsx` | GEWIJZIGD (ARIA + container) |
+| `hb-websites/src/blocks/TicketShop.tsx` | GEWIJZIGD (container grid + ARIA) |
+| `hb-websites/src/blocks/ReservationWidget.tsx` | GEWIJZIGD (ARIA) |
+| `admin-module/editors/TestimonialsEditor.jsx` | GEWIJZIGD (+title) |
+| `admin-module/editors/EventCalendarEditor.jsx` | GEWIJZIGD (+categoryFilter) |
+| `admin-module/blockEditorRegistry.js` | GEWIJZIGD (Testimonials SVG) |
+
+### Tellingen
+- CLAUDE.md v4.63.0, MS v8.18
+- 303 admin endpoints (ongewijzigd), 79 BullMQ jobs (ongewijzigd)
+- Schema.org: +FAQPage (Faq), +AggregateRating+Review (Testimonials)
+
+---
+
 ## v4.62.0 — Fase VII-B COMPLEET: Cluster A Enterprise Upgrade (25 april 2026)
 
 ### Scope
