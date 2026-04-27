@@ -1673,9 +1673,10 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
     contentService.getItem(itemId).then(r => {
       const data = r.data;
       setItem(data);
-      setEditBody(data[`body_${defaultLanguage}`] || data.body_en || data.body_nl || '');
+      const itemLang = data.destination_config?.defaultLanguage || defaultLanguage;
+      setEditBody(data[`body_${itemLang}`] || data.body_en || data.body_nl || '');
       setEditTitle(data.title || '');
-      setLangTab(defaultLanguage);
+      setLangTab(data.destination_config?.defaultLanguage || defaultLanguage);
     }).finally(() => setLoading(false));
   }, [itemId, open]);
 
@@ -1936,12 +1937,17 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
   if (!open) return null;
 
   const ALL_LANGS = ['en', 'nl', 'de', 'es', 'fr'];
-  // Filter languages: use supportedLanguages prop, fallback to defaultLanguage if known
-  const LANGS = (Array.isArray(supportedLanguages) && supportedLanguages.length > 0)
-    ? ALL_LANGS.filter(l => supportedLanguages.includes(l))
-    : (defaultLanguage && defaultLanguage !== 'en')
-      ? [defaultLanguage]  // Single-language destination: show only default language
+  // Enterprise: use item's own destination_config (from backend), not UI dropdown selection
+  const itemDestConfig = item?.destination_config;
+  const itemSupportedLangs = itemDestConfig?.supportedLanguages || supportedLanguages;
+  const itemDefaultLang = itemDestConfig?.defaultLanguage || defaultLanguage;
+  const LANGS = (Array.isArray(itemSupportedLangs) && itemSupportedLangs.length > 0)
+    ? ALL_LANGS.filter(l => itemSupportedLangs.includes(l))
+    : (itemDefaultLang && itemDefaultLang !== 'en')
+      ? [itemDefaultLang]
       : ALL_LANGS;
+
+
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -1969,7 +1975,10 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
               {/* Image Section (BLOK 2) */}
               <ContentImageSection itemId={itemId} item={item} onUpdate={onUpdate} isContentOnlyDest={isContentOnlyDest} />
 
-              <Tabs value={langTab} onChange={(_, v) => handleLangChange(v)} sx={{ mb: 1 }}>
+              {item && (
+              <Tabs value={langTab} onChange={(_, v) => handleLangChange(v)} sx={{ mb: 1 }}
+                key={LANGS.join(',')}
+              >
                 {LANGS.map(lang => (
                   <Tab key={lang} value={lang} label={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1979,6 +1988,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
                   } />
                 ))}
               </Tabs>
+              )}
 
               <TextField
                 multiline
@@ -2048,7 +2058,7 @@ function ContentItemDialog({ open, onClose, itemId, onUpdate, onTranslate, isCon
                     Vertaal naar {langTab.toUpperCase()}
                   </Button>
                 )}
-                {LANGS.filter(l => l !== defaultLanguage && !item[`body_${l}`]).map(l => (
+                {item && LANGS.filter(l => l !== itemDefaultLang && !item[`body_${l}`]).map(l => (
                   <Tooltip key={l} title={`Vertaal naar ${l.toUpperCase()}`}>
                     <Chip
                       label={l.toUpperCase()}

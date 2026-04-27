@@ -2072,44 +2072,45 @@ function cronToHuman(cron) {
  * Calculate agent status based on last run and schedule
  */
 function calculateAgentStatus(lastRun, schedule, meta) {
-  // Fase 1 fix: returns healthy | warning | error | deactivated (never unknown)
+  // Deactivated agents always return 'deactivated'
   if (meta?.active === false) return 'deactivated';
-
-  if (!lastRun) {
-    if (!schedule) return 'healthy';
-    const p = String(schedule).split(' ');
-    if (p[3] && p[3] !== '*') return 'healthy';
-    if (p[4] && p[4] !== '*') return 'warning';
-    if (p[2] && p[2] !== '*') return 'warning';
-    return 'error';
-  }
-
+  if (!lastRun) return 'unknown';
   if (lastRun.status === 'error' || lastRun.status === 'failed') return 'error';
+
   if (!schedule) return (lastRun.status === 'completed' || lastRun.status === 'success') ? 'healthy' : 'warning';
 
-  const parts = String(schedule).split(' ');
-  const [min, hour, dayOfMonth, month, dayOfWeek] = parts;
+  // Parse cron schedule to determine expected interval in ms
+  // Format: min hour dayOfMonth month dayOfWeek
+  const parts = schedule.split(' ');
+  const [min, hour, dayOfMonth, , dayOfWeek] = parts;
   let intervalMs;
 
-  if (month && month !== '*') {
-    intervalMs = 100 * 24 * 3600 * 1000;
-  } else if (dayOfWeek && dayOfWeek !== '*') {
-    intervalMs = 7 * 24 * 3600 * 1000;
+  if (dayOfWeek && dayOfWeek !== '*') {
+    // Weekly schedule (e.g., '0 5 * * 1' = Monday 05:00)
+    intervalMs = 7 * 24 * 3600 * 1000; // 168 hours
   } else if (dayOfMonth && dayOfMonth !== '*') {
+    // Monthly schedule (e.g., '0 3 1 * *' = 1st of month)
     intervalMs = 30 * 24 * 3600 * 1000;
   } else if (min.startsWith('*/') && hour === '*') {
+    // Sub-hourly (e.g., '*/30 * * * *' = every 30 min)
     intervalMs = parseInt(min.slice(2)) * 60 * 1000;
   } else if (min === '0' && hour.startsWith('*/')) {
+    // Multi-hourly (e.g., '0 */4 * * *' = every 4 hours)
     intervalMs = parseInt(hour.slice(2)) * 3600 * 1000;
   } else if (hour === '*') {
+    // Hourly (e.g., '0 * * * *')
     intervalMs = 60 * 60 * 1000;
   } else {
+    // Daily default (e.g., '0 6 * * *')
     intervalMs = 24 * 3600 * 1000;
   }
 
   const elapsed = Date.now() - new Date(lastRun.timestamp).getTime();
+  // Healthy if within 2x the expected interval
   if (elapsed < intervalMs * 2) return 'healthy';
+  // Warning if within 3x the expected interval
   if (elapsed < intervalMs * 3) return 'warning';
+  // Error if very stale (more than 3x expected interval)
   return 'error';
 }
 
@@ -2162,9 +2163,9 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
         deactivatedReason: meta.deactivatedReason || null,
         deactivatedDate: meta.deactivatedDate || null,
         destinationAware: meta.type === 'A',
-        status: meta.active === false ? 'deactivated' : 'warning',
+        status: meta.active === false ? 'deactivated' : 'unknown',
         lastRun: null,
-        destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'warning' }, texel: { lastRun: null, status: 'warning' } } : null
+        destinations: meta.type === 'A' ? { calpe: { lastRun: null, status: 'unknown' }, texel: { lastRun: null, status: 'unknown' } } : null
       };
     });
 
@@ -2203,7 +2204,7 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       if (mongoose.connection.readyState === 1) {
         const db = mongoose.connection.db;
         const auditLogs = db.collection('audit_logs');
-        const since = new Date(Date.now() - 120 * 24 * 3600 * 1000);
+        const since = new Date(Date.now() - 24 * 3600 * 1000);
 
         // Get last runs per actor
         const lastRuns = await auditLogs.aggregate([

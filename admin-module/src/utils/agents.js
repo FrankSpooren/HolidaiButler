@@ -7,7 +7,7 @@ export const AGENT_ICONS = {
   'De Maestro': '\u{1F3AD}',
   'De Bode': '\u{1F4E2}',
   'De Dokter': '\u{1F3E5}',
-  'De Koerier': '\u{1F4E6}',
+  'De Koerier': '\u{1F6B4}',
   'Het Geheugen': '\u{1F9E0}',
   'De Gastheer': '\u{1F91D}',
   'De Poortwachter': '\u{1F512}',
@@ -21,7 +21,16 @@ export const AGENT_ICONS = {
   'De Weermeester': '\u{1F52E}',
   'Content Quality Checker': '\u{1F4CA}',
   'Smoke Test Runner': '\u{1F9EA}',
-  'Backup Health Checker': '\u{1F4BE}'
+  'Backup Health Checker': '\u{1F4BE}',
+  'De Makelaar': '\u{1F4BC}',
+  'De Kassier': '\u{1F4B0}',
+  'De Magazijnier': '\u{1F4E6}',
+  'De Trendspotter': '\u{1F4C8}',
+  'De Redacteur': '\u{270D}\uFE0F',
+  'De SEO Meester': '\u{1F50E}',
+  'De Uitgever': '\u{1F4F0}',
+  'De Verkenner': '\u{1F9ED}',
+  'De Promotor': '\u{2B06}\uFE0F'
 };
 
 export const CATEGORY_COLORS = {
@@ -29,7 +38,8 @@ export const CATEGORY_COLORS = {
   operations: '#5d4037',
   development: '#4a148c',
   strategy: '#01579b',
-  monitoring: '#004d40'
+  monitoring: '#004d40',
+  content: '#b71c1c'
 };
 
 export const STATUS_COLORS = {
@@ -58,7 +68,16 @@ export const AGENT_DESCRIPTIONS_NL = {
   'De Weermeester': 'Predictive analytics en trendanalyse',
   'Content Quality Checker': 'Wekelijkse content kwaliteitscheck',
   'Smoke Test Runner': 'Dagelijkse endpoint tests alle portals',
-  'Backup Health Checker': 'Dagelijkse controle database backups'
+  'Backup Health Checker': 'Dagelijkse controle database backups',
+  'De Makelaar': 'Intermediaire transactie monitoring en escalatie',
+  'De Kassier': 'Financiële reconciliatie en anomaliedetectie',
+  'De Magazijnier': 'Voorraad synchronisatie Redis vs MySQL',
+  'De Trendspotter': 'Trending keyword collectie en analyse via Google Trends',
+  'De Redacteur': 'AI content generatie, herschrijven en optimalisatie',
+  'De SEO Meester': 'SEO analyse, meta-optimalisatie en score berekening',
+  'De Uitgever': 'Social media publicatie naar alle platformen',
+  'De Verkenner': 'Automatische POI discovery via Apify (Google Places)',
+  'De Promotor': 'Automatische POI tier promotie/degradatie op data-activiteit'
 };
 
 export const AGENT_TASKS = {
@@ -169,6 +188,56 @@ export const AGENT_TASKS = {
     'MongoDB backup recency check',
     'Disk space monitoring',
     'Alert bij CRITICAL status'
+  ],
+  'De Makelaar': [
+    'Intermediaire transactie monitoring',
+    'Escalatie bij timeout of fout',
+    'Partner status tracking'
+  ],
+  'De Kassier': [
+    'Dagelijkse financiële reconciliatie',
+    'Anomalie detectie in transacties',
+    'Revenue rapportage per destination'
+  ],
+  'De Magazijnier': [
+    'Redis ↔ MySQL voorraad sync',
+    'Ticket inventory monitoring',
+    'Alert bij lage voorraad'
+  ],
+  'De Trendspotter': [
+    'Google Trends keyword collectie',
+    'Trending topic analyse per destination',
+    'Content suggesties op basis van trends'
+  ],
+  'De Redacteur': [
+    'AI content generatie (Mistral)',
+    'Content herschrijven en optimalisatie',
+    'Hashtag en caption generatie',
+    'Multi-platform content adaptatie'
+  ],
+  'De SEO Meester': [
+    'SEO score berekening per content item',
+    'Meta title/description optimalisatie',
+    'Keyword dichtheid analyse',
+    'Interne linking suggesties'
+  ],
+  'De Uitgever': [
+    'Publicatie naar Facebook, Instagram, LinkedIn',
+    'Scheduling en queue management',
+    'Publicatie status tracking',
+    'Platform-specifieke formatting'
+  ],
+  'De Verkenner': [
+    'Kwartaallijkse POI discovery Calpe',
+    'Jaarlijkse volledige POI scan',
+    'Deduplicatie en kwaliteitsfiltering',
+    'Automatische classificatie nieuwe POIs'
+  ],
+  'De Promotor': [
+    'Wekelijkse data-activiteit analyse',
+    'Automatische tier promotie bij frequent updates',
+    'Automatische tier degradatie bij inactiviteit',
+    'Audit trail van alle tier-wijzigingen'
   ]
 };
 

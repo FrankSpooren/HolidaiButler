@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.66.0
+> **Versie**: 4.67.0
 > **Laatst bijgewerkt**: 27 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -413,8 +413,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
 | Media Library endpoints | 31 |
-| CLAUDE.md | v4.66.0 |
-| Master Strategie | v8.20 |
+| CLAUDE.md | v4.67.0 |
+| Master Strategie | v8.21 |
 
 ---
 
@@ -864,6 +864,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.67.0** | **2026-04-27** | **Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS**. **Content Studio**: image reorder via pijltjes-patroon (POI Management bewezen aanpak) met `loadImages()` self-loading + backend `resolved_images` sort op `media_ids` volgorde. MUI Icons tree-shaking bundel 9.5MB→2.8MB. **BUTE Taal-Pipeline**: contentGenerator.js destination-aware (`body_<sourceLang>` i.p.v. altijd `body_en`), backfill 20 items `body_en→NULL`, backend PATCH enforcement single-language destinations, frontend LANGS uit `item.destination_config` (backend-driven, niet UI dropdown). **Publiqio.com**: Apache CORS dubbele headers verwijderd, ProxyTimeout 120s, `VITE_API_URL=` leeg voor same-origin proxy. |
 | **4.66.0** | **2026-04-27** | **Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close**. **Page Builder VII-B/C/D code deploy**: 22 blokken enterprise-geüpgraded (ARIA, container queries, schema.org, srcset) in 1 productie-commit (94 bestanden, +7.430/-2.813 LOC). SchemaInjector `schema.ts` (6 generators). Image Resize Proxy `image.ts` (srcset 400-1200w webp). ProgramCard Texel kwaliteit (5 fixes). Tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). **Content Studio fixes**: Image reorder pijltjes-patroon, ContentImageSection zelfstandige image loading via loadImages(), MUI Icons tree-shaking barrel→path imports (bundel 9.5MB→2.8MB), VITE_API_URL leeg voor same-origin proxy. **BUTE taal-pipeline**: contentGenerator.js destination-aware generatie (body_<sourceLang> i.p.v. altijd body_en), backfill 4 BUTE items body_en→body_nl, frontend LANGS filter op destination.supportedLanguages, vertaal-knoppen filteren op defaultLanguage. **Admin UI Gap-Close (12 nieuwe componenten)**: ChatbotAdminPanels (271 LOC), Commerce tabs (GuestsTab/ReservationsTab/TicketsTab/VouchersTab), POI dashboards (POIClassificationDashboard/POIDiscoveryDashboard/POIFreshnessPanel/POIImageReviewQueue), PlatformHealthDashboard (278 LOC), MediaContextSearch (188 LOC), ContentReportTab (181 LOC). **Backend**: tierPromotionAgent.js (249 LOC, nieuwe agent #26), circuitBreaker.js refactored + circuitBreakerInit.js (startup isolatie), adminPortal.js resolved_images sort op media_ids volgorde, metaClient.js uitgebreid (+222 LOC), monitoring.js + poiClassification.js + poiImages.js wijzigingen, Apache publiqio.com CORS dubbele headers fix + ProxyTimeout 120s. 81 BullMQ jobs. |
 | **4.65.0** | **2026-04-25** | **Content Studio Bug Fixes + Media Library Enterprise Upgrade + Backend-Frontend Gap Analyse**. **5 Content Studio bugs gefixt**: (1) Manual content social post werd blog (backend las `platform` enkelvoud i.p.v. `platforms` array, nu per-platform items), (2) Nederlandse tekst werd als Engels opgeslagen (taaldetectie NL/ES/DE/FR + juiste body_xx kolom), (3) Verwachtingsmanagement bij aanmaken (progress bar + fasebeschrijvingen), (4) MUI chunk splitting (vendor-mui 4.3MB gesplitst in core 445KB + icons 3.8MB), (5) Interactieve crop UI (canvas-based, 6 aspect presets, drag handles, auto-80% selectie, viewport-fit voor portrait images). **Media Library upgrade**: AI Tools tab (Auto Enhance + Alt-tekst 5 talen + AI Hertaggen), GDPR consent verzoek knop, Media Analytics tab (content-gaps, readiness, top-performers, revenue-top). **Backend-Frontend Gap Analyse**: 113 van 330 endpoints (34%) hadden GEEN frontend UI. Van 39 "bewust backend-only" bleken slechts 7 terecht. 8-fasen actieplan opgesteld (project_gap_actieplan.md). Fase 1 Media Library COMPLEET. **Bestanden**: 1 nieuw (MediaAnalyticsTab.jsx) + 7 gewijzigd (adminPortal.js, contentGenerator.js, ContentStudioPage.jsx, MediaDetailDialog.jsx, MediaImageEditor.jsx, MediaSourceTabs.jsx, vite.config.js, MediaPage.jsx). |
 | **4.64.0** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. **VII-D**: 7 content-blokken (Gallery, Video, SocialFeed, Downloads, Banner, CardGroup, WeatherWidget) — ARIA, container queries, schema.org VideoObject. **P0 fixes**: Image Resize Proxy integratie via `src/lib/image.ts` (srcset 400/600/800/1200w webp) op PoiGrid+EventCalendar+Gallery. ARIA op 22/24 blocks. Touch targets >=44px op 7 interactieve blocks. Container queries op 16 blocks. **P1 fixes**: i18n NL/EN voor ContactForm+Newsletter (7 strings). ARIA op Hero, DesktopHero, EventCalendar, DesktopEvents, CategoryGrid. |
