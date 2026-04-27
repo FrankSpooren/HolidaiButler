@@ -334,6 +334,7 @@
       "development": "Development",
       "strategy": "Strategy",
       "monitoring": "Monitoring",
+      "content": "Contenu",
       "destination": "Destination"
     },
     "table": {

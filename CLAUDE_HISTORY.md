@@ -7,6 +7,52 @@
 
 ---
 
+## v4.67.0 — Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS (27 april 2026)
+
+### Content Studio Image Reorder (definitieve fix)
+- DnD (@dnd-kit) verwijderd na 6+ mislukte pogingen — vervangen door bewezen pijltjes-patroon uit POI Management
+- `ContentImageSection.loadImages()`: component laadt images ZELF via API (niet via item prop)
+- Na elke move/remove/add: `await loadImages()` — herlaad van server
+- Backend: `resolved_images` gesorteerd op `media_ids` volgorde (MySQL IN() PK-volgorde fix)
+- Dubbele `onDragEnd` events geblokkeerd via `lastDragRef` eventKey tracking
+
+### BUTE Taal-Pipeline (3-laags fix)
+| Laag | Fix |
+|------|-----|
+| **Backend generatie** | `contentGenerator.js`: destination-aware — content in `body_<sourceLang>`, prompt in destination taal, vertaalstap filtert sourceLang |
+| **Data backfill** | 20 BUTE items: `body_en = NULL` (was: NL tekst in body_en kolom) |
+| **Backend PATCH** | Enforcement: single-language destinations accepteren alleen `body_<defaultLanguage>` |
+| **Backend GET** | `destination_config` (defaultLanguage + supportedLanguages) in content item response |
+| **Frontend** | LANGS uit `item.destination_config` (backend-driven), tabs conditional op item loaded, `key={LANGS.join(',')}` forced re-render |
+
+### Publiqio.com Stabiliteit
+| Fix | Detail |
+|-----|--------|
+| Apache CORS | Dubbele headers verwijderd (Apache + Express → alleen Express) |
+| ProxyTimeout | 60s → 120s (AI generatie duurt 30-60s) |
+| ProxyPass retry | retry=0 (geen ghost requests bij timeout) |
+| VITE_API_URL | `https://api.holidaibutler.com` → leeg (same-origin via proxy) |
+
+### MUI Icons Bundel Optimalisatie
+- 86 barrel imports → path imports (8 bestanden)
+- 3 `import * as MuiIcons` → whitelist van 29 gebruikte icons
+- Bundel: 9.5MB → 2.8MB (-71%)
+
+### Bestanden gewijzigd
+- `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` — destination-aware generatie
+- `platform-core/src/routes/adminPortal.js` — destination_config in response, PATCH enforcement, resolved_images sort
+- `admin-module/src/pages/ContentStudioPage.jsx` — LANGS uit destination_config, tabs conditional
+- `admin-module/src/components/content/ContentImageSection.jsx` — pijltjes-patroon, loadImages()
+- `admin-module/.env.production` — VITE_API_URL leeg
+- `/etc/apache2/sites-enabled/publiqio.com-le-ssl.conf` — CORS verwijderd, ProxyTimeout
+- 8 bestanden barrel→path icon imports
+
+### Tellingen
+- CLAUDE.md v4.67.0, MS v8.21
+- 303 admin endpoints (ongewijzigd), 79 BullMQ jobs (ongewijzigd)
+
+---
+
 ## v4.66.0 — Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close (27 april 2026)
 
 ### Scope

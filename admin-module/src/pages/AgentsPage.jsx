@@ -164,6 +164,7 @@ export default function AgentsPage({ embedded = false }) {
           { key: 'healthy', value: summary.healthy, color: STATUS_COLORS.healthy },
           { key: 'warning', value: summary.warning, color: STATUS_COLORS.warning },
           { key: 'error', value: summary.error, color: STATUS_COLORS.error },
+          { key: 'unknown', value: summary.unknown, color: STATUS_COLORS.unknown },
           { key: 'deactivated', value: summary.deactivated, color: STATUS_COLORS.deactivated }
         ].map(({ key, value, color }) => (
           <Grid item xs={6} md={3} key={key}>
