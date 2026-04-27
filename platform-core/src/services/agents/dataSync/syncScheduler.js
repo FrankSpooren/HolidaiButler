@@ -52,6 +52,27 @@ const SYNC_JOBS = {
     maxPOIs: null,
     description: "Tier 4 POI sync (remaining) - Quarterly"
   },
+  "poi-discovery-quarterly": {
+    cron: "0 2 1 1,4,7,10 *",    // Quarterly (Jan, Apr, Jul, Oct) at 02:00
+    type: "poi-discovery-auto",
+    description: "Kwartaallijkse POI discovery Calpe (6 categorieën)",
+    destination: "Calpe, Spain",
+    categories: ["food_drinks", "shopping", "activities", "beach", "historical", "nightlife"],
+    maxBudgetEur: 20
+  },
+  "poi-discovery-annual": {
+    cron: "0 2 15 1 *",           // Annual on Jan 15 at 02:00
+    type: "poi-discovery-auto",
+    description: "Jaarlijkse volledige POI discovery Calpe",
+    destination: "Calpe, Spain",
+    categories: [],
+    maxBudgetEur: 20
+  },
+  "tier-promotion": {
+    cron: "0 4 * * 0",           // Weekly on Sunday at 04:00 (after tier-recalc)
+    type: "tier-promotion",
+    description: "Auto-promote/demote POIs based on data activity"
+  },
   "poi-tier-recalc": {
     cron: "0 3 * * 0",           // Weekly on Sunday at 03:00
     type: "data-sync-recalc",

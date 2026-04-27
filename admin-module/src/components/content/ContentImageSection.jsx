@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +22,7 @@ import client from '../../api/client.js';
 export default function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false }) {
   const { t } = useTranslation();
   const [images, setImages] = useState([]);
+
   const [suggestions, setSuggestions] = useState([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -36,7 +39,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   // Load images from all sources based on active tab + search
   useEffect(() => {
     if (!mediaPickerOpen) return;
-    const apiBase = import.meta.env.VITE_API_URL || '';
+    const apiBase = import.meta.env.VITE_API_URL || 'https://api.holidaibutler.com';
     const destCode = String(item?.destination_id || 1);
     const destId = item?.destination_id || 1;
 
@@ -69,43 +72,52 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   }, [mediaPickerOpen, mediaTab, mediaSearch, itemId, item?.destination_id]);
 
   // Load current images — resolve raw IDs to URLs
-  useEffect(() => {
-    if (!item) return;
+
+
+  // Suggestions loaded on-demand (user clicks button), not on mount — performance optimization
+  // useEffect removed: was loading suggestions for every item open, even when not needed
+
+  // Load images directly from server (not from item prop — avoids stale state)
+  const loadImages = async () => {
+    if (!itemId) return;
     try {
-      if (item.resolved_images && item.resolved_images.length > 0) {
-        setImages(item.resolved_images);
+      const r = await client.get(`/content/items/${itemId}`);
+      const data = r.data?.data || r.data || {};
+      if (data.resolved_images && data.resolved_images.length > 0) {
+        setImages(data.resolved_images);
       } else {
-        const mediaIds = item.media_ids
-          ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids)
+        const mediaIds = data.media_ids
+          ? (typeof data.media_ids === 'string' ? JSON.parse(data.media_ids) : data.media_ids)
           : [];
-        if (mediaIds.length > 0 && typeof mediaIds[0] !== 'object') {
-          Promise.all(mediaIds.map(async (rawId) => {
-            if (typeof rawId === 'string' && rawId.startsWith('http')) {
-              return { id: rawId, url: rawId, thumbnail: rawId };
-            }
-            const numId = typeof rawId === 'string' && rawId.startsWith('poi:') ? Number(rawId.replace('poi:', '')) : Number(rawId);
-            if (isNaN(numId)) return { id: rawId, url: rawId, thumbnail: rawId };
-            try {
-              const res = await client.get(`/content/images/resolve/${numId}`);
-              return res.data?.data || { id: numId, url: null };
-            } catch {
-              return { id: numId, url: null };
-            }
-          })).then(resolved => setImages(resolved)).catch(() => setImages(mediaIds));
-        } else {
-          setImages(mediaIds);
-        }
+        setImages(mediaIds);
       }
     } catch { setImages([]); }
-  }, [item?.media_ids, item?.resolved_images]);
+  };
 
-  // Auto-load suggestions when component mounts
-  useEffect(() => {
-    if (!itemId) return;
-    loadSuggestions();
-  }, [itemId]);
+  useEffect(() => { loadImages(); }, [itemId]);
 
   const currentImageIds = new Set(images.map(img => typeof img === 'object' ? img.id : img));
+
+  const handleMoveImage = async (fromIdx, direction) => {
+    const toIdx = fromIdx + direction;
+    if (toIdx < 0 || toIdx >= images.length) return;
+    const newOrder = [...images];
+    [newOrder[fromIdx], newOrder[toIdx]] = [newOrder[toIdx], newOrder[fromIdx]];
+    setImages(newOrder);
+    // Persist to backend
+    const updatedIds = newOrder.map(m => {
+      if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
+      return typeof m === 'object' ? m.id : m;
+    });
+    try {
+      await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
+      // Reload images from server to confirm persistence
+      await loadImages();
+    } catch (err) {
+      console.error('Image reorder failed:', err);
+      await loadImages();
+    }
+  };
 
   const handleRemoveImage = async (mediaId) => {
     try {
@@ -117,7 +129,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
         if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
         return typeof m === 'object' ? m.id : m;
       });
-      await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
+      const patchRes = await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
       setImages(updatedImages);
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -137,6 +149,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
       } else {
         await contentService.attachImages(itemId, [mediaId]);
       }
+      await loadImages();
       if (onUpdate) onUpdate();
     } catch (err) {
       console.error('Image select failed:', err);
@@ -146,6 +159,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   const handleAttachImage = async (mediaId) => {
     try {
       await contentService.attachImages(itemId, [mediaId]);
+      await loadImages();
       if (onUpdate) onUpdate();
     } catch (err) {
       console.error('Image attach failed:', err);
@@ -189,7 +203,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
           {images.length > 0 && <Chip label={images.length} size="small" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
         </Typography>
         <Button size="small" variant="outlined" onClick={() => setMediaPickerOpen(true)} startIcon={<AddIcon />}>
-          {t('contentStudio.images.addImage', 'Afbeelding zoeken')}
+          {t('contentStudio.images.addImage', 'Voeg afbeelding toe')}
         </Button>
       </Box>
 
@@ -199,7 +213,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
             const src = typeof imgId === 'object' ? (imgId.url || imgId.thumbnail) : null;
             const id = typeof imgId === 'object' ? imgId.id : imgId;
             return (
-              <Box key={idx} sx={{ position: 'relative', width: 140, height: 105, borderRadius: 1, overflow: 'hidden', border: '2px solid', borderColor: 'success.main' }}>
+              <Box key={id || idx} sx={{ position: 'relative', width: 140, height: 105, borderRadius: 1, overflow: 'hidden', border: '2px solid', borderColor: 'success.main', bgcolor: '#f5f5f5' }}>
                 {src && <Box component="img" src={src} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={e => { e.target.style.background = '#e0e0e0'; e.target.style.display = 'none'; }} />}
                 <Chip label={t('contentStudio.images.active', 'Actief')} size="small" color="success"
@@ -208,6 +222,16 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
                   sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, p: 0.3 }}>
                   <CloseIcon sx={{ fontSize: 14 }} />
                 </IconButton>
+                <Box sx={{ position: 'absolute', bottom: 2, right: 2, display: 'flex', gap: 0.25 }}>
+                  <IconButton size="small" disabled={idx === 0} onClick={() => handleMoveImage(idx, -1)}
+                    sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, p: 0.25, '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)', bgcolor: 'rgba(0,0,0,0.3)' } }}>
+                    <ArrowBackIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                  <IconButton size="small" disabled={idx === images.length - 1} onClick={() => handleMoveImage(idx, 1)}
+                    sx={{ bgcolor: 'rgba(0,0,0,0.5)', color: 'white', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' }, p: 0.25, '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)', bgcolor: 'rgba(0,0,0,0.3)' } }}>
+                    <ArrowForwardIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Box>
               </Box>
             );
           })}

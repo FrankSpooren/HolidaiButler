@@ -48,7 +48,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         description: tenant.branding?.payoff?.[locale] ?? tenant.branding?.payoff?.en ?? '',
       };
     }
-    return generatePageMetadata(page, tenant, { locale });
+    const metaBaseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (tenantSlug === 'texel' ? 'https://www.texelmaps.nl' : 'https://www.holidaibutler.com');
+    return generatePageMetadata(page, tenant, { locale, baseUrl: metaBaseUrl });
   } catch {
     return { title: 'HolidaiButler' };
   }
@@ -114,7 +115,7 @@ export default async function Page({ params }: PageProps) {
   // Texel uses page builder blocks for homepage. Other destinations use MobileHomepage in layout.tsx.
   if (pageSlug === 'home' && tenantSlug !== 'texel') {
     if (!tenant) notFound();
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (tenantSlug === 'texel' ? 'https://www.texelmaps.nl' : 'https://www.holidaibutler.com');
     const jsonLd = generateWebSiteJsonLd(tenant, baseUrl);
     const breadcrumbLd = generateBreadcrumbJsonLd([{ name: tenant.displayName, url: baseUrl }]);
     return (
@@ -128,7 +129,7 @@ export default async function Page({ params }: PageProps) {
   // Homepage without page data in DB: render JSON-LD only
   if (pageSlug === 'home' && !page) {
     if (!tenant) notFound();
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (tenantSlug === 'texel' ? 'https://www.texelmaps.nl' : 'https://www.holidaibutler.com');
     const jsonLd = generateWebSiteJsonLd(tenant, baseUrl);
     const breadcrumbLd = generateBreadcrumbJsonLd([{ name: tenant.displayName, url: baseUrl }]);
     return (
@@ -143,7 +144,7 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (tenantSlug === 'texel' ? 'https://www.texelmaps.nl' : 'https://www.holidaibutler.com');
   const blocks = page.layout?.blocks ?? [];
 
   // JSON-LD structured data

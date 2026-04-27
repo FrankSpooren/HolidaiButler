@@ -6,12 +6,18 @@ import {
   Grid, CardMedia, Card, CardContent, CardActions, TablePagination, Checkbox, Snackbar, CircularProgress,
   TableSortLabel
 } from '@mui/material';
-import {
-  Refresh as RefreshIcon, Visibility as ViewIcon, Delete as DismissIcon,
-  SaveAlt as SaveIcon, AutoFixHigh as AnalyzeIcon, YouTube as YouTubeIcon,
-  Image as ImageIcon, ViewModule as GridIcon, TableChart as TableIcon,
-  FilterList as FilterIcon, CheckCircle as CheckIcon, CloudUpload as UploadIcon
-} from '@mui/icons-material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ViewIcon from '@mui/icons-material/Visibility';
+import DismissIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/SaveAlt';
+import AnalyzeIcon from '@mui/icons-material/AutoFixHigh';
+import YouTubeIcon from '@mui/icons-material/YouTube';
+import ImageIcon from '@mui/icons-material/Image';
+import GridIcon from '@mui/icons-material/ViewModule';
+import TableIcon from '@mui/icons-material/TableChart';
+import FilterIcon from '@mui/icons-material/FilterList';
+import CheckIcon from '@mui/icons-material/CheckCircle';
+import UploadIcon from '@mui/icons-material/CloudUpload';
 import { useTranslation } from 'react-i18next';
 import contentService from '../../api/contentService';
 

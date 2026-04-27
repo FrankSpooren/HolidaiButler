@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Box, Typography, Button,
   IconButton, Slider, Tabs, Tab, ToggleButtonGroup, ToggleButton, TextField,
@@ -15,6 +15,7 @@ import RotateLeftIcon from '@mui/icons-material/RotateLeft';
 import RotateRightIcon from '@mui/icons-material/RotateRight';
 import FlipIcon from '@mui/icons-material/Flip';
 import FilterIcon from '@mui/icons-material/Filter';
+import CropFreeIcon from '@mui/icons-material/CropFree';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client.js';
@@ -47,6 +48,15 @@ const SOCIAL_PRESETS = [
   { label: 'X/Twitter', icon: '🐦', width: 1200, height: 675 },
 ];
 
+const CROP_ASPECT_PRESETS = [
+  { label: 'Vrij', value: null },
+  { label: '1:1', value: 1 },
+  { label: '4:3', value: 4/3 },
+  { label: '3:4', value: 3/4 },
+  { label: '16:9', value: 16/9 },
+  { label: '9:16', value: 9/16 },
+];
+
 const ASPECT_PRESETS = [
   { label: 'Vrij', value: null },
   { label: '1:1', value: 1 },
@@ -64,6 +74,31 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
   const [saving, setSaving] = useState(false);
   const [activePreset, setActivePreset] = useState(null);
   const [activeFilter, setActiveFilter] = useState('none');
+
+  // Crop state
+  const [cropMode, setCropMode] = useState(false);
+  const [cropRegion, setCropRegion] = useState(null);
+  const [cropAspect, setCropAspect] = useState(null);
+  const [imgDims, setImgDims] = useState(null); // {left, top, width, height} of rendered img
+  const cropContainerRef = useRef(null);
+  const imgRef = useRef(null);
+  const cropDragRef = useRef({ dragging: false, resizing: false, handle: null, startX: 0, startY: 0, startCrop: null });
+
+  // Track rendered image dimensions for precise overlay positioning
+  const updateImgDims = useCallback(() => {
+    const img = imgRef.current;
+    const container = cropContainerRef.current;
+    if (img && container) {
+      const cRect = container.getBoundingClientRect();
+      const iRect = img.getBoundingClientRect();
+      setImgDims({
+        left: iRect.left - cRect.left,
+        top: iRect.top - cRect.top,
+        width: iRect.width,
+        height: iRect.height,
+      });
+    }
+  }, []);
 
   // Adjust state
   const [brightness, setBrightness] = useState(1);
@@ -97,20 +132,33 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
     setOperations(prev => [...prev, op]);
   }, []);
 
-  const hasChanges = operations.length > 0 || brightness !== 1 || contrast !== 1 || saturation !== 1 || activeFilter !== 'none';
+  const hasChanges = operations.length > 0 || brightness !== 1 || contrast !== 1 || saturation !== 1 || activeFilter !== 'none' || cropRegion !== null;
 
   const undo = useCallback(() => {
-    if (operations.length > 0) {
+    if (cropRegion) {
+      setCropRegion(null); setCropMode(false);
+    } else if (operations.length > 0) {
       setOperations(prev => prev.slice(0, -1));
     } else if (activeFilter !== 'none') {
       setActiveFilter('none');
     } else {
       setBrightness(1); setContrast(1); setSaturation(1);
     }
-  }, [operations.length, activeFilter]);
+  }, [operations.length, activeFilter, cropRegion]);
 
   const buildOperations = () => {
-    const ops = [...operations];
+    const ops = [];
+    // Apply crop FIRST (before other transforms)
+    if (cropRegion && media?.width && media?.height) {
+      ops.push({
+        type: 'crop',
+        x: Math.round(cropRegion.x / 100 * media.width),
+        y: Math.round(cropRegion.y / 100 * media.height),
+        width: Math.round(cropRegion.w / 100 * media.width),
+        height: Math.round(cropRegion.h / 100 * media.height),
+      });
+    }
+    ops.push(...operations);
     if (activeFilter !== 'none') {
       // Use filter's predefined operations
       ops.push(...filterObj.ops);
@@ -155,6 +203,53 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
     if (resizeWidth) addOp({ type: 'resize', width: parseInt(resizeWidth), height: parseInt(resizeHeight) || undefined });
   };
 
+  // Global mouse handlers for crop dragging/resizing
+  useEffect(() => {
+    if (!cropMode) return;
+    const handleMouseMove = (e) => {
+      const ref = cropDragRef.current;
+      if (!ref.dragging && !ref.resizing) return;
+      const rect = ref.imgRect;
+      if (!rect) return;
+      const dx = ((e.clientX - ref.startX) / rect.width) * 100;
+      const dy = ((e.clientY - ref.startY) / rect.height) * 100;
+
+      if (ref.dragging && ref.startCrop) {
+        let nx = ref.startCrop.x + dx;
+        let ny = ref.startCrop.y + dy;
+        nx = Math.max(0, Math.min(nx, 100 - ref.startCrop.w));
+        ny = Math.max(0, Math.min(ny, 100 - ref.startCrop.h));
+        setCropRegion(prev => ({ ...prev, x: nx, y: ny }));
+      } else if (ref.resizing && ref.startCrop) {
+        const sc = ref.startCrop;
+        let nx = sc.x, ny = sc.y, nw = sc.w, nh = sc.h;
+        const h = ref.handle;
+        if (h === 'se' || h === 'ne' || h === 'e') { nw = Math.max(2, sc.w + dx); }
+        if (h === 'sw' || h === 'nw' || h === 'w') { nx = sc.x + dx; nw = Math.max(2, sc.w - dx); }
+        if (h === 'se' || h === 'sw' || h === 's') { nh = Math.max(2, sc.h + dy); }
+        if (h === 'ne' || h === 'nw' || h === 'n') { ny = sc.y + dy; nh = Math.max(2, sc.h - dy); }
+        if (cropAspect && nw > 0) {
+          const imgW = media?.width || 1;
+          const imgH = media?.height || 1;
+          nh = (nw / 100 * imgW) / cropAspect / imgH * 100;
+        }
+        nx = Math.max(0, nx); ny = Math.max(0, ny);
+        nw = Math.min(nw, 100 - nx); nh = Math.min(nh, 100 - ny);
+        setCropRegion({ x: nx, y: ny, w: nw, h: nh });
+      }
+    };
+    const handleMouseUp = () => {
+      cropDragRef.current.dragging = false;
+      cropDragRef.current.resizing = false;
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [cropMode, cropAspect, media?.width, media?.height]);
+
   if (!media) return null;
 
   return (
@@ -171,23 +266,88 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ display: 'flex', gap: 2, p: 2, overflow: 'hidden' }}>
-        {/* Left: Preview */}
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', borderRadius: 2, overflow: 'hidden', minHeight: 400 }}>
-          <Box
-            component="img"
-            src={imgUrl}
-            alt={media.alt_text || media.filename}
-            sx={{
-              maxWidth: '100%', maxHeight: '100%', objectFit: 'contain',
-              transition: 'filter 0.2s, transform 0.2s',
-              ...previewStyle,
-            }}
-          />
+      <DialogContent sx={{ display: 'flex', gap: 2, p: 2, overflow: 'hidden', height: 'calc(100vh - 120px)' }}>
+        {/* Left: Preview with Crop Overlay */}
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', borderRadius: 2, overflow: 'visible', position: 'relative', height: '100%', minHeight: 0 }}>
+          <Box ref={cropContainerRef} sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', height: '100%', overflow: 'visible' }}>
+            <Box
+              component="img"
+              ref={imgRef}
+              src={imgUrl}
+              alt={media.alt_text || media.filename}
+              onLoad={updateImgDims}
+              sx={{
+                maxWidth: '100%', maxHeight: 'calc(100vh - 160px)', objectFit: 'contain', display: 'block',
+                transition: 'filter 0.2s, transform 0.2s',
+                ...previewStyle,
+                ...(cropMode ? { cursor: 'crosshair', userSelect: 'none' } : {}),
+              }}
+              draggable={false}
+              onMouseDown={cropMode ? (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                if (!cropRegion) {
+                  setCropRegion({ x, y, w: 0, h: 0 });
+                  cropDragRef.current = { dragging: false, resizing: true, handle: 'se', startX: e.clientX, startY: e.clientY, startCrop: { x, y, w: 0, h: 0 }, imgRect: rect };
+                } else {
+                  setCropRegion({ x, y, w: 0, h: 0 });
+                  cropDragRef.current = { dragging: false, resizing: true, handle: 'se', startX: e.clientX, startY: e.clientY, startCrop: { x, y, w: 0, h: 0 }, imgRect: rect };
+                }
+                e.preventDefault();
+              } : undefined}
+            />
+            {cropMode && cropRegion && cropRegion.w > 0.5 && cropRegion.h > 0.5 && imgDims && (<>
+              <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                <Box sx={{ position: 'absolute', top: imgDims.top, left: imgDims.left, width: imgDims.width, height: cropRegion.y / 100 * imgDims.height, bgcolor: 'rgba(0,0,0,0.55)' }} />
+                <Box sx={{ position: 'absolute', top: imgDims.top + cropRegion.y / 100 * imgDims.height, left: imgDims.left, width: cropRegion.x / 100 * imgDims.width, height: cropRegion.h / 100 * imgDims.height, bgcolor: 'rgba(0,0,0,0.55)' }} />
+                <Box sx={{ position: 'absolute', top: imgDims.top + cropRegion.y / 100 * imgDims.height, left: imgDims.left + (cropRegion.x + cropRegion.w) / 100 * imgDims.width, width: imgDims.width - (cropRegion.x + cropRegion.w) / 100 * imgDims.width, height: cropRegion.h / 100 * imgDims.height, bgcolor: 'rgba(0,0,0,0.55)' }} />
+                <Box sx={{ position: 'absolute', top: imgDims.top + (cropRegion.y + cropRegion.h) / 100 * imgDims.height, left: imgDims.left, width: imgDims.width, height: imgDims.height - (cropRegion.y + cropRegion.h) / 100 * imgDims.height, bgcolor: 'rgba(0,0,0,0.55)' }} />
+              </Box>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: imgDims.left + cropRegion.x / 100 * imgDims.width,
+                  top: imgDims.top + cropRegion.y / 100 * imgDims.height,
+                  width: cropRegion.w / 100 * imgDims.width,
+                  height: cropRegion.h / 100 * imgDims.height,
+                  border: '2px solid #02C39A', cursor: 'move', boxSizing: 'border-box',
+                }}
+                onMouseDown={(e) => {
+                  const imgEl = cropContainerRef.current?.querySelector('img');
+                  if (!imgEl) return;
+                  const rect = imgEl.getBoundingClientRect();
+                  cropDragRef.current = { dragging: true, resizing: false, handle: null, startX: e.clientX, startY: e.clientY, startCrop: { ...cropRegion }, imgRect: rect };
+                  e.preventDefault(); e.stopPropagation();
+                }}
+              >
+                <Box sx={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(2,195,154,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(2,195,154,0.25) 1px, transparent 1px)', backgroundSize: '33.33% 33.33%', pointerEvents: 'none' }} />
+                {['nw','ne','sw','se'].map(h => (
+                  <Box key={h} sx={{
+                    position: 'absolute', width: 12, height: 12, bgcolor: '#02C39A', border: '2px solid white', borderRadius: '2px',
+                    ...(h.includes('n') ? { top: -6 } : { bottom: -6 }),
+                    ...(h.includes('w') ? { left: -6 } : { right: -6 }),
+                    cursor: h + '-resize', zIndex: 2,
+                  }} onMouseDown={(e) => {
+                    const imgEl = cropContainerRef.current?.querySelector('img');
+                    if (!imgEl) return;
+                    const rect = imgEl.getBoundingClientRect();
+                    cropDragRef.current = { dragging: false, resizing: true, handle: h, startX: e.clientX, startY: e.clientY, startCrop: { ...cropRegion }, imgRect: rect };
+                    e.preventDefault(); e.stopPropagation();
+                  }} />
+                ))}
+                {media?.width && media?.height && (
+                  <Box sx={{ position: 'absolute', bottom: -22, left: '50%', transform: 'translateX(-50%)', bgcolor: 'rgba(0,0,0,0.75)', color: 'white', px: 1, py: 0.2, borderRadius: 1, fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+                    {Math.round(cropRegion.w / 100 * media.width)} x {Math.round(cropRegion.h / 100 * media.height)} px
+                  </Box>
+                )}
+              </Box>
+            </>)}
+          </Box>
         </Box>
 
         {/* Right: Tools */}
-        <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        <Box sx={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'auto', height: '100%', minHeight: 0 }}>
           <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mb: 2 }}>
             <Tab icon={<TuneIcon />} label={t('media.editor.adjust', 'Aanpassen')} sx={{ minWidth: 0, fontSize: '0.75rem' }} />
             <Tab icon={<PhotoSizeSelectLargeIcon />} label={t('media.editor.resize', 'Formaat')} sx={{ minWidth: 0, fontSize: '0.75rem' }} />
@@ -264,9 +424,68 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
             </Box>
           )}
 
-          {/* Tab 2: Transform */}
+          {/* Tab 2: Transform (Crop + Rotate + Flip) */}
           {tab === 2 && (
             <Box sx={{ px: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('media.editor.crop', 'Bijsnijden')}</Typography>
+              <Button
+                fullWidth variant={cropMode ? 'contained' : 'outlined'} color={cropMode ? 'primary' : 'inherit'}
+                startIcon={<CropFreeIcon />} sx={{ mb: 1.5 }}
+                onClick={() => {
+                  if (cropMode) { setCropMode(false); }
+                  else {
+                    setCropMode(true);
+                    setCropAspect(null);
+                    // Auto-select 80% center of image so user can immediately adjust
+                    setCropRegion({ x: 10, y: 10, w: 80, h: 80 });
+                    updateImgDims();
+                  }
+                }}
+              >
+                {cropMode ? t('media.editor.cropActive', 'Bijsnijden actief — sleep op afbeelding') : t('media.editor.startCrop', 'Bijsnijden starten')}
+              </Button>
+              {cropMode && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                    {t('media.editor.cropHelp', 'Sleep op de afbeelding om een selectie te maken. Gebruik de hoekpunten om aan te passen.')}
+                  </Typography>
+                  <Typography variant="caption" fontWeight={600} sx={{ mb: 0.5, display: 'block' }}>{t('media.editor.cropAspect', 'Beeldverhouding')}</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+                    {CROP_ASPECT_PRESETS.map(p => (
+                      <Chip key={p.label} label={p.label} size="small" clickable
+                        color={cropAspect === p.value ? 'primary' : 'default'}
+                        variant={cropAspect === p.value ? 'filled' : 'outlined'}
+                        onClick={() => {
+                          setCropAspect(p.value);
+                          if (p.value && cropRegion && cropRegion.w > 0) {
+                            const imgW = media?.width || 1;
+                            const imgH = media?.height || 1;
+                            const newH = (cropRegion.w / 100 * imgW) / p.value / imgH * 100;
+                            setCropRegion(prev => ({ ...prev, h: Math.min(newH, 100 - prev.y) }));
+                          }
+                        }}
+                      />
+                    ))}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button size="small" variant="contained" disabled={!cropRegion || cropRegion.w < 1}
+                      onClick={() => { setCropMode(false); }}
+                      startIcon={<CropIcon />}>
+                      {t('media.editor.applyCrop', 'Bijsnijden toepassen')}
+                    </Button>
+                    <Button size="small" variant="outlined" color="secondary"
+                      onClick={() => { setCropRegion(null); }}>
+                      {t('media.editor.resetCrop', 'Reset')}
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+              {cropRegion && !cropMode && media?.width && media?.height && (
+                <Chip size="small" label={'Bijgesneden: ' + Math.round(cropRegion.w/100*media.width) + 'x' + Math.round(cropRegion.h/100*media.height) + 'px'}
+                  color="success" variant="outlined" sx={{ mb: 2 }}
+                  onDelete={() => setCropRegion(null)} />
+              )}
+
               <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('media.editor.rotate', 'Roteren')}</Typography>
               <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                 <Button variant="outlined" startIcon={<RotateLeftIcon />} onClick={() => addOp({ type: 'rotate', angle: -90 })}>-90°</Button>

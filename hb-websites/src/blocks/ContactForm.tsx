@@ -54,14 +54,14 @@ export default function ContactForm({
 
   if (status === 'success') {
     return (
-      <section className="py-12 sm:py-16">
+      <section className="py-12 sm:py-16" role="region" aria-label="Contact">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <div className="bg-green-50 rounded-tenant p-8">
             <svg className="w-12 h-12 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <h3 className="text-xl font-heading font-bold text-green-800 mb-2">Message sent!</h3>
-            <p className="text-green-700">Thank you for your message. We&apos;ll get back to you soon.</p>
+            <h3 className="text-xl font-heading font-bold text-green-800 mb-2">{typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Bericht verzonden!' : 'Message sent!'}</h3>
+            <p className="text-green-700">{typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Bedankt voor je bericht. We nemen zo snel mogelijk contact op.' : 'Thank you for your message. We\'ll get back to you soon.'}</p>
             <button
               onClick={() => setStatus('idle')}
               className="mt-4 text-sm text-primary underline hover:no-underline"
@@ -75,7 +75,7 @@ export default function ContactForm({
   }
 
   return (
-    <section className="py-12 sm:py-16">
+    <section className="py-12 sm:py-16" style={{ containerType: 'inline-size' }} role="region" aria-label={headline || 'Contact'}>
       <div className={`max-w-${layout === 'side-by-side' ? '7xl' : '2xl'} mx-auto px-4 sm:px-6 lg:px-8`}>
         {(headline || description) && (
           <div className="mb-8 text-center">
@@ -109,7 +109,7 @@ export default function ContactForm({
                   required={field.required}
                   placeholder={field.placeholder}
                   rows={5}
-                  className="w-full rounded-tenant border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-tenant border border-border bg-background px-3 py-3 text-foreground min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               ) : field.type === 'select' && field.options ? (
                 <select
@@ -147,7 +147,8 @@ export default function ContactForm({
               className="mt-1"
             />
             <label htmlFor="contact-consent" className="text-sm text-muted">
-              I agree to the processing of my personal data for the purpose of this inquiry.
+              I agree to the processing of my data. See our{' '}
+              <a href="/privacy" className="underline hover:no-underline">privacy policy</a>.
             </label>
           </div>
 
@@ -160,7 +161,7 @@ export default function ContactForm({
             disabled={status === 'sending'}
             className="w-full sm:w-auto px-8 py-3 bg-primary text-on-primary rounded-tenant font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {status === 'sending' ? 'Sending...' : 'Send Message'}
+            {status === 'sending' ? (typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Bezig...' : 'Sending...') : (typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Verstuur bericht' : 'Send Message')}
           </button>
         </form>
       </div>

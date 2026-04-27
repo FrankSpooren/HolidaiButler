@@ -356,6 +356,16 @@ export async function generateContent(suggestion, options = {}) {
   // Build brand context (includes profile, persona, knowledge base)
   const brandContext = await buildBrandContext(destinationId, personaId, keywords);
 
+  // Destination language: generate content in the destination's default language
+  let destSourceLang = 'en';
+  try {
+    const [[destLangRow]] = await mysqlSequelize.query(
+      'SELECT default_language, supported_languages FROM destinations WHERE id = :id',
+      { replacements: { id: Number(destinationId) } }
+    );
+    if (destLangRow?.default_language) destSourceLang = destLangRow.default_language;
+  } catch { /* fallback to en */ }
+
   // POI/Event grounding: find real places from our DB to constrain AI output
   const [relevantPOIs, relevantEvents] = await Promise.all([
     findRelevantPOIs(destinationId, keywords, contentType === 'blog' ? 15 : 5, suggestion.title || ''),
@@ -364,7 +374,7 @@ export async function generateContent(suggestion, options = {}) {
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destinationId);
 
   // Build the generation prompt — clean output, no markdown
-  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext, groundingContext);
+  const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext, groundingContext, destSourceLang);
   const userPrompt = buildUserPrompt(suggestion, contentType, platform, keywords);
 
   try {
@@ -463,7 +473,7 @@ export async function generateContent(suggestion, options = {}) {
 
     let result = {
       title: metaTitle || title, // prefer SEO-optimized title for blogs
-      body_en: trackedBody,
+      [`body_${destSourceLang}`]: trackedBody,  // Store in source language column
       meta_description: metaDescription,
       seo_data: seoData,
       hashtags,
@@ -478,7 +488,7 @@ export async function generateContent(suggestion, options = {}) {
 
     // === AUTO-IMPROVE LOOP: SEO check → AI rewrite until ≥65/100 ===
     const seoResult = await analyzeContent(
-      { title: result.title, body_en: result.body_en, seo_data: { meta_description: metaDescription }, content_type: contentType, keyword_cluster: keywords },
+      { title: result.title, body_en: result[`body_${destSourceLang}`], seo_data: { meta_description: metaDescription }, content_type: contentType, keyword_cluster: keywords },
       destinationId
     );
     result.seo_score = seoResult.overallScore;
@@ -489,7 +499,7 @@ export async function generateContent(suggestion, options = {}) {
       const improved = await improveContent(result, seoResult, { destinationId, contentType, keywords, targetPlatform: platform });
       if (improved) {
         result.title = improved.title || result.title;
-        result.body_en = improved.body_en || result.body_en;
+        result[`body_${destSourceLang}`] = improved.body_en || result[`body_${destSourceLang}`];
         result.meta_description = improved.meta_description || result.meta_description;
         result.seo_score = improved.seo_score;
         result.seo_grade = improved.seo_grade;
@@ -498,18 +508,22 @@ export async function generateContent(suggestion, options = {}) {
       }
     }
 
-    // Translate to requested languages
+    // Translate to destination languages — detect input language to avoid redundant translations
     const destLangs = await getLanguages(destinationId);
     const targetLangs = (languages.length > 0 ? languages : destLangs)
-      .filter(l => l !== 'en');
+      .filter(l => l !== destSourceLang);  // Filter source language, not hardcoded 'en'
 
     if (targetLangs.length > 0) {
-      const translations = await translateContent(result.title, result.body_en, targetLangs);
+      const translations = await translateContent(result.title, result[`body_${destSourceLang}`], targetLangs);
       for (const lang of targetLangs) {
         if (translations.title?.[lang]) result[`title_${lang}`] = translations.title[lang];
         if (translations.body?.[lang]) result[`body_${lang}`] = translations.body[lang];
       }
     }
+
+    // Ensure EN column is always populated (content is generated in EN)
+    // If body_en looks like it was written in another language (manual input),
+    // the caller should use detectAndStoreByLanguage() instead
 
     return result;
   } catch (error) {
@@ -613,7 +627,7 @@ CRITICAL: Respect the CONTENT GOALS from the brand profile above.
 /**
  * Build system prompt — clean output, platform-aware, no markdown
  */
-function buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext = '', groundingContext = '') {
+function buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext = '', groundingContext = '', outputLanguage = 'en') {
   const keywordsStr = keywords.length > 0
     ? `Target keywords (MUST appear in text): ${keywords.map(k => `"${k}"`).join(', ')}`
     : '';
@@ -626,6 +640,7 @@ ${brandBlock}
 ${toneInstruction}
 ${groundingBlock}
 ABSOLUTE RULES:
+- Write ALL content in ${{ nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' }[outputLanguage] || 'English'}. This is the destination's primary language. Do NOT write in English unless the destination's language IS English.
 - Write original, high-quality content — NO plagiarism
 - Facts must be accurate — do NOT hallucinate. If reference material is provided, use those facts.
 - Preserve proper nouns (names, street names, local terms)

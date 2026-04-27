@@ -3,7 +3,8 @@ import {
   Dialog, DialogContent, DialogTitle, Typography, Box, IconButton, TextField,
   InputAdornment,
 } from '@mui/material';
-import { Close, Search } from '@mui/icons-material';
+import Close from '@mui/icons-material/Close';
+import Search from '@mui/icons-material/Search';
 
 const SHORTCUT_SECTIONS = [
   {

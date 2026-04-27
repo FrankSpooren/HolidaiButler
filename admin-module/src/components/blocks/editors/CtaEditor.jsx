@@ -1,9 +1,11 @@
-import { TranslatableField, ButtonListField, SelectField } from '../fields/index.js';
+import { TranslatableField, ButtonListField, SelectField, ImageUploadField } from '../fields/index.js';
 
 const BG_STYLE_OPTIONS = [
   { value: 'primary', label: 'Primary' },
   { value: 'accent', label: 'Accent' },
-  { value: 'gradient', label: 'Gradient' }
+  { value: 'gradient', label: 'Gradient' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' }
 ];
 
 export default function CtaEditor({ block, onChange }) {
@@ -16,6 +18,7 @@ export default function CtaEditor({ block, onChange }) {
       <TranslatableField label="Description" value={props.description} onChange={v => update('description', v)} multiline rows={2} />
       <SelectField label="Background Style" value={props.backgroundStyle || 'primary'} onChange={v => update('backgroundStyle', v)} options={BG_STYLE_OPTIONS} />
       <ButtonListField label="Buttons" value={props.buttons} onChange={v => update('buttons', v)} />
+      <ImageUploadField label="Background Image (optional)" value={props.backgroundImage} onChange={v => update('backgroundImage', v)} />
     </>
   );
 }

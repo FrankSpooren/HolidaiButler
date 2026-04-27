@@ -62,20 +62,20 @@ export default function Newsletter({
 
   if (status === 'success') {
     return (
-      <section className={`${bg} py-12 sm:py-16`}>
+      <section className={`${bg} py-12 sm:py-16`} role="region" aria-label="Newsletter">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <svg className={`w-10 h-10 mx-auto mb-3 ${isLight ? 'text-green-500' : 'opacity-90'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <h3 className="text-xl font-heading font-bold mb-1">Subscribed!</h3>
-          <p className="opacity-80">Check your email to confirm your subscription.</p>
+          <h3 className="text-xl font-heading font-bold mb-1">{typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Ingeschreven!' : 'Subscribed!'}</h3>
+          <p className="opacity-80">{typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Controleer je e-mail om je inschrijving te bevestigen.' : 'Check your email to confirm your subscription.'}</p>
         </div>
       </section>
     );
   }
 
   return (
-    <section className={`${bg} py-12 sm:py-16`}>
+    <section className={`${bg} py-12 sm:py-16`} style={{ containerType: 'inline-size' }} role="region" aria-label={headline}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={layout === 'inline' ? 'flex flex-col sm:flex-row items-center gap-6' : 'text-center'}>
           <div className={layout === 'inline' ? 'flex-1' : 'mb-6'}>
@@ -93,7 +93,7 @@ export default function Newsletter({
                 placeholder="Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`flex-1 rounded-tenant px-4 py-2.5 text-foreground bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary ${layout === 'inline' ? 'min-w-0' : 'w-full'}`}
+                className={`flex-1 rounded-tenant px-4 py-3 text-foreground min-h-[44px] bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary ${layout === 'inline' ? 'min-w-0' : 'w-full'}`}
               />
               <input
                 type="email"
@@ -114,7 +114,7 @@ export default function Newsletter({
                 className="mt-1"
               />
               <label htmlFor="newsletter-consent" className={`text-xs ${isLight ? 'text-muted' : 'opacity-70'}`}>
-                I agree to receive newsletters and accept the privacy policy.
+                I agree to receive newsletters. See our <a href="/privacy" className="underline">privacy policy</a>.
               </label>
             </div>
 
@@ -127,7 +127,7 @@ export default function Newsletter({
                 isLight ? 'bg-primary text-on-primary hover:opacity-90' : 'bg-on-primary text-primary hover:opacity-90'
               }`}
             >
-              {status === 'sending' ? 'Subscribing...' : 'Subscribe'}
+              {status === 'sending' ? (typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Bezig...' : 'Subscribing...') : (typeof window !== 'undefined' && document.documentElement.lang === 'nl' ? 'Inschrijven' : 'Subscribe')}
             </button>
           </form>
         </div>

@@ -138,6 +138,54 @@ export function startWorkers() {
           }
           break;
 
+        case "tier-promotion": {
+          try {
+            const { default: tierPromotionAgent } = await import("../agents/dataSync/tierPromotionAgent.js");
+            const promoResult = await tierPromotionAgent.run();
+            console.log("[Orchestrator] Tier promotion:", JSON.stringify({
+              promoted: promoResult.promoted?.length || 0,
+              demoted: promoResult.demoted?.length || 0,
+              errors: promoResult.errors?.length || 0,
+            }));
+            return promoResult;
+          } catch (error) {
+            console.error("[Orchestrator] Tier promotion failed:", error.message);
+            throw error;
+          }
+        }
+
+
+        case "poi-discovery-auto":
+        case "poi-discovery-quarterly":
+        case "poi-discovery-annual": {
+          try {
+            const { default: poiDiscoveryService } = await import("../services/poiDiscovery.js");
+            const dest = job.data.destination || "Calpe, Spain";
+            const cats = job.data.categories || [];
+            const maxPOIs = job.data.maxPOIsPerCategory || 50;
+            console.log(`[Orchestrator] Auto-discovery: ${dest}, categories: ${cats.length || 'all'}`);
+            const result = await poiDiscoveryService.discoverDestination({
+              destination: dest,
+              categories: cats,
+              maxPOIsPerCategory: maxPOIs,
+              sources: ["google_places"],
+              autoClassify: true,
+              autoEnrich: true,
+              triggeredBy: "auto-scheduler",
+            });
+            console.log(`[Orchestrator] Auto-discovery complete:`, JSON.stringify({
+              destination: dest,
+              poisCreated: result.run?.pois_created || 0,
+              poisUpdated: result.run?.pois_updated || 0,
+            }));
+            return result;
+          } catch (error) {
+            console.error("[Orchestrator] Auto-discovery failed:", error.message);
+            throw error;
+          }
+        }
+
+
         case "poi-discovery-manual":
           try {
             const dataSyncDiscovery = await import("../agents/dataSync/index.js");

@@ -26,10 +26,10 @@ const logger = winston.createLogger({
 });
 
 // Services
-const aggregationService = new POIImageAggregationService();
-const discoveryJob = new POIImageDiscoveryJob();
-const flickrService = new FlickrService();
-const unsplashService = new UnsplashService();
+let aggregationService; try { aggregationService = new POIImageAggregationService(); } catch(e) { console.warn("[poiImages] POIImageAggregationService init skipped:", e.message); }
+let discoveryJob; try { discoveryJob = new POIImageDiscoveryJob(); } catch(e) { console.warn("[poiImages] POIImageDiscoveryJob init skipped:", e.message); }
+let flickrService; try { flickrService = new FlickrService(); } catch(e) { console.warn("[poiImages] FlickrService init skipped:", e.message); }
+let unsplashService; try { unsplashService = new UnsplashService(); } catch(e) { console.warn("[poiImages] UnsplashService init skipped:", e.message); }
 
 /**
  * GET /api/poi-images/poi/:poiId
@@ -81,6 +81,57 @@ router.get('/poi/:poiId', async (req, res) => {
 });
 
 /**
+ * GET /api/poi-images/pending
+ * Get all pending images for moderation
+ */
+router.get('/pending', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+
+    const [images] = await mysqlSequelize.query(
+      `SELECT
+         pi.*,
+         p.name as poi_name,
+         p.category as poi_category,
+         p.city as poi_city
+       FROM poi_images pi
+       JOIN POI p ON pi.poi_id = p.id
+       WHERE pi.status = 'pending'
+       ORDER BY pi.quality_score DESC, pi.created_at DESC
+       LIMIT :limit OFFSET :offset`,
+      {
+        replacements: {
+          limit: parseInt(limit),
+          offset: parseInt(offset)
+        }
+      }
+    );
+
+    const [countResult] = await mysqlSequelize.query(
+      `SELECT COUNT(*) as total FROM poi_images WHERE status = 'pending'`
+    );
+
+    res.json({
+      success: true,
+      data: images,
+      pagination: {
+        total: countResult[0].total,
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      }
+    });
+
+  } catch (error) {
+    logger.error('Failed to get pending images', { error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+
+/**
  * GET /api/poi-images/:id
  * Get single image details
  */
@@ -118,51 +169,6 @@ router.get('/:id', async (req, res) => {
  * GET /api/poi-images/pending
  * Get images pending manual review
  */
-router.get('/pending', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0 } = req.query;
-
-    const [images] = await mysqlSequelize.query(
-      `SELECT
-         pi.*,
-         p.name as poi_name,
-         p.category as poi_category,
-         p.city as poi_city
-       FROM poi_images pi
-       JOIN pois p ON pi.poi_id = p.id
-       WHERE pi.status = 'pending'
-       ORDER BY pi.quality_score DESC, pi.created_at DESC
-       LIMIT :limit OFFSET :offset`,
-      {
-        replacements: {
-          limit: parseInt(limit),
-          offset: parseInt(offset)
-        }
-      }
-    );
-
-    const [countResult] = await mysqlSequelize.query(
-      `SELECT COUNT(*) as total FROM poi_images WHERE status = 'pending'`
-    );
-
-    res.json({
-      success: true,
-      data: images,
-      pagination: {
-        total: countResult[0].total,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
-      }
-    });
-
-  } catch (error) {
-    logger.error('Failed to get pending images', { error: error.message });
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
 
 /**
  * POST /api/poi-images/:id/approve

@@ -225,27 +225,52 @@ function DroppableDayCell({ day, isToday, isInSeason, isGap, onClick, children }
 }
 
 // ─── Schedule Dialog ──────────────────────────────────────────────
-function ScheduleDialog({ open, item, accounts, onClose, onSchedule, isPending }) {
+function ScheduleDialog({ open, item, accounts, onClose, onSchedule, onReschedule, isPending }) {
   const { t } = useTranslation();
+  const isReschedule = item?.approval_status === 'scheduled';
   const [dateTime, setDateTime] = useState('');
   const [accountId, setAccountId] = useState('');
 
+  // Pre-fill datetime when opening for reschedule
+  // scheduled_at is a raw MySQL string like "2026-04-27 10:35:00" (no timezone)
+  useEffect(() => {
+    if (open && item?.scheduled_at) {
+      const raw = String(item.scheduled_at);
+      // Handle both "2026-04-27 10:35:00" and "2026-04-27T10:35:00.000Z" formats
+      const local = raw.includes('T') && raw.endsWith('Z')
+        ? raw.slice(0, 16) // ISO UTC — strip Z, keep as-is (matches what MySQL stored)
+        : raw.replace(' ', 'T').slice(0, 16); // MySQL string — just reformat
+      setDateTime(local);
+    } else if (open) {
+      setDateTime('');
+    }
+  }, [open, item?.scheduled_at]);
+
   const handleSubmit = () => {
     if (!dateTime) return;
-    onSchedule(item?.id, dateTime, accountId || undefined);
+    if (isReschedule && onReschedule) {
+      onReschedule(item.id, dateTime);
+    } else {
+      onSchedule(item?.id, dateTime, accountId || undefined);
+    }
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{t('contentStudio.calendar.scheduleTitle', 'Content inplannen')}</DialogTitle>
+      <DialogTitle>{isReschedule ? 'Tijd wijzigen' : t('contentStudio.calendar.scheduleTitle', 'Content inplannen')}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
         <Typography variant="body2" color="text.secondary">{item?.title || item?.content_type}</Typography>
+        {isReschedule && (
+          <Alert severity="info" sx={{ py: 0.5, fontSize: 12 }}>
+            Huidig gepland: {item?.scheduled_at ? new Date(item.scheduled_at).toLocaleString('nl-NL') : '—'}
+          </Alert>
+        )}
         <TextField
-          type="datetime-local" label={t('contentStudio.calendar.dateTime', 'Datum & tijd')}
+          type="datetime-local" label={isReschedule ? 'Nieuwe datum & tijd' : t('contentStudio.calendar.dateTime', 'Datum & tijd')}
           value={dateTime} onChange={e => setDateTime(e.target.value)}
           InputLabelProps={{ shrink: true }} fullWidth
         />
-        {accounts.length > 0 && (
+        {!isReschedule && accounts.length > 0 && (
           <FormControl fullWidth size="small">
             <InputLabel>{t('contentStudio.calendar.account', 'Account')}</InputLabel>
             <Select value={accountId} onChange={e => setAccountId(e.target.value)} label="Account">
@@ -259,7 +284,7 @@ function ScheduleDialog({ open, item, accounts, onClose, onSchedule, isPending }
       <DialogActions>
         <Button onClick={onClose}>{t('common.cancel', 'Annuleren')}</Button>
         <Button onClick={handleSubmit} variant="contained" disabled={!dateTime || isPending}>
-          {isPending ? <CircularProgress size={20} /> : t('contentStudio.calendar.schedule', 'Inplannen')}
+          {isPending ? <CircularProgress size={20} /> : isReschedule ? 'Herplannen' : t('contentStudio.calendar.schedule', 'Inplannen')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -693,6 +718,16 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
     setScheduleDialog(null);
   };
 
+  const handleReschedule = async (itemId, newScheduledAt) => {
+    try {
+      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newScheduledAt } });
+      setScheduleDialog(null);
+      await refetch();
+    } catch (err) {
+      setAutoFillSnack(`Herplannen mislukt: ${err.response?.data?.error?.message || err.message || 'onbekende fout'}`);
+    }
+  };
+
   const handlePublishNow = async (itemId, socialAccountId) => {
     await publishMut.mutateAsync({ id: itemId, data: { social_account_id: socialAccountId } });
   };
@@ -922,7 +957,7 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                             {platform} ({pItems.length})
                           </Typography>
                           {pItems.map(item => (
-                            <Box key={item.id} onClick={() => onEditConcept && onEditConcept(item.concept_id)}
+                            <Box key={item.id} onClick={() => onEditConcept && onEditConcept(item.concept_id, item.target_platform)}
                               sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, mb: 1, borderRadius: 1,
                                 borderLeft: '4px solid', borderLeftColor: item.pillar_color || '#5E8B7E',
                                 border: '1px solid', borderColor: 'divider', cursor: 'pointer',
@@ -1108,13 +1143,14 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                       <Chip label={item.approval_status} size="small" sx={{ bgcolor: STATUS_COLORS[item.approval_status], color: 'common.white', fontSize: 11 }} />
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                      {item.scheduled_at ? `Gepland: ${new Date(item.scheduled_at).toLocaleString('nl-NL')}` :
-                       item.published_at ? `Gepubliceerd: ${new Date(item.published_at).toLocaleString('nl-NL')}` : ''}
+                      {item.approval_status === 'failed' ? `Mislukt${item.publish_error ? ': ' + item.publish_error.substring(0, 60) : ''}` :
+                       item.approval_status === 'published' && item.published_at ? `Gepubliceerd: ${new Date(item.published_at).toLocaleString('nl-NL')}` :
+                       item.scheduled_at ? `Gepland: ${new Date(item.scheduled_at).toLocaleString('nl-NL')}` : ''}
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
                       {item.concept_id && onEditConcept && (
                         <Button size="small" variant="outlined" startIcon={<EditIcon />}
-                          onClick={() => { setSelectedDay(null); onEditConcept(item.concept_id); }}>
+                          onClick={() => { setSelectedDay(null); onEditConcept(item.concept_id, item.target_platform); }}>
                           {t('contentStudio.calendar.edit', 'Bewerken')}
                         </Button>
                       )}
@@ -1132,9 +1168,21 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                         </>
                       )}
                       {item.approval_status === 'scheduled' && (
-                        <Button size="small" color="warning" variant="outlined" startIcon={<CancelIcon />}
-                          onClick={() => handleCancel(item.id)} disabled={cancelMut.isPending}>
-                          {t('contentStudio.calendar.cancelSchedule', 'Annuleren')}
+                        <>
+                          <Button size="small" variant="outlined" startIcon={<ScheduleIcon />}
+                            onClick={() => setScheduleDialog(item)}>
+                            Herplannen
+                          </Button>
+                          <Button size="small" color="warning" variant="outlined" startIcon={<CancelIcon />}
+                            onClick={() => handleCancel(item.id)} disabled={cancelMut.isPending}>
+                            {t('contentStudio.calendar.cancelSchedule', 'Annuleren')}
+                          </Button>
+                        </>
+                      )}
+                      {item.approval_status === 'failed' && (
+                        <Button size="small" variant="outlined" color="error" startIcon={<ScheduleIcon />}
+                          onClick={() => setScheduleDialog({ ...item, approval_status: 'approved' })}>
+                          Opnieuw inplannen
                         </Button>
                       )}
                     </Box>
@@ -1152,7 +1200,8 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
       {/* Schedule dialog */}
       <ScheduleDialog
         open={!!scheduleDialog} item={scheduleDialog} accounts={accounts}
-        onClose={() => setScheduleDialog(null)} onSchedule={handleSchedule} isPending={scheduleMut.isPending}
+        onClose={() => setScheduleDialog(null)} onSchedule={handleSchedule} onReschedule={handleReschedule}
+        isPending={scheduleMut.isPending || rescheduleMut.isPending}
       />
 
       {/* Keyboard shortcuts help dialog */}

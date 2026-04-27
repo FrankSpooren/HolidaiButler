@@ -59,6 +59,9 @@ import pagesRoutes from './routes/pages.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
+import poiImagesRoutes from "./routes/poiImages.js";
+import monitoringRoutes from "./routes/monitoring.js";
+import { initializeCircuitBreakers } from './services/circuitBreakerInit.js';
 import User from './models/User.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -172,6 +175,8 @@ app.use('/api/v1/integration', integrationRoutes);
 app.use('/api/v1/workflows', workflowRoutes);
 app.use('/api/v1/poi-classification', poiClassificationRoutes);
 app.use('/api/v1/poi-discovery', poiDiscoveryRoutes);
+app.use("/api/v1/poi-images", poiImagesRoutes);
+app.use("/api/v1/monitoring", monitoringRoutes);
 app.use('/api/v1/pois', publicPOIRoutes); // Public POI endpoints (no auth)
 app.use('/api/v1/chat', chatRoutes); // HoliBot Chat API
 app.use('/api/v1/holibot', holibotRoutes); // HoliBot Widget API
@@ -347,6 +352,9 @@ process.on('SIGINT', async () => {
  * Start Server
  */
 initializePlatform().then(() => {
+  // Initialize circuit breakers for monitoring
+  try { initializeCircuitBreakers(); } catch(e) { console.warn("[Init] Circuit breaker init:", e.message); }
+
   const server = app.listen(PORT, () => {
   server.timeout = 300000; // 5 min (video uploads)
   server.keepAliveTimeout = 65000;

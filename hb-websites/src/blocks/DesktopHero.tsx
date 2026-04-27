@@ -143,7 +143,7 @@ export default function DesktopHero({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaLd) }} />
       )}
 
-      <section className="relative overflow-hidden" style={{ minHeight: '360px' }}>
+      <section role="banner" aria-label="Hero" className="relative overflow-hidden" style={{ minHeight: '360px' }}>
         {/* Skeleton loader — shown until image loads */}
         {resolvedImage && !imgLoaded && (
           <div className="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true" />

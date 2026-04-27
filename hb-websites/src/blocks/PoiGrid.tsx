@@ -5,6 +5,7 @@ import { CardImage, CardContent } from '@/components/ui/Card';
 import PoiCard from '@/components/ui/PoiCard';
 import Rating from '@/components/ui/Rating';
 import { generatePoiGridSchema, schemaToJsonLd } from '@/lib/schema';
+import { generateSrcSet, DEFAULT_SIZES } from '@/lib/image';
 
 interface POI {
   id: number;
@@ -111,7 +112,7 @@ export default async function PoiGrid({
   title,
   tierFilter,
   sortOrder = 'rating',
-  showTierBadge = true,
+  showTierBadge = false,
 }: PoiGridProps) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
@@ -145,7 +146,7 @@ export default async function PoiGrid({
   if (displayPois.length === 0) return null;
 
   // Generate schema.org JSON-LD for this block
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://holidaibutler.com';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? (tenantSlug === 'texel' ? 'https://www.texelmaps.nl' : 'https://www.holidaibutler.com');
   const schemaData = generatePoiGridSchema(displayPois, baseUrl);
 
   // List layout
@@ -166,7 +167,7 @@ export default async function PoiGrid({
                   {imageUrl && (
                     <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={imageUrl} alt={poi.name} className="w-full h-full object-cover" loading="lazy" />
+                      <img src={imageUrl} alt={poi.name} className="w-full h-full object-cover" loading="lazy" srcSet={generateSrcSet(imageUrl) || undefined} sizes="80px" />
                       {showTierBadge && tier <= 3 && (
                         <span
                           className="absolute top-1 left-1 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold leading-none"
@@ -206,7 +207,7 @@ export default async function PoiGrid({
   const colOverrideClass = columns === 2 ? 'poi-grid-cols-2' : columns === 4 ? 'poi-grid-cols-4' : '';
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ containerType: 'inline-size' }}>
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="region" aria-label={title || 'Points of interest'} style={{ containerType: 'inline-size' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: schemaToJsonLd(schemaData) }} />
       {title && <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">{title}</h2>}
       <div className={`poi-grid ${colOverrideClass} animate-stagger`}>
@@ -230,6 +231,8 @@ export default async function PoiGrid({
                     src={imageUrl}
                     alt={poi.name}
                     loading="lazy"
+                    srcSet={generateSrcSet(imageUrl) || undefined}
+                    sizes={generateSrcSet(imageUrl) ? DEFAULT_SIZES : undefined}
                     className="w-full h-full object-cover animate-image-load"
                   />
                   {/* Tier badge */}

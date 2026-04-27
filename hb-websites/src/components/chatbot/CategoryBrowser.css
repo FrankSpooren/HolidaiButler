@@ -16,7 +16,7 @@
   justify-content: center;
   gap: 6px;
   padding: 14px 8px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--hb-font-body, 'Inter'), sans-serif;
   background: white;
   border: 1.5px solid #D4AF37;
   border-radius: 12px;
@@ -53,7 +53,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--hb-font-body, 'Inter'), sans-serif;
   background: white;
   border: 1.5px solid #D4AF37;
   border-radius: 20px;
@@ -81,7 +81,7 @@
 .cb-back {
   margin-top: 12px;
   padding: 8px 20px;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--hb-font-body, 'Inter'), sans-serif;
   font-size: 13px;
   font-weight: 500;
   color: #2C3E50;

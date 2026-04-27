@@ -230,7 +230,7 @@ export default function OnboardingSheet({ locale, primaryColor }: OnboardingShee
       <div
         className="fixed bottom-0 left-0 right-0 z-[61] flex flex-col bg-white"
         style={{
-          fontFamily: "'Inter', var(--hb-font-body), sans-serif",
+          fontFamily: "var(--hb-font-body, 'Inter'), sans-serif",
           maxHeight: '85vh',
           borderRadius: '24px 24px 0 0',
           transformOrigin: 'bottom right',
