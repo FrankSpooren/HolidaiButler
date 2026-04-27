@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.65.0
-> **Laatst bijgewerkt**: 24 april 2026
+> **Versie**: 4.66.0
+> **Laatst bijgewerkt**: 27 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -398,26 +398,29 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Studio Landing Upgrade | v4.42.0 (7 opdrachten dark theme redesign + i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | PubliQio Branding & Polish | v4.43.0 (10 opdrachten branding + mockup + dark popups + privacy + per-user taal) | ✅ COMPLEET | apr 2026 |
 | Corporate Landing Page | v4.44.0 (9 opdrachten) + **v4.58.0 Enterprise Upgrade v5.1** (8 opdrachten: outcome-first CTA, 12 modules, 6 stats, flywheel, USP spotlight, EU-stack 8 providers, compliance, i18n 5 talen) | ✅ COMPLEET | apr 2026 |
+| Page Builder Enterprise | Fase VII-A t/m VII-D (22 blokken ARIA/container queries/schema.org/srcset) | ✅ COMPLEET | apr 2026 |
+| Content Studio + BUTE Pipeline | v4.66.0 (image reorder, MUI tree-shaking 9.5→2.8MB, destination-aware taal-pipeline) | ✅ COMPLEET | apr 2026 |
+| Admin UI Gap-Close | 12 nieuwe componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth, ContentReport) | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 303 (backend), ~220 met frontend UI (73%) |
-| adminPortal.js | v3.47.0 |
-| Agents | 25 |
-| BullMQ jobs | 79 |
+| Admin endpoints | 303 (backend), ~250 met frontend UI (82%) |
+| adminPortal.js | v3.48.0 |
+| Agents | 26 (+ tierPromotionAgent) |
+| BullMQ jobs | 81 |
 | Block types | 35 (30 uniek + 5 aliassen) |
 | Block editors | 28 |
 | Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| Media Library endpoints | 31 (22 met UI, 9 nieuw deze sessie) |
-| CLAUDE.md | v4.65.0 |
-| Master Strategie | v8.19 |
+| Media Library endpoints | 31 |
+| CLAUDE.md | v4.66.0 |
+| Master Strategie | v8.20 |
 
 ---
 
 ## 🤖 Agent Systeem
 
-### 25 Agents (15 agents + 3 monitoring modules + 3 commerce monitoring + 4 content agents) + 3 Enterprise Services (Issues, Baselines, Correlation)
+### 26 Agents (15 agents + 3 monitoring modules + 3 commerce monitoring + 4 content agents + 1 tier promotion) + 3 Enterprise Services (Issues, Baselines, Correlation)
 | # | Agent | Naam | Categorie | Type | Schedule |
 |---|-------|------|-----------|------|----------|
 | 1 | Orchestrator | De Maestro | Core | A (dest) | Continuous |
@@ -445,6 +448,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | 23 | Content Redacteur | De Redacteur | Content | A | On-demand |
 | 24 | SEO Master | De SEO Meester | Content | B | Monday 04:00 |
 | 25 | Publisher | De Uitgever | Content | A | Every 15 min + Daily 09:00 |
+| 26 | Tier Promotion | De Promotor | Operations | A | Weekly Mon 07:00 |
 
 **Type A** = destination-aware (`runForDestination(id)`), **Type B** = shared/platform-breed (`execute()`)
 
@@ -453,7 +457,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
 - `agentRegistry.js`: Centrale registratie 25 entries
 
-### Scheduled Jobs: 62 totaal
+### Scheduled Jobs: 81 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -639,7 +643,7 @@ analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 | IV | Intermediair & Revenue (Data Pipeline + Intermediair module + Agent) | ✅ COMPLEET (Blok A+B+C+D+E+F) | 6-8 wkn |
 | V | Multi-Tenant Configuratielaag (Next.js SSR, Component Library, Tenant-Theming) | 🟡 IN PROGRESS (V.0-V.6 + Wave 1-3 + Cmd v5.0-v8.0 + v13.0-v15.0 COMPLEET) | 12 wkn |
 | VI | UX Revolution + WarreWijzer (Mobiele UX polish, WarreWijzer uitrol op Next.js) | 🟡 IN PROGRESS (VI-A UX Polish + VI-B Features + VI-B Mobile Homepage COMPLEET) | 6-8 wkn |
-| VII | Polish, Scale & Launch (E2E testing, load testing, DR, go-live multi-tenant) | GEPLAND | 3-4 wkn |
+| VII | Page Builder Enterprise + Scale & Launch (VII-A t/m VII-D COMPLEET, VII-E GEPLAND) | 🟡 IN PROGRESS | 8-12 wkn |
 
 ### State-of-the-Art Vervolgstappen (na Fase 12)
 
@@ -860,12 +864,13 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.66.0** | **2026-04-27** | **Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close**. **Page Builder VII-B/C/D code deploy**: 22 blokken enterprise-geüpgraded (ARIA, container queries, schema.org, srcset) in 1 productie-commit (94 bestanden, +7.430/-2.813 LOC). SchemaInjector `schema.ts` (6 generators). Image Resize Proxy `image.ts` (srcset 400-1200w webp). ProgramCard Texel kwaliteit (5 fixes). Tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). **Content Studio fixes**: Image reorder pijltjes-patroon, ContentImageSection zelfstandige image loading via loadImages(), MUI Icons tree-shaking barrel→path imports (bundel 9.5MB→2.8MB), VITE_API_URL leeg voor same-origin proxy. **BUTE taal-pipeline**: contentGenerator.js destination-aware generatie (body_<sourceLang> i.p.v. altijd body_en), backfill 4 BUTE items body_en→body_nl, frontend LANGS filter op destination.supportedLanguages, vertaal-knoppen filteren op defaultLanguage. **Admin UI Gap-Close (12 nieuwe componenten)**: ChatbotAdminPanels (271 LOC), Commerce tabs (GuestsTab/ReservationsTab/TicketsTab/VouchersTab), POI dashboards (POIClassificationDashboard/POIDiscoveryDashboard/POIFreshnessPanel/POIImageReviewQueue), PlatformHealthDashboard (278 LOC), MediaContextSearch (188 LOC), ContentReportTab (181 LOC). **Backend**: tierPromotionAgent.js (249 LOC, nieuwe agent #26), circuitBreaker.js refactored + circuitBreakerInit.js (startup isolatie), adminPortal.js resolved_images sort op media_ids volgorde, metaClient.js uitgebreid (+222 LOC), monitoring.js + poiClassification.js + poiImages.js wijzigingen, Apache publiqio.com CORS dubbele headers fix + ProxyTimeout 120s. 81 BullMQ jobs. |
 | **4.65.0** | **2026-04-25** | **Content Studio Bug Fixes + Media Library Enterprise Upgrade + Backend-Frontend Gap Analyse**. **5 Content Studio bugs gefixt**: (1) Manual content social post werd blog (backend las `platform` enkelvoud i.p.v. `platforms` array, nu per-platform items), (2) Nederlandse tekst werd als Engels opgeslagen (taaldetectie NL/ES/DE/FR + juiste body_xx kolom), (3) Verwachtingsmanagement bij aanmaken (progress bar + fasebeschrijvingen), (4) MUI chunk splitting (vendor-mui 4.3MB gesplitst in core 445KB + icons 3.8MB), (5) Interactieve crop UI (canvas-based, 6 aspect presets, drag handles, auto-80% selectie, viewport-fit voor portrait images). **Media Library upgrade**: AI Tools tab (Auto Enhance + Alt-tekst 5 talen + AI Hertaggen), GDPR consent verzoek knop, Media Analytics tab (content-gaps, readiness, top-performers, revenue-top). **Backend-Frontend Gap Analyse**: 113 van 330 endpoints (34%) hadden GEEN frontend UI. Van 39 "bewust backend-only" bleken slechts 7 terecht. 8-fasen actieplan opgesteld (project_gap_actieplan.md). Fase 1 Media Library COMPLEET. **Bestanden**: 1 nieuw (MediaAnalyticsTab.jsx) + 7 gewijzigd (adminPortal.js, contentGenerator.js, ContentStudioPage.jsx, MediaDetailDialog.jsx, MediaImageEditor.jsx, MediaSourceTabs.jsx, vite.config.js, MediaPage.jsx). |
 | **4.64.0** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. **VII-D**: 7 content-blokken (Gallery, Video, SocialFeed, Downloads, Banner, CardGroup, WeatherWidget) — ARIA, container queries, schema.org VideoObject. **P0 fixes**: Image Resize Proxy integratie via `src/lib/image.ts` (srcset 400/600/800/1200w webp) op PoiGrid+EventCalendar+Gallery. ARIA op 22/24 blocks. Touch targets >=44px op 7 interactieve blocks. Container queries op 16 blocks. **P1 fixes**: i18n NL/EN voor ContactForm+Newsletter (7 strings). ARIA op Hero, DesktopHero, EventCalendar, DesktopEvents, CategoryGrid. |
 | **4.63.0** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. **Faq**: schema.org FAQPage, ARIA accordion (aria-expanded/controls/labelledby), container queries. **Testimonials**: schema.org AggregateRating + Review, container queries, blockquote/cite, title i18n, eigen SVG thumbnail. **Newsletter**: ARIA region, GDPR privacy link. **ContactForm**: ARIA, GDPR privacy link, container queries. **Partners**: ARIA, container queries. **TicketShop**: container query grid, ARIA + aria-busy skeleton. **ReservationWidget**: ARIA region. **Admin fixes**: TestimonialsEditor +title veld, EventCalendarEditor +categoryFilter, Testimonials eigen SVG thumbnail. 7 frontend + 3 admin bestanden. |
 | **4.62.0** | **2026-04-25** | **Fase VII-B COMPLEET: Cluster A — 8 blokken + SchemaInjector enterprise-geüpgraded**. **VII-B2**: EventCalendar (schema.org Event JSON-LD, @container queries, time display, categorie badges) + Map (tier rings, markerLimit, showLegend, ARIA). **VII-B3**: Cta (container queries, backgroundImage, dark/light styles, ARIA region) + Footer (schema.org Organization, ARIA nav landmark, privacy link). **VII-B4**: RichText auto POI-link op naammatch (server-side fetch top-200 POIs, regex word boundary, client-side hb:poi:open dispatch). **Fixes**: tier-badges default OFF (consument ziet ze niet), tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). SchemaInjector nu 6 generators. 5 JSON-LD schema's op homepage. 3 nieuwe + 12 gewijzigde bestanden. |
 | **4.61.0** | **2026-04-24** | **Fase VII-B1: ProgramCard Kwaliteit + PoiGrid Enterprise + SchemaInjector COMPLEET**. **ProgramCard**: sortProgramOrder() (activiteiten eerst, eten als afsluiter), fine-dine prioriteit avondprogramma (fineDineMinRating 4.5), per-dagdeel rating drempels (ochtend/middag 4.0, avond 4.3), subcategorie bug fix (monuments->monumenten, +galerie/atelier/kunst), is_active check versterkt. **PoiGrid Enterprise**: tier-badges (goud T1/zilver T2/brons T3), CSS @container queries (1/2/3 koloms op block-breedte), inline rating (compact), desktop hover ghost button "Ontdek meer", card aspect-ratio 3/2. Admin PoiGridEditor +3 velden (tierFilter, sortOrder, showTierBadge). **SchemaInjector**: `src/lib/schema.ts` — 4 generator functies (TouristDestination, ItemList, TouristAttraction, schemaToJsonLd). PoiGrid rendert inline JSON-LD. **Backend**: publicPOI.js +3 velden (tier, google_rating, google_review_count). Zombie POI rapport Texel (456 no-rating, 11 rating<3.0). 6 bestanden gewijzigd + 1 nieuw. |
-| **4.60.0** | **2026-04-24** | **Corporate Landing Page Enterprise Upgrade v5.1 (8 opdrachten) + Media Library Activatie + Weather Chatbot**. **Corporate Upgrade**: Outcome-first hero-CTA ("Van bezoeker tot beleving"), 12 module cards (Tourism Media Intelligence, Commerce Suite, etc.), 6-stat balk (303/100+/36+/25/144k+/78), HolidaiButler Flywheel (5 fasen + 6 learning loops, collapsible desktop+mobile), EU-Stack 8 providers (+Bugsink NL, +MailerLite LT), Enterprise Compliance sectie (4 pijlers: GDPR/EU AI Act/WCAG/Security), i18n ~244 keys x 5 talen. **12 module detail-pagina's** (`/modules/*.html`) met SEO meta, volledige nav/footer, specificaties + differentiator per module. **Browser taaldetectie** (navigator.language fallback). **npm audit fix**: 17 \u2192 5 vulnerabilities (low only). **Duplicate CLAUDE.md** verwijderd uit platform-core/. **Media Library Activatie**: `media-performance-aggregator` cron job toegevoegd (dagelijks 02:00, 79 jobs totaal), `OPENWEATHER_API_KEY` geconfigureerd, lat/lng voor Calpe (38.6447, 0.0458) + Texel (53.0548, 4.7979), batch retag 168 media items (context-dimensies: weather/seasons/persona/content_purposes/time_of_day). **Weather Chatbot**: contextService.js uitgebreid met live OpenWeather integratie (async fetch, 30min cache per destination, weer-tips in 5 talen), ragService.js await fix. Werkt voor CalpeTrip.com + Texel Page Builder chatbot. |
+| 4.60.0 | 2026-04-24 | Corporate Landing Page Enterprise Upgrade v5.1 + Media Library Activatie + Weather Chatbot. **Corporate Upgrade**: Outcome-first hero-CTA ("Van bezoeker tot beleving"), 12 module cards (Tourism Media Intelligence, Commerce Suite, etc.), 6-stat balk (303/100+/36+/25/144k+/78), HolidaiButler Flywheel (5 fasen + 6 learning loops, collapsible desktop+mobile), EU-Stack 8 providers (+Bugsink NL, +MailerLite LT), Enterprise Compliance sectie (4 pijlers: GDPR/EU AI Act/WCAG/Security), i18n ~244 keys x 5 talen. **12 module detail-pagina's** (`/modules/*.html`) met SEO meta, volledige nav/footer, specificaties + differentiator per module. **Browser taaldetectie** (navigator.language fallback). **npm audit fix**: 17 \u2192 5 vulnerabilities (low only). **Duplicate CLAUDE.md** verwijderd uit platform-core/. **Media Library Activatie**: `media-performance-aggregator` cron job toegevoegd (dagelijks 02:00, 79 jobs totaal), `OPENWEATHER_API_KEY` geconfigureerd, lat/lng voor Calpe (38.6447, 0.0458) + Texel (53.0548, 4.7979), batch retag 168 media items (context-dimensies: weather/seasons/persona/content_purposes/time_of_day). **Weather Chatbot**: contextService.js uitgebreid met live OpenWeather integratie (async fetch, 30min cache per destination, weer-tips in 5 talen), ragService.js await fix. Werkt voor CalpeTrip.com + Texel Page Builder chatbot. |
 | **4.58.0** | **2026-04-22** | **Corporate Landing Page Enterprise Upgrade — Command v5.1 (8 opdrachten)**. **Opdracht 1**: Outcome-first hero-CTA ("Van bezoeker tot beleving – volledig geautomatiseerd.") + subtekst met "media" in opsomming, 5 talen. **Opdracht 2**: Module-grid 9 → 12 cards, "Media Library" herschreven tot **"Tourism Media Intelligence"** met 5 USP’s als proof-points. Nieuwe cards: Commerce Suite, Page Builder, Merk Profiel & Knowledge Base, Merk-Branding, EU-First Infra, Enterprise Compliance. **Opdracht 3**: Stats-balk 5 → 6 stats met actuele waarden (303 endpoints, 78 jobs, 144k+ vectoren, 36+ blocks, 25 agents, 100+ talen). **Opdracht 4**: Lineair 3-fase proces vervangen door **HolidaiButler Flywheel** — 5 fasen + learning loop met 6 concrete cadence-mechanismen (Trendspotter, Content Feedback, Performance-Learning Media, Content-Gap Detector, Predictive Supply Chain, Revenue Attribution). Desktop horizontaal grid + mobile collapsible details. KPI’s uitsluitend in fase 4 met bronverwijzingen (HubSpot/Statista/ETC). **Opdracht 5**: USP Spotlight-sectie — 5 wereldwijd unieke Tourism Media Intelligence-capabilities + sales-punch. **Opdracht 6**: EU-Stack 6 → 8 providers (+Bugsink NL, +MailerLite LT). **Opdracht 7**: Enterprise Compliance sectie (4 pijlers: GDPR / EU AI Act / WCAG 2.1 AA / Beveiliging) + trust-signals balk. **Opdracht 8**: i18n ~244 keys × 5 talen compleet, QA, documentatie-sync. Bestanden: `index.html` (1.276 LOC), `i18n.js` (347 LOC). npm audit fix: 17 → 5 vulnerabilities (low only). Duplicate `platform-core/CLAUDE.md` verwijderd. |
 | **4.54.0** | **2026-04-20** | **Corporate UX Upgrade Command v4.0 — Opdracht 8+11-15 (7 opdrachten)**. **Opdracht 8**: Sidebar herstructurering (corporate grouping, badges, collapse icon-only mode). **Opdracht 11**: Kalender Corporate Polish (mini-kalender sidebar, keyboard nav t/arrows/1-2-3, workload indicator, platform/pillar/status filters, CSV/ICS export, print view). **Opdracht 12**: Analytics herstructurering (Content tab in Analytics, Rapport sub-tab verwijderd, Analytics sidebar-link hersteld). **Frank feedback**: Platform Dashboard (personaliseerbare KPI widgets, 7d/30d/90d delta badges, destination-scoped data, klikbare blokken). Conditional sidebar (adminOnly/studioOnly). **Opdracht 13**: Onboarding Widget Intercom-stijl (persistent cirkel rechtsonder, 6-10 context-afhankelijke stappen, NotificationsCenter integratie, toggle steps, session dismiss, createPortal). **Opdracht 14**: Performance (code-splitting 6 chunks, asset cleanup 1.3GB→7.9MB, Cache-Control headers, sourcemaps disabled). **Opdracht 15**: WCAG 2.1 AA (21 fixes: 16 aria-labels, 5 keyboard access). +6 endpoints (295 totaal), +4 onboarding endpoints, +1 content/report, +1 analytics/report. 74 BullMQ jobs. |
 | **4.53.0** | **2026-04-19** | **Content Items Enterprise Density + ConceptDialog Focus Mode (Command v4.0 Opdracht 9+10)**. **Opdracht 9**: Density toggle (3 modes, localStorage), column visibility popover, keyboard nav (j/k/Enter/x/Shift+A) met shortcuts popover + Ctrl+K link, sticky table header, 15-rij skeleton loading, enhanced empty state, inline titel editing (dubbelklik, PATCH /content/concepts/:id), row hover actie-iconen, status chips dark-mode-safe (Material 300-reeks), Type kolom toont content_type i.p.v. source_type, table-layout fixed. **Opdracht 10**: Full-screen toggle (F key + button), auto-save draft 10s, keyboard shortcuts (Ctrl+S/Enter/P, F, Esc), unsaved changes indicator (3-state chip), beforeunload warning, Dialog onClose met confirm. **CORS**: publiqio.com in Apache allowlist. +1 endpoint (289 totaal). 4 bestanden. Commit 35eadba. |
@@ -893,7 +898,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.15 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.20 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
