@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, forwardRef, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, Box, Typography, IconButton, Tabs, Tab,
   TextField, Chip, Select, MenuItem, FormControl, InputLabel, Switch,
-  FormControlLabel, Autocomplete, Skeleton, Stack, Divider, Slide, Tooltip
+  FormControlLabel, Autocomplete, Skeleton, Stack, Divider, Slide, Tooltip,
+  Button, Alert, LinearProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
@@ -13,9 +14,14 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import SmartDisplayIcon from '@mui/icons-material/SmartDisplay';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import TranslateIcon from '@mui/icons-material/Translate';
+import LabelIcon from '@mui/icons-material/Label';
+import SendIcon from '@mui/icons-material/Send';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client.js';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const SlideTransition = forwardRef(function SlideTransition(props, ref) {
   return <Slide direction="left" ref={ref} {...props} />;
@@ -54,7 +60,7 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
   const { data: tagSuggestions } = useQuery({
     queryKey: ['media-tags-ac', destId],
     queryFn: () => client.get('/media/tags/autocomplete', { params: { destinationId: destId } }).then(r => r.data?.data || []),
-    enabled: open && tab === 1 && !!destId,
+    enabled: open && tab === 2 && !!destId,
     staleTime: 60000,
   });
 
@@ -280,6 +286,7 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
         <Box sx={{ width: '40%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ borderBottom: 1, borderColor: 'divider', mb: 1 }}>
             <Tab label={t('media.tabInfo', 'Info')} />
+            <Tab label={t('media.tabAI', 'AI Tools')} />
             <Tab label={t('media.tabTags', 'Tags')} />
             <Tab label={t('media.tabRights', 'Rechten')} />
             <Tab label={t('media.tabVersions', 'Versies')} />
@@ -294,10 +301,11 @@ export default function MediaDetailDialog({ open, mediaId, destId, onClose, onUp
             ) : (
               <>
                 {tab === 0 && <InfoTab media={media} onSave={handleFieldSave} t={t} />}
-                {tab === 1 && <TagsTab media={media} onSave={handleFieldSave} suggestions={tagSuggestions || []} t={t} />}
-                {tab === 2 && <RightsTab media={media} onSave={handleFieldSave} t={t} />}
-                {tab === 3 && <VersionsTab media={media} t={t} />}
-                {tab === 4 && <UsageTab media={media} t={t} />}
+                {tab === 1 && <AIToolsTab media={media} destId={destId} t={t} onUpdate={() => { queryClient.invalidateQueries({ queryKey: ['media-detail', mediaId] }); onUpdate?.(); }} />}
+                {tab === 2 && <TagsTab media={media} onSave={handleFieldSave} suggestions={tagSuggestions || []} t={t} />}
+                {tab === 3 && <RightsTab media={media} onSave={handleFieldSave} t={t} />}
+                {tab === 4 && <VersionsTab media={media} t={t} />}
+                {tab === 5 && <UsageTab media={media} t={t} />}
               </>
             )}
           </Box>
@@ -526,7 +534,38 @@ function RightsTab({ media, onSave, t }) {
         }
         label={t('media.aiBadge', 'AI badge')}
       />
+
+      {media?.consent_status === 'pending' && media?.owner_email && (
+        <ConsentRequestButton media={media} />
+      )}
     </Stack>
+  );
+}
+
+/* ── GDPR Consent Request Button ── */
+function ConsentRequestButton({ media }) {
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      await client.post('/media/' + media.id + '/consent/request', { email: media.owner_email }, { params: { destinationId: media.destination_id } });
+      setSent(true);
+    } catch (err) {
+      alert('Fout bij versturen: ' + (err?.response?.data?.error?.message || err.message));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) return <Alert severity="success" sx={{ mt: 1 }}>Toestemmingsverzoek verstuurd naar {media.owner_email}</Alert>;
+
+  return (
+    <Button variant="outlined" color="warning" startIcon={sending ? <CircularProgress size={16} /> : <SendIcon />}
+      onClick={handleSend} disabled={sending} sx={{ mt: 1 }} fullWidth>
+      {sending ? 'Versturen...' : 'Toestemmingsverzoek versturen naar ' + media.owner_email}
+    </Button>
   );
 }
 
@@ -619,7 +658,151 @@ function UsageTab({ media, t }) {
   );
 }
 
-/* ── Helpers ── */
+/* __ Tab 5: AI Tools __ */
+function AIToolsTab({ media, destId, t, onUpdate }) {
+  const [enhanceLoading, setEnhanceLoading] = useState(false);
+  const [enhanceResult, setEnhanceResult] = useState(null);
+  const [altTextLoading, setAltTextLoading] = useState(false);
+  const [altTextResult, setAltTextResult] = useState(null);
+  const [retagLoading, setRetagLoading] = useState(false);
+  const [retagResult, setRetagResult] = useState(null);
+
+  const isImage = media?.mime_type?.startsWith('image/');
+
+  const handleEnhance = async () => {
+    setEnhanceLoading(true);
+    setEnhanceResult(null);
+    try {
+      const res = await client.post('/media/' + media.id + '/ai/enhance', {}, { params: { destinationId: destId }, timeout: 120000 });
+      setEnhanceResult({ success: true, data: res.data?.data });
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setEnhanceResult({ success: false, error: err?.response?.data?.error?.message || err.message });
+    } finally {
+      setEnhanceLoading(false);
+    }
+  };
+
+  const handleAltText = async () => {
+    setAltTextLoading(true);
+    setAltTextResult(null);
+    try {
+      const res = await client.post('/media/' + media.id + '/ai/alt-text', {}, { params: { destinationId: destId }, timeout: 120000 });
+      setAltTextResult({ success: true, data: res.data?.data });
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setAltTextResult({ success: false, error: err?.response?.data?.error?.message || err.message });
+    } finally {
+      setAltTextLoading(false);
+    }
+  };
+
+  const handleRetag = async () => {
+    setRetagLoading(true);
+    setRetagResult(null);
+    try {
+      const res = await client.post('/media/' + media.id + '/ai/retag', {}, { params: { destinationId: destId }, timeout: 60000 });
+      setRetagResult({ success: true, data: res.data?.data });
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setRetagResult({ success: false, error: err?.response?.data?.error?.message || err.message });
+    } finally {
+      setRetagLoading(false);
+    }
+  };
+
+  if (!isImage) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography color="text.secondary">{t('media.aiOnlyImages', 'AI tools zijn alleen beschikbaar voor afbeeldingen.')}</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Stack spacing={2.5} sx={{ p: 1 }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('media.aiTools', 'AI Beeldverwerking')}</Typography>
+
+      <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <AutoFixHighIcon color="primary" />
+          <Typography variant="subtitle2">{t('media.aiEnhance', 'Auto Enhance')}</Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          {t('media.aiEnhanceDesc', 'Verbetert automatisch scherpte, ruis en belichting. Slaat op als nieuwe versie (origineel blijft behouden).')}
+        </Typography>
+        <Button variant="contained" startIcon={enhanceLoading ? <CircularProgress size={16} /> : <AutoFixHighIcon />}
+          onClick={handleEnhance} disabled={enhanceLoading} fullWidth>
+          {enhanceLoading ? t('media.aiProcessing', 'Verwerken...') : t('media.aiEnhanceBtn', 'Afbeelding verbeteren')}
+        </Button>
+        {enhanceLoading && <LinearProgress sx={{ mt: 1, borderRadius: 1 }} />}
+        {enhanceResult && (
+          <Alert severity={enhanceResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
+            {enhanceResult.success ? t('media.aiEnhanceSuccess', 'Afbeelding verbeterd en opgeslagen als nieuwe versie.') : enhanceResult.error}
+          </Alert>
+        )}
+      </Box>
+
+      <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <TranslateIcon color="secondary" />
+          <Typography variant="subtitle2">{t('media.aiAltText', 'Alt-tekst genereren')}</Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          {t('media.aiAltTextDesc', 'Genereert automatisch beschrijvende alt-tekst in 5 talen (NL, EN, DE, ES, FR) voor SEO en toegankelijkheid.')}
+        </Typography>
+        <Button variant="contained" color="secondary" startIcon={altTextLoading ? <CircularProgress size={16} /> : <TranslateIcon />}
+          onClick={handleAltText} disabled={altTextLoading} fullWidth>
+          {altTextLoading ? t('media.aiProcessing', 'Verwerken...') : t('media.aiAltTextBtn', 'Alt-tekst genereren (5 talen)')}
+        </Button>
+        {altTextLoading && <LinearProgress color="secondary" sx={{ mt: 1, borderRadius: 1 }} />}
+        {altTextResult && (
+          <Alert severity={altTextResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
+            {altTextResult.success ? (
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{t('media.aiAltTextSuccess', 'Alt-tekst gegenereerd:')}</Typography>
+                {altTextResult.data?.translations && Object.entries(altTextResult.data.translations).map(([lang, text]) => (
+                  <Typography key={lang} variant="caption" sx={{ display: 'block', mt: 0.3 }}>
+                    <strong>{lang.toUpperCase()}:</strong> {text}
+                  </Typography>
+                ))}
+              </Box>
+            ) : altTextResult.error}
+          </Alert>
+        )}
+      </Box>
+
+      <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <LabelIcon sx={{ color: '#ed6c02' }} />
+          <Typography variant="subtitle2">{t('media.aiRetag', 'AI Hertaggen')}</Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          {t('media.aiRetagDesc', 'Analyseert de afbeelding opnieuw met AI en genereert nieuwe visuele tags. Bestaande AI-tags worden vervangen.')}
+        </Typography>
+        <Button variant="contained" sx={{ bgcolor: '#ed6c02', '&:hover': { bgcolor: '#e65100' } }}
+          startIcon={retagLoading ? <CircularProgress size={16} /> : <LabelIcon />}
+          onClick={handleRetag} disabled={retagLoading} fullWidth>
+          {retagLoading ? t('media.aiProcessing', 'Verwerken...') : t('media.aiRetagBtn', 'Tags opnieuw genereren')}
+        </Button>
+        {retagLoading && <LinearProgress sx={{ mt: 1, borderRadius: 1 }} color="warning" />}
+        {retagResult && (
+          <Alert severity={retagResult.success ? 'success' : 'error'} sx={{ mt: 1 }}>
+            {retagResult.success ? t('media.aiRetagSuccess', 'AI hertagging gestart. Tags worden op de achtergrond bijgewerkt.') : retagResult.error}
+          </Alert>
+        )}
+      </Box>
+
+      {media?.ai_badge && (
+        <Alert severity="info" variant="outlined" sx={{ fontSize: '0.75rem' }}>
+          {t('media.aiBadgeNote', 'Deze afbeelding is eerder AI-bewerkt. Origineel blijft altijd bewaard in versiegeschiedenis.')}
+        </Alert>
+      )}
+    </Stack>
+  );
+}
+
+/* __ Helpers __ */
 function ReadOnlyField({ label, value }) {
   return (
     <Box>

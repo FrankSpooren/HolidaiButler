@@ -65,6 +65,19 @@ const dbConfig = {
 
 console.log('[Database Config] Connecting as:', dbConfig.username, 'to', dbConfig.host + ':' + dbConfig.port);
 
+// Dynamic timezone for Europe/Amsterdam (auto-adjusts for CET/CEST)
+function getAmsterdamOffset() {
+  const now = new Date();
+  const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const ams = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+  const diffMin = (ams - utc) / 60000;
+  const sign = diffMin >= 0 ? '+' : '-';
+  const h = String(Math.floor(Math.abs(diffMin) / 60)).padStart(2, '0');
+  const m = String(Math.abs(diffMin) % 60).padStart(2, '0');
+  return `${sign}${h}:${m}`;
+}
+const DB_TIMEZONE = process.env.DB_TIMEZONE || getAmsterdamOffset();
+
 export const mysqlSequelize = new Sequelize(
   dbConfig.database,
   dbConfig.username,
@@ -75,7 +88,8 @@ export const mysqlSequelize = new Sequelize(
     dialect: 'mysql',
     dialectOptions: {
       charset: 'utf8mb4',
-      timezone: process.env.DB_TIMEZONE || '+01:00',
+      dateStrings: true,
+      timezone: DB_TIMEZONE,
     },
     pool: {
       max: parseInt(process.env.DB_POOL_MAX || '20', 10),
@@ -84,7 +98,7 @@ export const mysqlSequelize = new Sequelize(
       idle: 10000,
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    timezone: process.env.DB_TIMEZONE || '+01:00',
+    timezone: DB_TIMEZONE,
   }
 );
 

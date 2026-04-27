@@ -161,7 +161,7 @@ export default function PreviewPage() {
 
   if (!layout) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999', fontFamily: 'system-ui' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999', fontFamily: "var(--hb-font-body, 'Inter'), system-ui, sans-serif" }}>
         <p>Preview will appear here when editing blocks</p>
       </div>
     );
@@ -171,7 +171,7 @@ export default function PreviewPage() {
 
   if (blocks.length === 0) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999', fontFamily: 'system-ui' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#999', fontFamily: "var(--hb-font-body, 'Inter'), system-ui, sans-serif" }}>
         <p>No blocks added yet</p>
       </div>
     );

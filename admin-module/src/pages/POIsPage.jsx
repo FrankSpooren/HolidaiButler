@@ -17,6 +17,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import CloseIcon from '@mui/icons-material/Close';
 import SyncIcon from '@mui/icons-material/Sync';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -26,6 +28,12 @@ import useDestinationStore from '../stores/destinationStore.js';
 import useAuthStore from '../stores/authStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
+import POIImageReviewQueue from '../components/poi/POIImageReviewQueue.jsx';
+import POIClassificationDashboard from '../components/poi/POIClassificationDashboard.jsx';
+import POIDiscoveryDashboard from '../components/poi/POIDiscoveryDashboard.jsx';
+import client from '../api/client.js';
+import POIFreshnessPanel from '../components/poi/POIFreshnessPanel.jsx';
+import Checkbox from '@mui/material/Checkbox';
 import { DESTINATIONS, getDestinationColor } from '../utils/destinations.js';
 
 const CONTENT_LANGS = ['en', 'nl', 'de', 'es'];
@@ -41,6 +49,14 @@ const SORTABLE_COLUMNS = [
 export default function POIsPage() {
   const { t } = useTranslation();
   const globalDestination = useDestinationStore(s => s.selectedDestination);
+  const [selectedPois, setSelectedPois] = useState(new Set());
+  const [bulkAction, setBulkAction] = useState(null);
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkStatus, setBulkStatus] = useState(true);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkSnack, setBulkSnack] = useState(null);
+  const [showFreshness, setShowFreshness] = useState(false);
+  const [poiTab, setPoiTab] = useState(0);
   const user = useAuthStore(s => s.user);
   const canEdit = user?.role !== 'reviewer'; // reviewers can only view, not edit
 
@@ -101,7 +117,39 @@ export default function POIsPage() {
       setOrder(o => o === 'ASC' ? 'DESC' : 'ASC');
     } else {
       setSort(col);
-      setOrder('ASC');
+      setOr
+  const togglePoiSelect = (id) => {
+    setSelectedPois(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkCategory = async () => {
+    if (!bulkCategory || selectedPois.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await client.post('/pois/bulk-category', { poiIds: [...selectedPois], category: bulkCategory });
+      setBulkSnack('Categorie gewijzigd voor ' + selectedPois.size + ' POIs');
+      setSelectedPois(new Set());
+      setBulkAction(null);
+    } catch (e) { setBulkSnack('Fout: ' + (e.response?.data?.error?.message || e.message)); }
+    finally { setBulkLoading(false); }
+  };
+
+  const handleBulkStatus = async () => {
+    if (selectedPois.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await client.post('/pois/bulk-status', { poiIds: [...selectedPois], is_active: bulkStatus });
+      setBulkSnack('Status gewijzigd voor ' + selectedPois.size + ' POIs');
+      setSelectedPois(new Set());
+      setBulkAction(null);
+    } catch (e) { setBulkSnack('Fout: ' + (e.response?.data?.error?.message || e.message)); }
+    finally { setBulkLoading(false); }
+  };
+der('ASC');
     }
     setPage(0);
   };
@@ -229,6 +277,53 @@ export default function POIsPage() {
         </Grid>
       </Card>
 
+      {/* POI Pipeline Tabs */}
+      <Tabs value={poiTab} onChange={(_, v) => setPoiTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Tab label="POI Lijst" />
+        <Tab label="Image Review" />
+        <Tab label="Classification" />
+        <Tab label="Discovery" />
+        <Tab label="Freshness" />
+      </Tabs>
+
+      {poiTab === 1 && <POIImageReviewQueue />}
+      {poiTab === 2 && <POIClassificationDashboard />}
+      {poiTab === 3 && <POIDiscoveryDashboard />}
+      {poiTab === 4 && <POIFreshnessPanel destinationId={destination || globalDestination} />}
+
+      {poiTab === 0 && (
+      <>
+      {/* Pagination Bar — boven de tabel, altijd zichtbaar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">Rijen per pagina:</Typography>
+          <Select
+            size="small"
+            value={rowsPerPage}
+            onChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            sx={{ minWidth: 80, height: 32, fontSize: '0.875rem' }}
+          >
+            <MenuItem value={25}>25</MenuItem>
+            <MenuItem value={100}>100</MenuItem>
+            <MenuItem value={250}>250</MenuItem>
+            <MenuItem value={500}>500</MenuItem>
+          </Select>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {pagination.total > 0
+              ? `${page * rowsPerPage + 1}–${Math.min((page + 1) * rowsPerPage, pagination.total)} van ${pagination.total}`
+              : '0 resultaten'}
+          </Typography>
+          <IconButton size="small" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+            <ArrowBackIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" disabled={(page + 1) * rowsPerPage >= (pagination.total || 0)} onClick={() => setPage(p => p + 1)}>
+            <ArrowForwardIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+
       {/* Table */}
       <TableContainer component={Paper}>
         <Table size="small">
@@ -335,20 +430,12 @@ export default function POIsPage() {
             )}
           </TableBody>
         </Table>
-        {!isLoading && (
-          <TablePagination
-            component="div"
-            count={pagination.total || 0}
-            page={page}
-            onPageChange={(_e, p) => setPage(p)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            labelRowsPerPage={t('pois.rowsPerPage')}
-          />
-        )}
+        
       </TableContainer>
 
+
+      </>
+      )}
       {/* Detail Dialog */}
       {detailId && (
         <POIDetailDialog
@@ -446,7 +533,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             {isLoading ? <Skeleton width={200} /> : poi.name}
           </Typography>
-          {!isLoading && (
+          
             <Typography variant="body2" color="text.secondary">
               ID: {poi.id} | {poi.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'} | {poi.category}{poi.subcategory ? ` > ${poi.subcategory}` : ''}
             </Typography>
@@ -724,7 +811,43 @@ function POIEditDialog({ poiId, onClose, onSaved }) {
       </DialogTitle>
       <DialogContent dividers>
         {isLoading ? (
-          <Box><Skeleton height={40} /><Skeleton height={300} /></Box>
+          <Box><Skeleton height={40} /><Skeleton height={300} />
+      {/* Bulk Category Dialog */}
+      <Dialog open={bulkAction === 'category'} onClose={() => setBulkAction(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Categorie wijzigen ({selectedPois.size} POIs)</DialogTitle>
+        <DialogContent>
+          <TextField fullWidth label="Nieuwe categorie" value={bulkCategory} onChange={e => setBulkCategory(e.target.value)}
+            sx={{ mt: 1 }} size="small" placeholder="bijv. Food & Drinks" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkAction(null)}>Annuleer</Button>
+          <Button variant="contained" onClick={handleBulkCategory} disabled={bulkLoading || !bulkCategory}>
+            {bulkLoading ? 'Bezig...' : 'Wijzig categorie'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Status Dialog */}
+      <Dialog open={bulkAction === 'status'} onClose={() => setBulkAction(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>{bulkStatus ? 'Activeren' : 'Deactiveren'} ({selectedPois.size} POIs)</DialogTitle>
+        <DialogContent>
+          <Typography>Weet je zeker dat je {selectedPois.size} POIs wilt {bulkStatus ? 'activeren' : 'deactiveren'}?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkAction(null)}>Annuleer</Button>
+          <Button variant="contained" color={bulkStatus ? 'success' : 'error'} onClick={handleBulkStatus} disabled={bulkLoading}>
+            {bulkLoading ? 'Bezig...' : (bulkStatus ? 'Activeren' : 'Deactiveren')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {bulkSnack && (
+        <Snackbar open autoHideDuration={3000} onClose={() => setBulkSnack(null)}>
+          <Alert severity="info" onClose={() => setBulkSnack(null)}>{bulkSnack}</Alert>
+        </Snackbar>
+      )}
+
+    </Box>
         ) : (
           <>
             {updateMutation.isError && (

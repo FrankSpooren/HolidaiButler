@@ -116,6 +116,79 @@ export function generateTouristAttractionSchema(poi: SchemaPOI, baseUrl?: string
   };
 }
 
+
+interface SchemaEvent {
+  id: number;
+  name: string;
+  description?: string;
+  startDate: string;
+  endDate?: string;
+  image?: string;
+  location?: {
+    name?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  category?: string;
+  url?: string;
+}
+
+/**
+ * Generate Event schema for a single event
+ */
+export function generateEventSchema(event: SchemaEvent, baseUrl?: string): object {
+  const url = baseUrl ? `${baseUrl}/event/${event.id}` : undefined;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.name,
+    startDate: event.startDate,
+    ...(event.endDate && { endDate: event.endDate }),
+    ...(event.description && { description: event.description }),
+    ...(event.image && { image: event.image }),
+    ...(url && { url }),
+    ...(event.location && {
+      location: {
+        '@type': 'Place',
+        ...(event.location.name && { name: event.location.name }),
+        ...(event.location.address && {
+          address: {
+            '@type': 'PostalAddress',
+            streetAddress: event.location.address,
+          },
+        }),
+        ...(event.location.latitude && event.location.longitude && {
+          geo: {
+            '@type': 'GeoCoordinates',
+            latitude: event.location.latitude,
+            longitude: event.location.longitude,
+          },
+        }),
+      },
+    }),
+    ...(event.category && {
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    }),
+  };
+}
+
+/**
+ * Generate ItemList schema with Event items for EventCalendar blocks
+ */
+export function generateEventListSchema(events: SchemaEvent[], baseUrl?: string): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    numberOfItems: events.length,
+    itemListElement: events.map((event, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: generateEventSchema(event, baseUrl),
+    })),
+  };
+}
 /**
  * Render a JSON-LD script tag content string (for use in dangerouslySetInnerHTML)
  */

@@ -22,9 +22,11 @@ import MediaBulkActionsBar from '../components/media/MediaBulkActionsBar.jsx';
 import MediaCollectionsDrawer from '../components/media/MediaCollectionsDrawer.jsx';
 import MediaCollectionDetailDialog from '../components/media/MediaCollectionDetailDialog.jsx';
 import MediaCleanupTab from '../components/media/MediaCleanupTab.jsx';
+import MediaAnalyticsTab from '../components/media/MediaAnalyticsTab.jsx';
 import PexelsSearchTab from '../components/media/PexelsSearchTab.jsx';
 import POIImagesTab from '../components/media/POIImagesTab.jsx';
 import useDestinationStore from '../stores/destinationStore.js';
+import MediaContextSearch from '../components/media/MediaContextSearch.jsx';
 
 const CATEGORIES = ['all', 'branding', 'pages', 'pois', 'video', 'documents', 'other'];
 const apiUrl = import.meta.env.VITE_API_URL || 'https://api.holidaibutler.com';
@@ -377,6 +379,14 @@ export default function MediaPage() {
 
       {tab === 3 && (
         <MediaCleanupTab destId={destId} />
+      )}
+
+      {tab === 4 && (
+        <MediaAnalyticsTab destId={destId} />
+      )}
+
+      {tab === 5 && (
+        <MediaContextSearch destId={destId} />
       )}
 
       {/* Detail dialog */}

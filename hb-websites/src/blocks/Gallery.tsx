@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { GalleryProps, GalleryItem } from '@/types/blocks';
 import { analytics } from '@/lib/analytics';
+import { generateSrcSet, DEFAULT_SIZES } from '@/lib/image';
 
 export default function Gallery({ images, items, columns = 3, layout = 'grid' }: GalleryProps) {
   // Backward compatible: convert images to items format
@@ -43,18 +44,15 @@ export default function Gallery({ images, items, columns = 3, layout = 'grid' }:
 
   if (allItems.length === 0) return null;
 
-  const gridCols =
-    columns === 2 ? 'sm:grid-cols-2' :
-    columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' :
-    'sm:grid-cols-2 lg:grid-cols-3';
+  const colOverride = columns === 2 ? 'gallery-cols-2' : columns === 4 ? 'gallery-cols-4' : '';
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className={`grid grid-cols-1 ${gridCols} gap-4`}>
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ containerType: 'inline-size' }}>
+      <div className={`gallery-grid ${colOverride} gap-4`}>
         {allItems.map((item, idx) => (
           <button
             key={idx}
-            className={`relative overflow-hidden rounded-tenant cursor-pointer group ${
+            className={`relative overflow-hidden rounded-tenant cursor-pointer group min-h-[44px] ${
               layout === 'masonry' && idx % 3 === 0 ? 'row-span-2' : ''
             }`}
             onClick={() => openLightbox(idx)}
@@ -64,6 +62,8 @@ export default function Gallery({ images, items, columns = 3, layout = 'grid' }:
               src={item.type === 'video' ? (item.thumbnailUrl ?? item.url) : item.url}
               alt={item.alt ?? ''}
               loading="lazy"
+              srcSet={generateSrcSet(item.type === 'video' ? (item.thumbnailUrl ?? item.url) : item.url) || undefined}
+              sizes={DEFAULT_SIZES}
               className="w-full h-full object-cover aspect-square group-hover:scale-105 transition-transform duration-300"
             />
             {/* Video play icon overlay */}
@@ -89,6 +89,9 @@ export default function Gallery({ images, items, columns = 3, layout = 'grid' }:
       {lightboxIndex !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image lightbox"
           onClick={closeLightbox}
         >
           <button
@@ -144,6 +147,25 @@ export default function Gallery({ images, items, columns = 3, layout = 'grid' }:
           </button>
         </div>
       )}
+      {/* Container query CSS */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .gallery-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+        @container (min-width: 500px) {
+          .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @container (min-width: 800px) {
+          .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @container (min-width: 500px) {
+          .gallery-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @container (min-width: 800px) {
+          .gallery-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        }
+      `}} />
     </section>
   );
 }

@@ -4,12 +4,17 @@ import {
   Grid, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Select, MenuItem, FormControl, InputLabel, Snackbar
 } from '@mui/material';
-import {
-  Refresh as RefreshIcon, Search as SearchIcon, Image as ImageIcon,
-  Place as POIIcon, Event as EventIcon, QuestionAnswer as ChatIcon,
-  TrendingUp as TrendIcon, AutoFixHigh as AIIcon, OpenInNew as OpenIcon,
-  ChevronRight as ChevronRightIcon, Add as AddIcon
-} from '@mui/icons-material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import ImageIcon from '@mui/icons-material/Image';
+import POIIcon from '@mui/icons-material/Place';
+import EventIcon from '@mui/icons-material/Event';
+import ChatIcon from '@mui/icons-material/QuestionAnswer';
+import TrendIcon from '@mui/icons-material/TrendingUp';
+import AIIcon from '@mui/icons-material/AutoFixHigh';
+import OpenIcon from '@mui/icons-material/OpenInNew';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import AddIcon from '@mui/icons-material/Add';
 import { useTranslation } from 'react-i18next';
 import contentService from '../../api/contentService';
 

@@ -22,13 +22,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
           // React core
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // MUI core (largest dep)
-          'vendor-mui': ['@mui/material', '@mui/icons-material'],
+          // MUI core — split icons from components to reduce initial load
+          'vendor-mui-core': ['@mui/material'],
+          'vendor-mui-icons': ['@mui/icons-material'],
           // Charts
           'vendor-charts': ['recharts'],
           // Data management

@@ -4,10 +4,20 @@
  */
 
 import express from 'express';
+import v8 from "v8";
 import metricsService from '../services/metrics.js';
-import circuitBreakerManager from '../utils/circuitBreaker.js';
-import cacheService from '../services/cache.js';
-import { authenticate } from '../middleware/auth.js';
+import circuitBreakerManager from '../services/circuitBreaker.js';
+import jwt from 'jsonwebtoken';
+
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, error: 'No token' });
+  const token = authHeader.substring(7);
+  for (const secret of [process.env.JWT_ADMIN_SECRET, process.env.JWT_SECRET].filter(Boolean)) {
+    try { req.user = jwt.verify(token, secret); return next(); } catch {}
+  }
+  return res.status(401).json({ success: false, error: 'Invalid token' });
+}
 import { mysqlSequelize } from '../config/database.js';
 import mongoose from 'mongoose';
 
@@ -54,8 +64,14 @@ router.get('/metrics/prometheus', async (req, res) => {
  */
 router.get('/circuit-breakers', authenticate, async (req, res) => {
   try {
-    const stats = circuitBreakerManager.getAllStats();
-    const health = circuitBreakerManager.healthCheck();
+    const stats = await circuitBreakerManager.getAllStats();
+    const entries = Object.values(stats);
+    const openBreakers = entries.filter(b => b.state === 'open');
+    const health = {
+      healthy: openBreakers.length === 0,
+      total: entries.length,
+      open: openBreakers.length,
+    };
 
     res.json({
       success: true,
@@ -144,7 +160,7 @@ router.get('/health', async (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    memory: process.memoryUsage(),
+    memory: { ...process.memoryUsage(), heapLimit: v8.getHeapStatistics().heap_size_limit },
     dependencies: {},
   };
 
@@ -170,19 +186,42 @@ router.get('/health', async (req, res) => {
   }
 
   try {
-    // Check Redis/Cache
-    const cacheConnected = await cacheService.isConnected;
-    health.dependencies.cache = cacheConnected ? { status: 'up' } : { status: 'down' };
+    // Check Redis/Cache via direct ping
+    const Redis = (await import('ioredis')).default;
+    const testRedis = new Redis({
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 3000,
+      lazyConnect: true,
+    });
+    try {
+      await testRedis.connect();
+      const pong = await testRedis.ping();
+      health.dependencies.cache = { status: pong === 'PONG' ? 'up' : 'down' };
+      await testRedis.quit();
+    } catch (redisErr) {
+      health.dependencies.cache = { status: 'down', error: redisErr.message };
+      try { testRedis.disconnect(); } catch {}
+    }
   } catch (error) {
     health.dependencies.cache = { status: 'down', error: error.message };
   }
 
   // Check circuit breakers
-  const breakerHealth = circuitBreakerManager.healthCheck();
-  health.dependencies.circuitBreakers = breakerHealth;
-
-  if (!breakerHealth.healthy) {
-    health.status = 'degraded';
+  try {
+    const breakerStats = await circuitBreakerManager.getAllStats();
+    const entries = Object.values(breakerStats);
+    const openBreakers = entries.filter(b => b.state === 'open');
+    health.dependencies.circuitBreakers = {
+      healthy: openBreakers.length === 0,
+      total: entries.length,
+      open: openBreakers.length,
+    };
+    if (openBreakers.length > 0) health.status = 'degraded';
+  } catch (e) {
+    health.dependencies.circuitBreakers = { healthy: true, total: 0, open: 0 };
   }
 
   const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
@@ -231,7 +270,7 @@ router.get('/system', authenticate, (req, res) => {
       arch: process.arch,
       nodeVersion: process.version,
       uptime: process.uptime(),
-      memory: process.memoryUsage(),
+      memory: { ...process.memoryUsage(), heapLimit: v8.getHeapStatistics().heap_size_limit },
       cpuUsage: process.cpuUsage(),
       env: process.env.NODE_ENV,
     },

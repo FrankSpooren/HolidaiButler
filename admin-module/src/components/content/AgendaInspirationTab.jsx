@@ -6,11 +6,14 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, FormGroup, FormControlLabel, Checkbox,
   CircularProgress, Snackbar
 } from '@mui/material';
-import {
-  Refresh as RefreshIcon, Image as ImageIcon, Search as SearchIcon,
-  CheckCircle as HasContentIcon, AutoFixHigh as AIIcon, OpenInNew as OpenIcon,
-  Event as EventIcon, LocationOn as LocationIcon
-} from '@mui/icons-material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ImageIcon from '@mui/icons-material/Image';
+import SearchIcon from '@mui/icons-material/Search';
+import HasContentIcon from '@mui/icons-material/CheckCircle';
+import AIIcon from '@mui/icons-material/AutoFixHigh';
+import OpenIcon from '@mui/icons-material/OpenInNew';
+import EventIcon from '@mui/icons-material/Event';
+import LocationIcon from '@mui/icons-material/LocationOn';
 import { useTranslation } from 'react-i18next';
 import contentService from '../../api/contentService';
 

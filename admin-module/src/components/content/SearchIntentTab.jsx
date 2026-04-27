@@ -3,7 +3,9 @@ import {
   Box, Typography, Paper, Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   Chip, IconButton, Tooltip, Alert, Skeleton, TableSortLabel
 } from '@mui/material';
-import { Refresh as RefreshIcon, Search as SearchIcon, TrendingUp as TrendIcon } from '@mui/icons-material';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import SearchIcon from '@mui/icons-material/Search';
+import TrendIcon from '@mui/icons-material/TrendingUp';
 import { useTranslation } from 'react-i18next';
 import contentService from '../../api/contentService';
 

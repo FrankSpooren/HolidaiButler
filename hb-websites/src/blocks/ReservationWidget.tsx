@@ -72,7 +72,7 @@ export default function ReservationWidget({ defaultPoiId, showSearch = true }: R
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="region" aria-label="Reservation">
       <div className="bg-surface rounded-tenant shadow-sm p-6">
         {/* Search Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

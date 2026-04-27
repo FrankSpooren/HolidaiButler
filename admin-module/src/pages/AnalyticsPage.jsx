@@ -36,6 +36,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAnalyticsOverview, useChatbotAnalytics, useAnalyticsTrend, useAnalyticsSnapshot, useWebsiteAnalytics, useAnalyticsReport } from '../hooks/useAnalytics.js';
 import { analyticsService } from '../api/analyticsService.js';
+import { ChromaDBStatusPanel, FallbackAnalysisPanel, SyncTriggersPanel } from '../components/chatbot/ChatbotAdminPanels.jsx';
 import useDestinationStore from '../stores/destinationStore.js';
 import ErrorBanner from '../components/common/ErrorBanner.jsx';
 import { formatNumber } from '../utils/formatters.js';
@@ -417,6 +418,19 @@ function PoiReviewsTab({ destination, t, isLoading, analytics, snapshot }) {
         </Card>
       )}
 
+      {/* ChromaDB Status + Sync + Fallback panels */}
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={6}>
+          <ChromaDBStatusPanel />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FallbackAnalysisPanel />
+        </Grid>
+      </Grid>
+      <Box sx={{ mt: 2 }}>
+        <SyncTriggersPanel />
+      </Box>
+
       <TrendDialog open={trendDialog.open} onClose={() => setTrendDialog({ ...trendDialog, open: false })}
         metric={trendDialog.metric} destination={destination} t={t} />
     </Box>
@@ -513,6 +527,19 @@ function ChatbotTab({ destination, t }) {
           </Box>
         </Card>
       )}
+
+      {/* ChromaDB Status + Sync + Fallback panels */}
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={6}>
+          <ChromaDBStatusPanel />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FallbackAnalysisPanel />
+        </Grid>
+      </Grid>
+      <Box sx={{ mt: 2 }}>
+        <SyncTriggersPanel />
+      </Box>
 
       <TrendDialog open={trendDialog.open} onClose={() => setTrendDialog({ ...trendDialog, open: false })}
         metric={trendDialog.metric} destination={destination} t={t} />

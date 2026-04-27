@@ -60,7 +60,7 @@ export default function CategoryGrid({ locale = 'nl', destinationSlug }: Categor
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-6 py-8" role="navigation" aria-label="Categories">
       <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">
         {t(SECTION_LABELS.title, locale)}
       </h2>

@@ -36,7 +36,7 @@ export default async function WeatherWidget({ layout = 'compact', showForecast =
 
   if (layout === 'compact') {
     return (
-      <section className="py-6">
+      <section className="py-6" role="region" aria-label="Weather">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 bg-surface rounded-tenant p-4 shadow-sm">
             <WeatherIcon icon={weather.current.icon} className="w-10 h-10 text-primary" />
@@ -56,7 +56,7 @@ export default async function WeatherWidget({ layout = 'compact', showForecast =
 
   // Detailed layout with 5-day forecast
   return (
-    <section className="py-12">
+    <section className="py-12" role="region" aria-label="Weather forecast" style={{ containerType: 'inline-size' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Current weather */}
         <div className="flex items-center gap-6 mb-8">
@@ -70,7 +70,7 @@ export default async function WeatherWidget({ layout = 'compact', showForecast =
 
         {/* 5-day forecast */}
         {(showForecast || layout === 'detailed') && weather.forecast.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="weather-forecast-grid gap-3">
             {weather.forecast.map((day) => (
               <div key={day.date} className="bg-surface rounded-tenant p-4 text-center shadow-sm">
                 <p className="text-sm font-medium text-muted mb-2">{formatDay(day.date)}</p>
@@ -82,6 +82,15 @@ export default async function WeatherWidget({ layout = 'compact', showForecast =
             ))}
           </div>
         )}
+        <style dangerouslySetInnerHTML={{ __html: `
+          .weather-forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+          }
+          @container (min-width: 600px) {
+            .weather-forecast-grid { grid-template-columns: repeat(5, 1fr); }
+          }
+        `}} />
       </div>
     </section>
   );

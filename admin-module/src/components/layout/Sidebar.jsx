@@ -76,10 +76,10 @@ const MENU_SECTIONS = [
   {
     label: 'nav.section_commerce',
     items: [
-      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasCommerce === true || ff.hasTicketing === true },
-      { key: 'partners', path: '/partners', icon: HandshakeIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPartners === true },
-      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasFinancial === true },
-      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasIntermediary === true },
+      { key: 'commerce', path: '/commerce', icon: ShoppingCartIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasCommerce === true || ff.hasTicketing === true || ff.commerce === true || ff.ticketing === true },
+      { key: 'partners', path: '/partners', icon: HandshakeIcon, allowedRoles: ['platform_admin', 'destination_admin'], visible: (ff) => ff.hasPartners === true || ff.partners === true },
+      { key: 'financial', path: '/financial', icon: AccountBalanceIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasFinancial === true || ff.financial === true },
+      { key: 'intermediary', path: '/intermediary', icon: SwapHorizIcon, allowedRoles: ['platform_admin', 'destination_admin', 'poi_owner'], visible: (ff) => ff.hasIntermediary === true || ff.intermediary === true },
     ]
   },
   // WEBSITE

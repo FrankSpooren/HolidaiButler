@@ -43,7 +43,7 @@ export default function Hero({
   const descriptionStyle: React.CSSProperties = textStyle?.descriptionColor ? { color: textStyle.descriptionColor } : {};
 
   return (
-    <section className="relative bg-primary text-on-primary overflow-hidden">
+    <section role="banner" aria-label="Hero" className="relative bg-primary text-on-primary overflow-hidden">
       {showVideo ? (
         <>
           <div className="absolute inset-0 hidden md:block">

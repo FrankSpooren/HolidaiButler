@@ -31,7 +31,7 @@ export default function Banner({ message, type = 'info', dismissible = false, li
   };
 
   return (
-    <div className={`border-b ${typeStyles[type]} py-3 px-4`}>
+    <div className={`border-b ${typeStyles[type]} py-3 px-4`} style={{ containerType: 'inline-size' }} role={type === 'warning' ? 'alert' : 'status'} aria-live="polite">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         <p className="text-sm font-medium flex-1">
           {message}
@@ -53,7 +53,7 @@ export default function Banner({ message, type = 'info', dismissible = false, li
         {dismissible && (
           <button
             onClick={handleDismiss}
-            className="text-current opacity-60 hover:opacity-100 text-lg leading-none"
+            className="text-current opacity-60 hover:opacity-100 text-lg leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Dismiss"
           >
             &times;

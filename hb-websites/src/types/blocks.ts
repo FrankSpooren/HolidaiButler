@@ -110,10 +110,18 @@ export interface PoiGridProps {
 export interface EventCalendarProps {
   limit?: number;
   layout?: 'list' | 'grid' | 'compact';
+  /** Configurable section title (i18n) */
+  title?: string;
+  /** Category filter for events */
+  categoryFilter?: string[];
+  /** Show past events (default: false) */
+  showPastEvents?: boolean;
 }
 
 export interface RichTextProps {
   content: string;
+  /** Auto-link POI names in content (default: true) */
+  enablePoiLinks?: boolean;
 }
 
 export interface CardGroupProps {
@@ -142,6 +150,14 @@ export interface MapProps {
   categoryFilter?: string[];
   markers?: MapMarker[];
   overlayLabel?: string;
+  /** Show category legend below map (default: true) */
+  showLegend?: boolean;
+  /** Maximum number of markers to display (default: 20) */
+  markerLimit?: number;
+  /** Map height CSS value (default: responsive 300/400/500px) */
+  height?: string;
+  /** Enable marker clustering for many POIs */
+  showClusters?: boolean;
 }
 
 export interface TestimonialsProps {
@@ -152,7 +168,9 @@ export interface TestimonialsProps {
 export interface CtaProps {
   headline: string;
   description?: string;
-  backgroundStyle?: 'primary' | 'accent' | 'gradient';
+  /** Optional background image URL */
+  backgroundImage?: string;
+  backgroundStyle?: 'primary' | 'accent' | 'gradient' | 'dark' | 'light';
   buttons?: HeroButton[];
 }
 
