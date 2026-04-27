@@ -325,7 +325,7 @@
     "healthy": "Gezond",
     "warning": "Waarschuwing",
     "error": "Fout",
-    "unknown": "Onbekend",
+    "unknown": "Geen recente data",
     "deactivated": "Gedeactiveerd",
     "filter": {
       "all": "Alle",

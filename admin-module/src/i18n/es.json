@@ -308,7 +308,7 @@
     "healthy": "Saludable",
     "warning": "Advertencia",
     "error": "Error",
-    "unknown": "Desconocido",
+    "unknown": "Sin datos recientes",
     "deactivated": "Desactivado",
     "filter": {
       "all": "Todos",

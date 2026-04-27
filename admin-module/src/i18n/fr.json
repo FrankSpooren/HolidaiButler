@@ -325,7 +325,7 @@
     "healthy": "Healthy",
     "warning": "Warning",
     "error": "Error",
-    "unknown": "Unknown",
+    "unknown": "Pas de donnees recentes",
     "deactivated": "Deactivated",
     "filter": {
       "all": "All",
