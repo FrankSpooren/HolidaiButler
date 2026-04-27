@@ -7,6 +7,112 @@
 
 ---
 
+## v4.66.0 — Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close (27 april 2026)
+
+### Scope
+Productie-deploy van alle Fase VII-B/C/D code (94 bestanden, +7.430/-2.813 LOC), Content Studio image/bundel fixes, BUTE destination-aware taal-pipeline, 12 nieuwe admin UI componenten (gap analyse follow-up), tierPromotionAgent, circuitBreaker refactor.
+
+### Content Studio Fixes
+| Fix | Detail |
+|-----|--------|
+| Image reorder | Pijltjes-patroon (POI Management bewezen patroon) voor image volgorde |
+| ContentImageSection | Zelfstandige image loading via loadImages() (ontkoppeld van parent) |
+| MUI Icons tree-shaking | barrel→path imports (bundel 9.5MB→2.8MB, -70%) |
+| VITE_API_URL | Leeg voor same-origin proxy (was: cross-origin naar api.holidaibutler.com) |
+
+### BUTE Taal-Pipeline
+| Wijziging | Detail |
+|-----------|--------|
+| contentGenerator.js | destination-aware generatie: body_<sourceLang> i.p.v. altijd body_en |
+| Backfill | 4 BUTE items: body_en→body_nl migratie |
+| Frontend LANGS | Filter op destination.supportedLanguages |
+| Vertaal-knoppen | Filteren op defaultLanguage (geen onnodige taalrichtingen) |
+
+### Admin UI Gap-Close (12 nieuwe componenten)
+| Component | LOC | Categorie |
+|-----------|-----|-----------|
+| ChatbotAdminPanels.jsx | 271 | Chatbot beheer |
+| GuestsTab.jsx | 108 | Commerce |
+| ReservationsTab.jsx | 123 | Commerce |
+| TicketsTab.jsx | 147 | Commerce |
+| VouchersTab.jsx | 129 | Commerce |
+| MediaContextSearch.jsx | 188 | Media Library |
+| POIClassificationDashboard.jsx | 309 | POI Management |
+| POIDiscoveryDashboard.jsx | 432 | POI Management |
+| POIFreshnessPanel.jsx | 163 | POI Management |
+| POIImageReviewQueue.jsx | 204 | POI Management |
+| PlatformHealthDashboard.jsx | 278 | System monitoring |
+| ContentReportTab.jsx | 181 | Content Studio |
+
+### Backend Wijzigingen
+| Bestand | Actie | Detail |
+|---------|-------|--------|
+| tierPromotionAgent.js | NIEUW (249 LOC) | Agent #26: data-driven tier promotie/demotie |
+| circuitBreakerInit.js | NIEUW (67 LOC) | Startup-isolatie circuit breaker initialisatie |
+| circuitBreaker.js | REFACTORED (-384 LOC) | Vereenvoudigd, init verplaatst naar apart bestand |
+| adminPortal.js | GEWIJZIGD (+105 LOC) | resolved_images sort op media_ids volgorde |
+| metaClient.js | GEWIJZIGD (+222 LOC) | Uitgebreide Facebook/Instagram publishing |
+| publisher/index.js | GEWIJZIGD (+57 LOC) | Multi-platform publishing verbeteringen |
+| monitoring.js | GEWIJZIGD (+69 LOC) | Extra monitoring endpoints |
+| contentGenerator.js | GEWIJZIGD (+26 LOC) | Destination-aware taal-pipeline |
+| poiSyncService.js | GEWIJZIGD (+25 LOC) | Sync uitbreidingen |
+| syncScheduler.js | GEWIJZIGD (+21 LOC) | Tier promotion scheduling |
+| workers.js | GEWIJZIGD (+48 LOC) | tierPromotion worker case |
+
+### Tellingen
+- CLAUDE.md v4.66.0, MS v8.20
+- 303 admin endpoints, 81 BullMQ jobs, 26 agents
+- 94 bestanden gewijzigd, +7.430/-2.813 LOC
+- Commit cf77fc0
+
+---
+
+## v4.65.0 — Content Studio Bug Fixes + Media Library Enterprise Upgrade + Backend-Frontend Gap Analyse (25 april 2026)
+
+### Scope
+5 Content Studio bugs gefixt, Media Library enterprise upgrade (AI Tools + GDPR + Analytics), Backend-Frontend gap analyse (113/330 endpoints zonder UI).
+
+### Content Studio Fixes
+| Fix | Detail |
+|-----|--------|
+| Manual content platforms | Backend las `platform` (enkelvoud) i.p.v. `platforms` array → per-platform items |
+| Taaldetectie | NL/ES/DE/FR input in juiste body_xx kolom (was: alles als EN) |
+| Verwachtingsmanagement | Progress bar + fasebeschrijvingen bij aanmaken |
+| MUI chunk splitting | vendor-mui 4.3MB → core 445KB + icons 3.8MB |
+| Crop UI | Canvas-based, 6 aspect presets, drag handles, auto-80% selectie, viewport-fit |
+
+### Media Library Upgrade
+| Feature | Detail |
+|---------|--------|
+| AI Tools tab | Auto Enhance + Alt-tekst 5 talen + AI Hertaggen |
+| GDPR | Consent verzoek knop in Rechten tab |
+| Media Analytics | Content-gaps, readiness, top-performers, revenue metrics |
+
+### Gap Analyse Resultaat
+- 113 van 330 endpoints (34%) hadden GEEN frontend UI
+- 8-fasen actieplan opgesteld (project_gap_actieplan.md)
+- Fase 1 Media Library gaps: COMPLEET
+
+### Bestanden
+| Bestand | Actie |
+|---------|-------|
+| admin-module/src/components/media/MediaAnalyticsTab.jsx | NIEUW |
+| admin-module/src/pages/MediaPage.jsx | GEWIJZIGD |
+| admin-module/src/components/media/MediaDetailDialog.jsx | GEWIJZIGD |
+| admin-module/src/components/media/MediaImageEditor.jsx | GEWIJZIGD |
+| admin-module/src/components/media/MediaSourceTabs.jsx | GEWIJZIGD |
+| admin-module/src/pages/ContentStudioPage.jsx | GEWIJZIGD |
+| admin-module/vite.config.js | GEWIJZIGD |
+| platform-core/src/routes/adminPortal.js | GEWIJZIGD |
+| platform-core/src/services/agents/contentRedacteur/contentGenerator.js | GEWIJZIGD |
+
+### Tellingen
+- CLAUDE.md v4.65.0, MS v8.19
+- 303 admin endpoints, 79 BullMQ jobs
+- Commit 0c6a406
+
+---
+
 ## v4.64.0 — Fase VII-D COMPLEET + P0/P1 Enterprise Fixes (25 april 2026)
 
 ### Scope
