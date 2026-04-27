@@ -4,15 +4,40 @@ import {
   Dialog, DialogContent, TextField, List, ListItemButton, ListItemIcon,
   ListItemText, Typography, Box, InputAdornment, Chip,
 } from '@mui/material';
-import {
-  Search, Dashboard, Edit, CalendarMonth, Folder, Palette, Add, Campaign,
-  AutoFixHigh, Refresh, Description, People, Settings, Storefront, Article,
-  Place, RateReview, BarChart, Assignment, Logout,
-  CloudUpload, SwapHoriz, AccountBalance, Handshake,
-  SmartToy, AddCircleOutline, AutoAwesome,
-  TrendingUp, Lightbulb, ViewList, PhotoLibrary, Language,
-  Keyboard, Publish,
-} from '@mui/icons-material';
+import Search from '@mui/icons-material/Search';
+import Dashboard from '@mui/icons-material/Dashboard';
+import Edit from '@mui/icons-material/Edit';
+import CalendarMonth from '@mui/icons-material/CalendarMonth';
+import Folder from '@mui/icons-material/Folder';
+import Palette from '@mui/icons-material/Palette';
+import Add from '@mui/icons-material/Add';
+import Campaign from '@mui/icons-material/Campaign';
+import AutoFixHigh from '@mui/icons-material/AutoFixHigh';
+import Refresh from '@mui/icons-material/Refresh';
+import Description from '@mui/icons-material/Description';
+import People from '@mui/icons-material/People';
+import Settings from '@mui/icons-material/Settings';
+import Storefront from '@mui/icons-material/Storefront';
+import Article from '@mui/icons-material/Article';
+import Place from '@mui/icons-material/Place';
+import RateReview from '@mui/icons-material/RateReview';
+import BarChart from '@mui/icons-material/BarChart';
+import Assignment from '@mui/icons-material/Assignment';
+import Logout from '@mui/icons-material/Logout';
+import CloudUpload from '@mui/icons-material/CloudUpload';
+import SwapHoriz from '@mui/icons-material/SwapHoriz';
+import AccountBalance from '@mui/icons-material/AccountBalance';
+import Handshake from '@mui/icons-material/Handshake';
+import SmartToy from '@mui/icons-material/SmartToy';
+import AddCircleOutline from '@mui/icons-material/AddCircleOutline';
+import AutoAwesome from '@mui/icons-material/AutoAwesome';
+import TrendingUp from '@mui/icons-material/TrendingUp';
+import Lightbulb from '@mui/icons-material/Lightbulb';
+import ViewList from '@mui/icons-material/ViewList';
+import PhotoLibrary from '@mui/icons-material/PhotoLibrary';
+import Language from '@mui/icons-material/Language';
+import Keyboard from '@mui/icons-material/Keyboard';
+import Publish from '@mui/icons-material/Publish';
 import useAuthStore from '../../stores/authStore.js';
 import contentService from '../../api/contentService.js';
 import useDestinationStore from '../../stores/destinationStore.js';

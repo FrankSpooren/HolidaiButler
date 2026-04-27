@@ -11,7 +11,8 @@ export default function MapEditor({ block, onChange }) {
       <NumberField label="Longitude" value={center[1]} onChange={v => update('center', [center[0], v || 0])} step={0.0001} />
       <NumberField label="Zoom Level" value={props.zoom || 13} onChange={v => update('zoom', v)} min={1} max={18} />
       <TextField label="Height" value={props.height} onChange={v => update('height', v)} helperText="e.g. 400px or 60vh" />
-      <SwitchField label="Show Clusters" value={props.showClusters} onChange={v => update('showClusters', v)} />
+      <NumberField label="Marker Limit" value={props.markerLimit || 20} onChange={v => update('markerLimit', v)} min={5} max={100} />
+      <SwitchField label="Show Legend" value={props.showLegend !== false} onChange={v => update('showLegend', v)} />
       <CategoryFilterField label="Category Filter" value={props.categoryFilter} onChange={v => update('categoryFilter', v)} />
     </>
   );

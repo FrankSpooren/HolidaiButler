@@ -4,7 +4,25 @@
  */
 
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+
+// Admin-compatible auth: accepts both JWT_SECRET and JWT_ADMIN_SECRET tokens
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'No token provided' });
+  }
+  const token = authHeader.substring(7);
+  const secrets = [process.env.JWT_ADMIN_SECRET, process.env.JWT_SECRET].filter(Boolean);
+  for (const secret of secrets) {
+    try {
+      const decoded = jwt.verify(token, secret);
+      req.user = { id: decoded.userId || decoded.id || decoded.adminId, email: decoded.email, role: decoded.role || 'admin', ...decoded };
+      return next();
+    } catch {}
+  }
+  return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN', message: 'Authentication token is invalid' } });
+}
 import poiClassificationService from '../services/poiClassification.js';
 import apifyService from '../services/apify.js';
 import touristRelevanceService from '../services/touristRelevance.js';

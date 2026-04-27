@@ -90,7 +90,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
         <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-6" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1,2,3].map(i => (
@@ -103,7 +103,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
 
   if (events.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
         <h2 className="text-2xl font-heading font-bold text-gray-900 mb-4">
           {SECTION_LABELS.title[locale] || SECTION_LABELS.title.en} {destinationName}
         </h2>
@@ -113,7 +113,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-heading font-bold text-gray-900">
           {SECTION_LABELS.title[locale] || SECTION_LABELS.title.en} {destinationName}

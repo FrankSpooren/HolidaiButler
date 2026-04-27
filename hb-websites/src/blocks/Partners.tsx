@@ -10,7 +10,7 @@ export default function Partners({ headline, logos, columns = 4 }: PartnersProps
     'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4';
 
   return (
-    <section className="py-12 sm:py-16 bg-surface">
+    <section className="py-12 sm:py-16 bg-surface" style={{ containerType: 'inline-size' }} role="region" aria-label={headline || 'Partners'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {headline && (
           <h2 className="text-2xl sm:text-3xl font-heading font-bold text-center mb-8">

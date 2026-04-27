@@ -81,8 +81,21 @@ export default function Video({
     </div>
   ) : null;
 
+  // Schema.org VideoObject
+  const videoSchema = (youtubeUrl || vimeoUrl || videoFile) ? {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    ...(headline && { name: headline }),
+    ...(description && { description }),
+    ...(posterImage && { thumbnailUrl: posterImage }),
+    ...(youtubeUrl && { embedUrl: youtubeUrl }),
+    ...(vimeoUrl && { embedUrl: vimeoUrl }),
+    ...(videoFile && { contentUrl: videoFile }),
+  } : null;
+
   return (
-    <section className={`${bgClass} py-12 sm:py-16`}>
+    <section className={`${bgClass} py-12 sm:py-16`} style={{ containerType: 'inline-size' }} role="region" aria-label={headline || 'Video'}>
+      {videoSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />}
       <div className={containerClass}>
         {layout === 'side-by-side' ? (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">

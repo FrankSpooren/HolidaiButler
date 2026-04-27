@@ -4,6 +4,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   TextField, ToggleButton, ToggleButtonGroup, Chip, Snackbar, Alert,
   Select, MenuItem, FormControl, InputLabel
+, CircularProgress
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -18,6 +19,11 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { lazy, Suspense } from 'react';
+const GuestsTab = lazy(() => import('../components/commerce/GuestsTab.jsx'));
+const VouchersTab = lazy(() => import('../components/commerce/VouchersTab.jsx'));
+const ReservationsTab = lazy(() => import('../components/commerce/ReservationsTab.jsx'));
+const TicketsTab = lazy(() => import('../components/commerce/TicketsTab.jsx'));
 import useDestinationStore from '../stores/destinationStore.js';
 import useAuthStore from '../stores/authStore.js';
 import { commerceService } from '../api/commerceService.js';
@@ -496,12 +502,20 @@ export default function CommercePage() {
         <Tab label={t('commerce.reports')} />
         <Tab label={t('commerce.alerts')} />
         <Tab label={t('commerce.export')} />
+        <Tab label="Gasten" />
+        <Tab label="Vouchers" />
+        <Tab label="Reserveringen" />
+        <Tab label="Tickets" />
       </Tabs>
 
       {tab === 0 && <DashboardTab destinationId={destId} t={t} lang={lang} />}
       {tab === 1 && <ReportsTab destinationId={destId} t={t} lang={lang} />}
       {tab === 2 && <AlertsTab destinationId={destId} t={t} />}
       {tab === 3 && <ExportTab destinationId={destId} t={t} />}
+      {tab === 4 && <Suspense fallback={<Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>}><GuestsTab destinationId={destId} t={t} /></Suspense>}
+      {tab === 5 && <Suspense fallback={<Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>}><VouchersTab destinationId={destId} t={t} /></Suspense>}
+      {tab === 6 && <Suspense fallback={<Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>}><ReservationsTab destinationId={destId} t={t} /></Suspense>}
+      {tab === 7 && <Suspense fallback={<Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>}><TicketsTab destinationId={destId} t={t} /></Suspense>}
     </Box>
   );
 }

@@ -7,6 +7,7 @@ const TAB_CONFIG = [
   { labelKey: 'media.tabs.pexels', fallback: 'Pexels Stock', icon: '\u{1F5BC}', source: 'pexels' },
   { labelKey: 'media.tabs.cleanup', fallback: 'Opschonen', icon: '\u{1F9F9}', source: 'cleanup' },
   { labelKey: 'media.tabs.analytics', fallback: 'Analytics', icon: '\u{1F4CA}', source: 'analytics' },
+  { labelKey: 'media.tabs.context', fallback: 'Context Search', icon: '\u{1F50D}', source: 'context' },
 ];
 
 export default function MediaSourceTabs({ activeTab, onTabChange }) {

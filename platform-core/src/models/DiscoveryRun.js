@@ -248,7 +248,7 @@ DiscoveryRun.prototype.getSummary = function() {
 // Static methods
 DiscoveryRun.getRecentRuns = async function(limit = 20) {
   return await this.findAll({
-    order: [['created_at', 'DESC']],
+    order: [['createdAt', 'DESC']],
     limit,
   });
 };
@@ -256,7 +256,7 @@ DiscoveryRun.getRecentRuns = async function(limit = 20) {
 DiscoveryRun.getRunsByDestination = async function(destination, limit = 10) {
   return await this.findAll({
     where: { destination },
-    order: [['created_at', 'DESC']],
+    order: [['createdAt', 'DESC']],
     limit,
   });
 };

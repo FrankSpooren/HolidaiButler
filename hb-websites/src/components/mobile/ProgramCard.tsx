@@ -139,7 +139,7 @@ const CALPE_CONFIG: DestinationConfig = {
       ],
       excludeSubcats: ['fastfood', 'breakfast'],
       excludeNames: [],
-      maxFood: 3,
+      maxFood: 1,
       minRating: 4.3,
       minReviews: 5,
       fineDineMinRating: 4.5,
@@ -218,7 +218,7 @@ const TEXEL_CONFIG: DestinationConfig = {
       ],
       excludeSubcats: ['fastfood', 'cafetaria', 'foodtrucks', 'ontbijt', 'ijs', 'speciaalzaken', 'strandkiosk'],
       excludeNames: [],
-      maxFood: 3,
+      maxFood: 1,
       minRating: 4.3,
       minReviews: 5,
       fineDineMinRating: 4.5,
@@ -296,12 +296,122 @@ const CLOSED_KEYWORDS = [
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+/**
+ * Check if POI is closed on a specific day of the week.
+ * Handles both ARRAY format [{day:"Friday", hours:"Closed"}]
+ * and OBJECT format {friday: "Closed"} / {friday: [{open:"10:00",close:"23:00"}]}
+ */
+function isClosedOnDay(openingHours: unknown, dayIndex: number): boolean {
+  if (!openingHours) return false;
+  try {
+    const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
+    if (!hours || typeof hours !== 'object') return false;
+
+    const dayNamesEn = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const dayNamesEnCap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayNamesNl = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+    const dayEn = dayNamesEn[dayIndex];
+    const dayEnCap = dayNamesEnCap[dayIndex];
+    const dayNl = dayNamesNl[dayIndex];
+
+    // ARRAY format: [{day: "Friday", hours: "Closed"}, ...]
+    if (Array.isArray(hours)) {
+      const entry = hours.find((h: any) => {
+        const d = (h.day || '').toLowerCase();
+        return d === dayEn || d === dayNl;
+      });
+      if (!entry) return false;
+      const h = (entry.hours || '').toLowerCase().trim();
+      return h === 'closed' || h === 'gesloten' || h === '';
+    }
+
+    // OBJECT format: {friday: "Closed"} or {friday: [{open,close}]}
+    const dayData = hours[dayEn] || hours[dayEnCap] || hours[dayNl];
+    if (dayData === undefined) return false;
+    if (!dayData) return true;
+    if (Array.isArray(dayData) && dayData.length === 0) return true;
+    if (typeof dayData === 'string') {
+      const s = dayData.toLowerCase().trim();
+      return s === 'closed' || s === 'gesloten' || s === '';
+    }
+    return false;
+  } catch { return false; }
+}
+
+/**
+ * Check if POI is closed at a specific hour on a specific day.
+ * Returns true if the POI closes before the given hour.
+ */
+function isClosedAtHour(openingHours: unknown, dayIndex: number, hour: number): boolean {
+  if (!openingHours) return false;
+  if (isClosedOnDay(openingHours, dayIndex)) return true;
+  try {
+    const hours = typeof openingHours === 'string' ? JSON.parse(openingHours) : openingHours;
+    if (!hours || typeof hours !== 'object') return false;
+
+    const dayNamesEn = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const dayNamesEnCap = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayNamesNl = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+    const dayEn = dayNamesEn[dayIndex];
+    const dayEnCap = dayNamesEnCap[dayIndex];
+    const dayNl = dayNamesNl[dayIndex];
+
+    // ARRAY format
+    if (Array.isArray(hours)) {
+      const entry = hours.find((h: any) => {
+        const d = (h.day || '').toLowerCase();
+        return d === dayEn || d === dayNl;
+      });
+      if (!entry) return false;
+      const hoursStr = (entry.hours || '').trim();
+      // Parse closing time from formats like "9 AM - 7 PM", "09:00 - 19:00", "8:30 AM to 4 PM"
+      const match = hoursStr.match(/(\d{1,2}):?(\d{2})?\s*(?:AM|PM)?\s*(?:to|–|-|,)\s*(\d{1,2}):?(\d{2})?\s*(AM|PM)?/i);
+      if (match) {
+        let closeH = parseInt(match[3]);
+        if (match[5]?.toUpperCase() === 'PM' && closeH < 12) closeH += 12;
+        if (match[5]?.toUpperCase() === 'AM' && closeH === 12) closeH = 0;
+        return hour >= closeH;
+      }
+      return false;
+    }
+
+    // OBJECT format
+    const dayData = hours[dayEn] || hours[dayEnCap] || hours[dayNl];
+    if (!dayData) return false;
+    if (Array.isArray(dayData) && dayData.length > 0) {
+      // Get the latest closing time
+      let latestClose = 0;
+      for (const slot of dayData) {
+        if (slot.close) {
+          const [ch] = slot.close.split(':').map(Number);
+          if (ch > latestClose) latestClose = ch;
+        }
+      }
+      if (latestClose > 0) return hour >= latestClose;
+    }
+    if (typeof dayData === 'string') {
+      const match = dayData.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+      if (match) {
+        const closeH = parseInt(match[3]);
+        return hour >= closeH;
+      }
+    }
+    return false;
+  } catch { return false; }
+}
+
 function isPOISuitable(poi: any, rule: DayPartRule): boolean {
   // Closed check — robust: handles 0, false, null
   if (poi.is_active === false || poi.is_active === 0) return false;
   if (poi.status === 'closed' || poi.status === 'inactive') return false;
   const fullText = `${poi.name || ''} ${poi.description || ''}`.toLowerCase();
   if (CLOSED_KEYWORDS.some(kw => fullText.includes(kw))) return false;
+
+  // Opening hours check: skip POIs closed today or closed at program time
+  const now = new Date();
+  const dayIndex = now.getDay();
+  if (isClosedOnDay(poi.opening_hours, dayIndex)) return false;
 
   const subText = `${poi.subcategory || ''}`.toLowerCase();
   const nameText = `${poi.name || ''}`;
@@ -380,7 +490,7 @@ function selectDiversePOIs(pois: any[], count: number, dayPart: DayPart, config:
 
     // Enforce category diversity — Shopping/Winkelen: max 2, others: max 1
     const maxPerCat = isShopping(poi) ? 2 : 1;
-    if (dayPart !== 'evening' && (categoryCount[mainCat] || 0) >= maxPerCat) continue;
+    if ((categoryCount[mainCat] || 0) >= maxPerCat) continue;
 
     // Max food POIs per rule
     if (isFood(poi) && foodCount >= rule.maxFood) continue;
@@ -523,6 +633,46 @@ function getLocalizedString(val: unknown, locale: string): string {
  * For evening with fineDineMinRating: premium restaurants come before casual ones.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+/** Fetch current weather from OpenWeatherMap via backend proxy or direct */
+interface WeatherData { condition: string; temp: number; wind: number; }
+const WEATHER_COORDS: Record<string, { lat: number; lng: number }> = {
+  calpe: { lat: 38.6447, lng: 0.0458 },
+  texel: { lat: 53.0548, lng: 4.7979 },
+};
+let _weatherCache: { data: WeatherData | null; ts: number; slug: string } | null = null;
+
+async function fetchWeather(): Promise<WeatherData | null> {
+  const slug = getDestinationSlug() || 'calpe';
+  if (_weatherCache && _weatherCache.slug === slug && Date.now() - _weatherCache.ts < 30 * 60 * 1000) return _weatherCache.data;
+  try {
+    const coords = WEATHER_COORDS[slug] || WEATHER_COORDS.calpe;
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lng}&units=metric&appid=***REMOVED***`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    const weather: WeatherData = {
+      condition: (d.weather?.[0]?.main || '').toLowerCase(),
+      temp: Math.round(d.main?.temp || 20),
+      wind: Math.round((d.wind?.speed || 0) * 3.6),
+    };
+    _weatherCache = { data: weather, ts: Date.now(), slug };
+    return weather;
+  } catch { return null; }
+}
+
+function isRainyWeather(w: WeatherData | null): boolean {
+  if (!w) return false;
+  return ['rain', 'drizzle', 'thunderstorm'].includes(w.condition);
+}
+
+function isIndoorPOI(poi: any): boolean {
+  const sub = (poi.subcategory || '').toLowerCase();
+  const cat = (poi.category || '').toLowerCase();
+  const name = (poi.name || '').toLowerCase();
+  const indoorKeywords = ['museum', 'musea', 'theater', 'entertainment', 'indoor', 'restaurant', 'bar', 'cafe', 'eetcafe', 'cocktail', 'galerie', 'atelier', 'shopping', 'winkelen', 'mode', 'lifestyle', 'arts', 'religious', 'kerk', 'church'];
+  return indoorKeywords.some(kw => sub.includes(kw) || cat.includes(kw) || name.includes(kw));
+}
+
 function sortProgramOrder(items: any[], dayPart: DayPart, config: DestinationConfig): any[] {
   const rule = config.rules[dayPart];
 
@@ -583,13 +733,15 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
         const poiLimit = Math.max(1, programSize - 1);
 
         // Fetch more than needed to have room after filtering
-        const [poisRes, eventsRes] = await Promise.all([
+        const [poisRes, eventsRes, weather] = await Promise.all([
           fetch(`/api/pois?limit=${poiLimit * 8}&sort=rating:desc&min_rating=${rule.minRating || 4.2}&min_reviews=${rule.minReviews || 3}&categories=${encodeURIComponent(rule.categories)}`),
           fetch('/api/events?limit=10&distance=5'),
+          fetchWeather(),
         ]);
 
         const poisData = await poisRes.json();
         const eventsData = await eventsRes.json();
+        const isRainy = isRainyWeather(weather);
 
         // Filter events: time-of-day + tourist relevance
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -607,36 +759,58 @@ export default function ProgramCard({ locale, programSize = 4, forceShow }: Prog
         // Calculate how many POIs we need: fill remaining slots, ensure minimum total
         const neededPois = Math.max(poiLimit, MIN_PROGRAM_ITEMS - events.length);
         const poisRaw = selectDiversePOIs(shuffled, neededPois, dayPart, config);
-        const pois = sortProgramOrder(poisRaw, dayPart, config);
+        let pois = sortProgramOrder(poisRaw, dayPart, config);
+        // Weather-aware: when raining, prioritize indoor POIs
+        if (isRainy) {
+          pois = [...pois].sort((a, b) => {
+            const aIndoor = isIndoorPOI(a) ? 0 : 1;
+            const bIndoor = isIndoorPOI(b) ? 0 : 1;
+            return aIndoor - bIndoor;
+          });
+        }
+
+        // Generate initial time slots
+        const allItems: any[] = [...pois.map((p: any) => ({ ...p, type: 'poi' })), ...events.map((e: any) => ({ ...e, type: 'event' }))];
+        const initialSlots = generateTimeSlots(allItems, dayPart);
+
+        // Filter out POIs that are closed at their assigned time slot
+        const dayIdx = new Date().getDay();
+        const validPois = pois.filter((p: any, i: number) => {
+          const slot = initialSlots[i];
+          if (!slot) return true;
+          const startH = parseInt(slot.start.split(':')[0]);
+          if (isClosedAtHour(p.opening_hours, dayIdx, startH)) return false;
+          return true;
+        });
+
+        // Regenerate slots for valid POIs only
+        const allValidItems: any[] = [...validPois.map((p: any) => ({ ...p, type: 'poi' })), ...events.map((e: any) => ({ ...e, type: 'event' }))];
+        const validSlots = generateTimeSlots(allValidItems, dayPart);
 
         const combined: ProgramItem[] = [];
-        // Build items array with category info for duration-aware time slots
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const allItems: any[] = [...pois.map((p: any) => ({ ...p, type: 'poi' })), ...events.map((e: any) => ({ ...e, type: 'event' }))];
-        const slots = generateTimeSlots(allItems, dayPart);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pois.forEach((p: any, i: number) => {
+        validPois.forEach((p: any, i: number) => {
           combined.push({
             id: p.id,
             type: 'poi',
             name: typeof p.name === 'string' ? p.name : getLocalizedString(p.name, locale),
             image: Array.isArray(p.images) ? p.images[0] : undefined,
-            timeStart: slots[i]?.start || '09:00',
-            timeEnd: slots[i]?.end || '11:00',
+            timeStart: validSlots[i]?.start || '09:00',
+            timeEnd: validSlots[i]?.end || '11:00',
           });
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         events.forEach((e: any, i: number) => {
-          const slotIdx = pois.length + i;
+          const slotIdx = validPois.length + i;
           combined.push({
             id: e.id,
             type: 'event',
             name: getLocalizedString(e.title, locale),
             image: e.image || undefined,
-            timeStart: slots[slotIdx]?.start || '14:00',
-            timeEnd: slots[slotIdx]?.end || '16:00',
+            timeStart: validSlots[slotIdx]?.start || '14:00',
+            timeEnd: validSlots[slotIdx]?.end || '16:00',
           });
         });
 

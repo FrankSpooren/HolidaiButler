@@ -371,6 +371,12 @@ const contentService = {
     return client.post(`/content/seasons/${id}/activate`).then(r => r.data);
   },
 
+  // === Content Report (Fase 2 Gap) ===
+
+  getReport(destinationId, { period = 'last_month' } = {}) {
+    return client.get('/content/report', { params: { destination_id: destinationId, period } }).then(r => r.data);
+  },
+
   // === Visual Trends (Content Bronnen) ===
 
   getVisualTrending(destinationId, params = {}) {

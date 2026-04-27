@@ -7,11 +7,11 @@ import ButtonRenderer from '@/components/ui/ButtonRenderer';
 export default function CardGroup({ cards, columns = 3 }: CardGroupProps) {
   if (!cards || cards.length === 0) return null;
 
-  const gridCols = columns === 2 ? 'sm:grid-cols-2' : columns === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+  const colOverride = columns === 2 ? 'cardgroup-cols-2' : columns === 4 ? 'cardgroup-cols-4' : '';
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className={`grid grid-cols-1 ${gridCols} gap-6`}>
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" role="region" aria-label="Content cards" style={{ containerType: 'inline-size' }}>
+      <div className={`cardgroup-grid ${colOverride} gap-6`}>
         {cards.map((card, i) => (
           <Card key={i} href={card.buttons && card.buttons.length > 0 ? undefined : card.href}>
             {card.image && <CardImage src={card.image} alt={card.title} />}
@@ -33,6 +33,24 @@ export default function CardGroup({ cards, columns = 3 }: CardGroupProps) {
           </Card>
         ))}
       </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .cardgroup-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+        @container (min-width: 600px) {
+          .cardgroup-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @container (min-width: 900px) {
+          .cardgroup-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @container (min-width: 600px) {
+          .cardgroup-cols-2 { grid-template-columns: repeat(2, 1fr); }
+        }
+        @container (min-width: 900px) {
+          .cardgroup-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        }
+      `}} />
     </section>
   );
 }

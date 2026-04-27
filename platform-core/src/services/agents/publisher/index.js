@@ -99,20 +99,10 @@ class PublisherAgent extends BaseAgent {
         try {
           let mediaIds = typeof contentItem.media_ids === 'string' ? JSON.parse(contentItem.media_ids) : (contentItem.media_ids || []);
           if (mediaIds.length > 0) {
-            const firstMediaId = mediaIds[0];
             const imageBase = process.env.IMAGE_BASE_URL || 'https://api.holidaibutler.com';
             const apiBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
-            let resolvedUrl = null;
 
-            // Branch 1: HTTP URL → use as-is
-            if (typeof firstMediaId === 'string' && (firstMediaId.startsWith('http://') || firstMediaId.startsWith('https://'))) {
-              resolvedUrl = firstMediaId;
-            }
-            // Branch 2: "/path" → prefix with API base
-            else if (typeof firstMediaId === 'string' && firstMediaId.startsWith('/')) {
-              resolvedUrl = `${apiBase}${firstMediaId}`;
-            }
-            // Helper: resolve a POI imageurls.id → URL (prefer local_path)
+            // Helper: resolve a POI imageurls.id to URL (prefer local_path)
             const resolvePoiImage = async (imgId) => {
               if (isNaN(imgId) || imgId <= 0) return null;
               const [[img]] = await mysqlSequelize.query(
@@ -122,7 +112,7 @@ class PublisherAgent extends BaseAgent {
               if (!img) return null;
               return img.local_path ? `${imageBase}${img.local_path}` : img.image_url;
             };
-            // Helper: resolve a media library id → URL (with auto-crop)
+            // Helper: resolve a media library id to URL
             const resolveMediaLibrary = async (mediaIdNum) => {
               if (isNaN(mediaIdNum) || mediaIdNum <= 0) return null;
               const [[media]] = await mysqlSequelize.query(
@@ -132,32 +122,37 @@ class PublisherAgent extends BaseAgent {
               if (!media) return null;
               return `${apiBase}/media-files/${media.destination_id}/${media.filename}`;
             };
-
-            // Branch 3: "poi:N" → imageurls
-            if (typeof firstMediaId === 'string' && firstMediaId.startsWith('poi:')) {
-              resolvedUrl = await resolvePoiImage(Number(firstMediaId.slice(4)));
-            }
-            // Branch 4: "media:N" → media library
-            else if (typeof firstMediaId === 'string' && firstMediaId.startsWith('media:')) {
-              resolvedUrl = await resolveMediaLibrary(Number(firstMediaId.slice(6)));
-            }
-            // Branch 5: bare number (legacy ambiguous) → try imageurls FIRST, then media library
-            else if (typeof firstMediaId === 'number' || (typeof firstMediaId === 'string' && /^\d+$/.test(firstMediaId))) {
-              const num = Number(firstMediaId);
-              resolvedUrl = await resolvePoiImage(num);
-              if (!resolvedUrl) {
-                resolvedUrl = await resolveMediaLibrary(num);
+            // Helper: resolve any media_id format to URL
+            const resolveOneMediaId = async (mid) => {
+              if (typeof mid === 'string' && (mid.startsWith('http://') || mid.startsWith('https://'))) return mid;
+              if (typeof mid === 'string' && mid.startsWith('/')) return `${apiBase}${mid}`;
+              if (typeof mid === 'string' && mid.startsWith('poi:')) return resolvePoiImage(Number(mid.slice(4)));
+              if (typeof mid === 'string' && mid.startsWith('media:')) return resolveMediaLibrary(Number(mid.slice(6)));
+              if (typeof mid === 'number' || (typeof mid === 'string' && /^\d+$/.test(mid))) {
+                const num = Number(mid);
+                return (await resolvePoiImage(num)) || (await resolveMediaLibrary(num));
               }
+              return null;
+            };
+
+            // Resolve ALL media_ids (not just the first)
+            const resolvedUrls = [];
+            for (const mid of mediaIds) {
+              const url = await resolveOneMediaId(mid);
+              if (url) resolvedUrls.push(url);
             }
 
-            if (resolvedUrl) {
+            if (resolvedUrls.length > 0) {
               let meta = {};
               try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
-              meta.image_url = resolvedUrl;
+              meta.image_url = resolvedUrls[0];
+              if (resolvedUrls.length > 1) {
+                meta.image_urls = resolvedUrls;
+              }
               contentItem.social_metadata = JSON.stringify(meta);
-              logger.info(`[Publisher] Resolved media_id ${JSON.stringify(firstMediaId)} → ${resolvedUrl} for ${contentItem.target_platform}`);
+              logger.info(`[Publisher] Resolved ${resolvedUrls.length} media_ids for ${contentItem.target_platform}: ${resolvedUrls.map(u => u.substring(0, 60)).join(', ')}`);
             } else {
-              logger.warn(`[Publisher] Could not resolve media_id ${JSON.stringify(firstMediaId)} for item ${contentItemId} — post will be text-only`);
+              logger.warn(`[Publisher] Could not resolve any media_ids for item ${contentItemId} - post will be text-only`);
             }
           }
         } catch (resolveErr) {

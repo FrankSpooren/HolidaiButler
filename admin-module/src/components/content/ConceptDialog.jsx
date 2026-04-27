@@ -183,7 +183,7 @@ function EmojiPicker({ onSelect, onClose }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────
-export default function ConceptDialog({ open, onClose, conceptId, onUpdate, destinationId }) {
+export default function ConceptDialog({ open, onClose, conceptId, onUpdate, destinationId, initialPlatform }) {
   const { t } = useTranslation();
 
   // Core state
@@ -209,7 +209,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [isEditing, setIsEditing] = useState(false);
   const [editBody, setEditBody] = useState('');
   const [originalBody, setOriginalBody] = useState(''); // track original from DB for "Aangepast" badge
-  const [langTab, setLangTab] = useState('en');
+  const [langTab, setLangTab] = useState('nl');
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false); // unsaved changes
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -240,9 +240,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [seoLoading, setSeoLoading] = useState(false);
   const [brandScore, setBrandScore] = useState(null);
   const [brandScoreLoading, setBrandScoreLoading] = useState(false);
+  const [hashtags, setHashtags] = useState([]);
+  const [hashtagLoading, setHashtagLoading] = useState(false);
   const [perfData, setPerfData] = useState(null);
   const [perfLoading, setPerfLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState(null); // { platform, step, detail }
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduleDatetime, setScheduleDatetime] = useState('');
@@ -275,13 +278,21 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       const platformItems = (conceptData.items || []).filter(i => i.approval_status !== 'deleted');
       setItems(platformItems);
       setTitleValue(conceptData.title || '');
-      setActiveTab(0);
+      // Select platform tab matching initialPlatform (from calendar click), fallback to first
+      if (initialPlatform && platformItems.length > 0) {
+        const platformIdx = platformItems.findIndex(i => i.target_platform === initialPlatform);
+        setActiveTab(platformIdx >= 0 ? platformIdx : 0);
+      } else {
+        setActiveTab(0);
+      }
       if (conceptData.persona_id) setSelectedPersona(conceptData.persona_id);
-      // Init body editor with first item
+      // Init body editor - use destination default language, not hardcoded 'en'
       if (platformItems.length > 0) {
         const firstItem = platformItems[0];
-        setEditBody(firstItem.body_en || firstItem.body_nl || '');
-        setLangTab('en');
+        const destLang = conceptData.default_language || firstItem.language || 'nl';
+        const initBody = firstItem['body_' + destLang] || firstItem.body_nl || firstItem.body_en || '';
+        setEditBody(initBody);
+        setLangTab(firstItem['body_' + destLang] ? destLang : firstItem.body_nl ? 'nl' : 'en');
       }
     } catch (err) {
       setError(err.message || 'Fout bij laden concept');
@@ -559,6 +570,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     finally { setBrandScoreLoading(false); }
   }, []);
 
+  const handleGenerateHashtags = useCallback(async () => {
+    if (!activeItem) return;
+    setHashtagLoading(true);
+    try {
+      const r = await contentService.generateHashtags(activeItem.id);
+      const tags = r.data?.hashtags || r.hashtags || [];
+      setHashtags(tags);
+    } catch (e) { console.error('Hashtag generation failed:', e); }
+    finally { setHashtagLoading(false); }
+  }, [activeItem]);
+
   const loadPerformance = useCallback(async (itemId) => {
     if (!itemId) return;
     setPerfLoading(true);
@@ -588,6 +610,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     if (Array.isArray(mediaIds) && mediaIds.length > 0) {
       try {
         const r = await contentService.resolveMediaBatch(mediaIds);
+        // resolve-batch returns results in same order as input media_ids
         const resolved = (r.data || [])
           .filter(x => x && x.url)
           .map(x => ({ url: x.url, thumbnail: x.url, alt: x.alt || '', source: x.source }));
@@ -632,15 +655,16 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     let successCount = 0;
     let failCount = 0;
     try {
-      for (const item of items) {
-        if (item.approval_status !== 'published') {
-          try {
-            await contentService.publishNow(item.id, { platform: item.target_platform });
-            successCount++;
-          } catch (err) {
-            failCount++;
-            console.error(`Publish ${item.target_platform} failed:`, err.message);
-          }
+      const toPublish = items.filter(i => i.approval_status !== 'published');
+      for (let idx = 0; idx < toPublish.length; idx++) {
+        const item = toPublish[idx];
+        setPublishStatus({ platform: item.target_platform, step: `${item.target_platform} publiceren (${idx + 1}/${toPublish.length})...`, detail: 'Afbeeldingen worden verwerkt' });
+        try {
+          await contentService.publishNow(item.id, { platform: item.target_platform });
+          successCount++;
+        } catch (err) {
+          failCount++;
+          console.error(`Publish ${item.target_platform} failed:`, err.message);
         }
       }
       await loadConcept();
@@ -653,21 +677,56 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } catch (err) {
       setSnackMsg(`Publicatie mislukt: ${err.message}`);
     } finally {
-      setPublishing(false);
+      setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
     }
   };
 
   const handlePublishItem = async (itemId, platform) => {
     setPublishing(true);
+    setPublishStatus({ platform, step: 'Verbinden met platform...', detail: null });
     try {
+      // Show progress via timeout (actual API call is async)
+      const statusTimer = setTimeout(() => {
+        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: 'Instagram heeft verwerkingstijd nodig' } : prev);
+      }, 3000);
+      const statusTimer2 = setTimeout(() => {
+        setPublishStatus(prev => prev ? { ...prev, step: 'Bijna klaar...', detail: 'Content wordt gepubliceerd' } : prev);
+      }, 10000);
+
       await contentService.publishNow(itemId, { platform });
+      clearTimeout(statusTimer);
+      clearTimeout(statusTimer2);
+      setPublishStatus({ platform, step: 'Gepubliceerd!', detail: null });
       await loadConcept();
       if (onUpdate) onUpdate();
-      setSnackMsg(`${platform} succesvol gepubliceerd`);
+      setSnackMsg({ severity: 'success', text: `${platform} succesvol gepubliceerd` });
     } catch (err) {
-      setSnackMsg(`Publicatie ${platform} mislukt: ${err.response?.data?.error?.message || err.message}`);
+      setSnackMsg({ severity: 'error', text: `Publicatie ${platform} mislukt: ${err.response?.data?.error?.message || err.message}` });
     } finally {
-      setPublishing(false);
+      setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
+    }
+  };
+
+  const handleRepublishItem = async (itemId, platform) => {
+    setPublishing(true);
+    setPublishStatus({ platform, step: 'Opnieuw publiceren...', detail: 'Status wordt gereset' });
+    try {
+      // Reset to draft, then publish
+      await contentService.updateItem(itemId, { approval_status: 'approved' });
+      setPublishStatus({ platform, step: 'Verbinden met platform...', detail: null });
+      const statusTimer = setTimeout(() => {
+        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: 'Instagram heeft verwerkingstijd nodig' } : prev);
+      }, 3000);
+      await contentService.publishNow(itemId, { platform });
+      clearTimeout(statusTimer);
+      setPublishStatus({ platform, step: 'Gepubliceerd!', detail: null });
+      await loadConcept();
+      if (onUpdate) onUpdate();
+      setSnackMsg({ severity: 'success', text: `${platform} opnieuw gepubliceerd` });
+    } catch (err) {
+      setSnackMsg({ severity: 'error', text: `Republish ${platform} mislukt: ${err.response?.data?.error?.message || err.message}` });
+    } finally {
+      setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
     }
   };
 
@@ -947,9 +1006,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <cfg.Icon sx={{ fontSize: 18, color: cfg.color }} />
                       <span>{cfg.label}</span>
-                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : '—'}
-                        size="small" color={STATUS_COLORS[item.approval_status] || 'default'}
-                        sx={{ height: 18, fontSize: 10, ml: 0.5, minWidth: 24 }} />
+                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'failed' ? '✗' : '—'}
+                        size="small" variant={item.approval_status === 'scheduled' ? 'outlined' : 'filled'}
+                        color={STATUS_COLORS[item.approval_status] || 'default'}
+                        sx={{ height: 18, fontSize: 10, ml: 0.5, minWidth: 24, fontWeight: 700,
+                          ...(item.approval_status === 'scheduled' ? { borderColor: '#ed6c02', color: '#ed6c02', borderWidth: 2 } : {})
+                        }} />
                     </Box>
                   } sx={{ borderBottom: activeTab === idx ? `3px solid ${cfg.color}` : 'none' }} />
                 );
@@ -1294,7 +1356,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       {activeItem.publish_url && <Button size="small" href={activeItem.publish_url} target="_blank" sx={{ ml: 1 }}>Bekijk post</Button>}
                     </Alert>
                   )}
-                  {activeItem.publish_error && (
+                  {activeItem.approval_status === 'failed' && activeItem.publish_error && (
                     <Alert severity="error" sx={{ py: 0.5 }}>Publicatie mislukt: {activeItem.publish_error}</Alert>
                   )}
                 </Box>
@@ -1311,6 +1373,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <PublishIcon sx={{ fontSize: 18 }} /> Acties
                   </Typography>
 
+                  {/* Publish status indicator */}
+                  {publishing && publishStatus && (
+                    <Alert severity="info" icon={<CircularProgress size={16} />} sx={{ mb: 1.5, py: 0.5, '& .MuiAlert-message': { width: '100%' } }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 12 }}>{publishStatus.step}</Typography>
+                      {publishStatus.detail && (
+                        <Typography variant="caption" color="text.secondary">{publishStatus.detail}</Typography>
+                      )}
+                      <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />
+                    </Alert>
+                  )}
+
                   {/* Batch actions */}
                   <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
                     <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
@@ -1319,10 +1392,33 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Button>
                     <Button variant="outlined" size="small" startIcon={<ScheduleIcon />}
                       onClick={() => { setPublishTarget(null); setScheduleDialogOpen(true); }}
-                      disabled={publishing || items.every(i => ['published', 'scheduled'].includes(i.approval_status))} fullWidth>
+                      disabled={publishing} fullWidth>
                       Plan alle in
                     </Button>
                   </Box>
+
+                  {/* Hashtag generation */}
+                  {activeItem && (
+                    <Box sx={{ mb: 1.5 }}>
+                      <Button variant="outlined" size="small" fullWidth
+                        startIcon={hashtagLoading ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
+                        onClick={handleGenerateHashtags} disabled={hashtagLoading}>
+                        {hashtagLoading ? 'Hashtags genereren...' : 'Auto Hashtags'}
+                      </Button>
+                      {hashtags.length > 0 && (
+                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {hashtags.map((tag, i) => (
+                            <Chip key={i} label={tag} size="small" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(hashtags.join(' '));
+                              }} />
+                          ))}
+                          <Chip label="Kopieer alle" size="small" color="primary" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                            onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
+                        </Box>
+                      )}
+                    </Box>
+                  )}
 
                   {/* Per-platform actions */}
                   {items.map(it => {
@@ -1347,8 +1443,28 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                             </Tooltip>
                           </>
                         )}
-                        <Chip label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status}
-                          size="small" color={STATUS_COLORS[it.approval_status] || 'default'} sx={{ height: 18, fontSize: 10 }} />
+                        {isPublished && (
+                          <>
+                            <Tooltip title="Opnieuw publiceren">
+                              <IconButton size="small" color="primary" onClick={() => handleRepublishItem(it.id, it.target_platform)} disabled={publishing}>
+                                <RefreshIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Herplannen">
+                              <IconButton size="small" onClick={() => { setPublishTarget(it.id); setScheduleDialogOpen(true); }} disabled={publishing}>
+                                <ScheduleIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        <Chip
+                          icon={isScheduled ? <ScheduleIcon sx={{ fontSize: '12px !important' }} /> : undefined}
+                          label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status}
+                          size="small" variant={isScheduled ? 'outlined' : 'filled'}
+                          color={STATUS_COLORS[it.approval_status] || 'default'}
+                          sx={{ height: 20, fontSize: 10, fontWeight: 600,
+                            ...(isScheduled ? { borderColor: '#ed6c02', color: '#ed6c02', '& .MuiChip-icon': { color: '#ed6c02' } } : {})
+                          }} />
                         {items.length > 1 && (
                           <Tooltip title="Platform versie verwijderen">
                             <IconButton size="small" color="error" onClick={() => handleDeletePlatform(it.id)} disabled={deletingItemId === it.id || isPublished}>

@@ -1541,6 +1541,30 @@ const AGENT_METADATA = [
 4. Controleer review import: SELECT COUNT(*) FROM reviews WHERE created_at > NOW() - INTERVAL 1 DAY
 5. Herstart API: pm2 restart holidaibutler-api
 6. Wacht op volgende run (dagelijks 06:00 UTC) en verifieer status` } },
+  { id: 'verkenner', name: 'De Verkenner', englishName: 'POI Discovery Agent', category: 'operations', type: 'A',
+    description: 'Automatische POI discovery via Apify (Google Places)',
+    description_en: 'Automatic POI discovery via Apify (Google Places) for new destinations and categories',
+    tasks: ['Kwartaallijkse POI discovery Calpe (6 categorieën)', 'Jaarlijkse volledige POI scan alle categorieën', 'Deduplicatie en kwaliteitsfiltering', 'Automatische classificatie en verrijking nieuwe POIs'],
+    monitoring_scope: 'discovery_runs tabel, destination_configs, Apify budget',
+    output_description: 'Nieuwe POIs in database, discovery run logs, admin notificaties',
+    schedule: '0 2 1 1,4,7,10 *', actorNames: ['poi-discovery-quarterly', 'poi-discovery-annual'],
+    errorInstructions: { default: `1. Controleer logs: pm2 logs holidaibutler-api --lines 100 | grep "discovery\|Discovery"
+2. Controleer Apify token: grep APIFY_API_TOKEN .env
+3. Controleer budget: curl -s https://api.apify.com/v2/users/me/usage -H "Authorization: Bearer $APIFY_API_TOKEN"
+4. Controleer discovery_runs: SELECT * FROM discovery_runs ORDER BY createdAt DESC LIMIT 5
+5. Herstart API: pm2 restart holidaibutler-api` } },
+  { id: 'tier-promotor', name: 'De Promotor', englishName: 'Tier Promotion Agent', category: 'operations', type: 'A',
+    description: 'Automatische POI tier promotie en degradatie',
+    description_en: 'Automatic POI tier promotion and demotion based on data activity',
+    tasks: ['POI data-activiteit monitoren per tier', 'Automatische promotie bij frequente updates', 'Automatische degradatie bij inactieve POIs', 'Audit trail van alle tier-wijzigingen'],
+    monitoring_scope: 'POI.tier kolom, tier_changed_at, tier_change_reason',
+    output_description: 'Tier-wijzigingen met audit trail, admin notificaties',
+    schedule: '0 4 * * 0', actorNames: ['tier-promotion'],
+    errorInstructions: { default: `1. Controleer logs: pm2 logs holidaibutler-api --lines 100 | grep "TierPromotion"
+2. Controleer POI tabel: SELECT tier, COUNT(*) FROM POI WHERE is_active=1 GROUP BY tier
+3. Controleer tier_changed_at: SELECT * FROM POI WHERE tier_changed_at > NOW() - INTERVAL 7 DAY
+4. Herstart API: pm2 restart holidaibutler-api
+5. Wacht op volgende run (zondag 04:00 UTC)` } },
   { id: 'geheugen', name: 'Het Geheugen', englishName: 'HoliBot Sync Agent', category: 'operations', type: 'A',
     description: 'ChromaDB vectorisatie en QnA sync',
     description_en: 'ChromaDB vectorization and QnA sync',
@@ -1889,6 +1913,7 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'chromadb-state-snapshot', agent: 'Het Geheugen', cron: '0 3 * * 0', description: 'Wekelijkse ChromaDB vector count snapshot' },
   { name: 'agent-success-rate', agent: 'De Maestro', cron: '30 5 * * 1', description: 'Wekelijkse agent success rate aggregatie' },
   { name: 'tier-update', agent: 'De Koerier', cron: '0 5 * * *', description: 'Dagelijkse POI tier herberekening' },
+  { name: 'tier-promotion', agent: 'De Promotor', cron: '0 4 * * 0', description: 'Wekelijkse automatische tier promotie/degradatie op basis van data-activiteit' },
   { name: 'session-cleanup', agent: 'De Poortwachter', cron: '0 3 * * *', description: 'Dagelijkse verlopen sessies opruimen' },
   { name: 'review-sentiment', agent: 'De Koerier', cron: '0 7 * * *', description: 'Review sentiment analyse en aggregatie' },
   { name: 'cache-warmup', agent: 'De Maestro', cron: '0 5 * * *', description: 'Dagelijkse Redis cache opwarming' },
@@ -1898,6 +1923,10 @@ const SCHEDULED_JOBS_METADATA = [
   { name: 'inventory-sync', agent: 'De Magazijnier', cron: '*/30 * * * *', description: 'Voorraad synchronisatie Redis vs MySQL' },
   // Content Module
   { name: 'content-trending-scan', agent: 'De Trendspotter', cron: '30 3 * * 0', description: 'Wekelijkse trending keyword collectie en analyse via Google Trends' },
+
+  // POI Discovery Auto-agent (Calpe)
+  { name: 'poi-discovery-quarterly', agent: 'De Verkenner', cron: '0 2 1 1,4,7,10 *', description: 'Kwartaallijkse POI discovery Calpe (6 categorieën, max 20eu)' },
+  { name: 'poi-discovery-annual', agent: 'De Verkenner', cron: '0 2 15 1 *', description: 'Jaarlijkse volledige POI discovery Calpe (alle categorieën)' },
   { name: 'content-website-traffic', agent: 'De Trendspotter', cron: '45 3 * * 0', description: 'Wekelijkse website traffic analyse uit Apache access logs' },
   { name: 'content-seo-audit', agent: 'De SEO Meester', cron: '0 4 * * 1', description: 'Wekelijkse SEO audit: readability, keyword density, SISTRIX visibility' },
   // Fase C: Publisher Agent
@@ -2595,7 +2624,7 @@ router.get('/pois', adminAuth('reviewer'), destinationScope, async (req, res) =>
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit) || 25));
     const offset = (pageNum - 1) * limitNum;
 
     // Build WHERE clauses
@@ -3917,7 +3946,7 @@ router.get('/reviews', adminAuth('reviewer'), destinationScope, async (req, res)
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit) || 25));
     const offset = (pageNum - 1) * limitNum;
 
     const where = [];
@@ -5413,7 +5442,7 @@ router.get('/settings/audit-log', adminAuth('platform_admin'), async (req, res) 
   try {
     const { page = 1, limit = 25, action } = req.query;
     const pageNum = Math.max(1, parseInt(page) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 25));
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit) || 25));
     const skip = (pageNum - 1) * limitNum;
 
     if (mongoose.connection.readyState !== 1) {
@@ -12358,6 +12387,22 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
         })));
       }
 
+      // Sort resolved_images to match original media_ids order
+      if (item.resolved_images.length > 1 && rawIds.length > 1) {
+        const orderMap = new Map();
+        rawIds.forEach((rid, idx) => {
+          const key = typeof rid === 'string' && rid.startsWith('poi:') ? rid : String(Number(rid));
+          orderMap.set(key, idx);
+        });
+        item.resolved_images.sort((a, b) => {
+          const aKey = typeof a.id === 'string' && a.id.startsWith('poi:') ? a.id : String(Number(a.id));
+          const bKey = typeof b.id === 'string' && b.id.startsWith('poi:') ? b.id : String(Number(b.id));
+          const aIdx = orderMap.has(aKey) ? orderMap.get(aKey) : 999;
+          const bIdx = orderMap.has(bKey) ? orderMap.get(bKey) : 999;
+          return aIdx - bIdx;
+        });
+      }
+
       // Backward compat: if resolved is still empty but has numeric ids, try imageurls as fallback
       if (item.resolved_images.length === 0 && rawIds.length > 0) {
         const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
@@ -12435,6 +12480,22 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
         logger.warn('[ContentItem] Media resolve failed:', mediaErr.message);
       }
     }
+    // Sort resolved_images to match original media_ids order
+      if (item.resolved_images.length > 1 && rawIds.length > 1) {
+      const orderMap = new Map();
+      rawIds.forEach((rid, idx) => {
+        const key = typeof rid === 'string' && rid.startsWith('poi:') ? rid : String(Number(rid));
+        orderMap.set(key, idx);
+      });
+      item.resolved_images.sort((a, b) => {
+        const aKey = typeof a.id === 'string' && a.id.startsWith('poi:') ? a.id : String(Number(a.id));
+        const bKey = typeof b.id === 'string' && b.id.startsWith('poi:') ? b.id : String(Number(b.id));
+        const aIdx = orderMap.has(aKey) ? orderMap.get(aKey) : 999;
+        const bIdx = orderMap.has(bKey) ? orderMap.get(bKey) : 999;
+        return aIdx - bIdx;
+      });
+      }
+
     // Fallback: if resolved is still empty but has numeric ids, try imageurls (POI images stored without poi: prefix)
     if (item.resolved_images.length === 0 && rawIds.length > 0) {
       const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
@@ -12463,6 +12524,17 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
         item.languages[lang] = item[`body_${lang}`];
       }
     }
+
+    
+      // Sort resolved_images to match media_ids order (MySQL IN() doesn't guarantee order)
+      if (item.resolved_images.length > 0 && rawIds.length > 0) {
+        const orderMap = new Map(rawIds.map((id, idx) => [String(id), idx]));
+        item.resolved_images.sort((a, b) => {
+          const posA = orderMap.get(String(a.id)) ?? 999;
+          const posB = orderMap.get(String(b.id)) ?? 999;
+          return posA - posB;
+        });
+      }
 
     res.json({ success: true, data: item });
   } catch (error) {
@@ -12742,6 +12814,22 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
           thumbnail: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`,
           alt: img.alt_text || img.filename.replace(/\.\w+$/, ''),
         })));
+      }
+
+      // Sort resolved_images to match original media_ids order
+      if (item.resolved_images.length > 1 && rawIds.length > 1) {
+        const orderMap = new Map();
+        rawIds.forEach((rid, idx) => {
+          const key = typeof rid === 'string' && rid.startsWith('poi:') ? rid : String(Number(rid));
+          orderMap.set(key, idx);
+        });
+        item.resolved_images.sort((a, b) => {
+          const aKey = typeof a.id === 'string' && a.id.startsWith('poi:') ? a.id : String(Number(a.id));
+          const bKey = typeof b.id === 'string' && b.id.startsWith('poi:') ? b.id : String(Number(b.id));
+          const aIdx = orderMap.has(aKey) ? orderMap.get(aKey) : 999;
+          const bIdx = orderMap.has(bKey) ? orderMap.get(bKey) : 999;
+          return aIdx - bIdx;
+        });
       }
 
       // Backward compat fallback
@@ -13876,7 +13964,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
 
     const [items] = await mysqlSequelize.query(
       `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
-              ci.seo_score, ci.content_source_type, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+              ci.seo_score, ci.content_source_type, ci.publish_error, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
        FROM content_items ci
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
        LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
@@ -14316,17 +14404,10 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
-    // MySQL DATETIME accepteert geen ISO 8601 met 'Z' suffix in strict mode —
-    // converteer naar 'YYYY-MM-DD HH:MM:SS' (UTC).
-    const parsed = new Date(scheduled_at);
-    if (isNaN(parsed.getTime())) {
-      return res.status(400).json({ success: false, error: { code: 'INVALID_DATE', message: 'scheduled_at is geen geldige datum' } });
-    }
-    const mysqlDatetime = parsed.toISOString().slice(0, 19).replace('T', ' ');
     const [, meta] = await mysqlSequelize.query(
       `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
-      { replacements: { scheduledAt: mysqlDatetime, id: Number(id) } }
+      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
     );
     const affected = meta?.affectedRows ?? 0;
     if (affected === 0) {

@@ -31,8 +31,8 @@ export default function TicketShop({ limit, layout = 'grid', showPrices = true }
 
   if (loading) {
     return (
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{ containerType: 'inline-size' }} role="region" aria-label="Tickets">
+        <div className="ticket-grid">
           {Array.from({ length: limit ?? 3 }).map((_, i) => (
             <div key={i} className="bg-surface rounded-tenant overflow-hidden shadow-sm animate-pulse">
               <div className="h-48 bg-muted/20" />
@@ -139,6 +139,20 @@ export default function TicketShop({ limit, layout = 'grid', showPrices = true }
           </div>
         ))}
       </div>
+    
+      <style dangerouslySetInnerHTML={{ __html: `
+        .ticket-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+        @container (min-width: 600px) {
+          .ticket-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @container (min-width: 900px) {
+          .ticket-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+      `}} />
     </section>
   );
 }

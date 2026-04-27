@@ -245,9 +245,9 @@ const blockEditorRegistry = {
     editor: TestimonialsEditor,
     icon: 'FormatQuote',
     label: 'Recensies / Testimonials',
-    description: 'Reviews van bezoekers',
+    description: 'Reviews van bezoekers met sterren en citaten',
     category: 'Data',
-    thumbnail: THUMBNAILS.poi_grid
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="25" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="22" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="65" width="55" height="6" rx="2" fill="#94a3b8"/><circle cx="30" cy="86" r="6" fill="#e2e8f0"/><rect x="40" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="22" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="34" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="46" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="58" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="70" y="98" width="10" height="4" rx="1" fill="#e2e8f0"/><rect x="110" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="120" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="117" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="117" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="125" cy="86" r="6" fill="#e2e8f0"/><rect x="135" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="205" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="215" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="212" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="212" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="220" cy="86" r="6" fill="#e2e8f0"/><rect x="230" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="55" y="130" width="190" height="12" rx="2" fill="#334155"/><rect x="80" y="155" width="140" height="8" rx="2" fill="#94a3b8"/></svg>`
   },
   // Desktop homepage blocks (primary names used in templates + DB)
   desktop_hero: {

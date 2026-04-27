@@ -3,10 +3,12 @@ import { Box, Typography, Tabs, Tab } from '@mui/material';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import StorageIcon from '@mui/icons-material/Storage';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useTranslation } from 'react-i18next';
 import AgentsPage from './AgentsPage.jsx';
 import IssuesPage from './IssuesPage.jsx';
 import { useSettings } from '../hooks/useSettings.js';
+import PlatformHealthDashboard from '../components/system/PlatformHealthDashboard.jsx';
 
 export default function AgentsSystemPage() {
   const { t } = useTranslation();
@@ -27,10 +29,12 @@ export default function AgentsSystemPage() {
         <Tab icon={<SmartToyIcon sx={{ fontSize: 18 }} />} iconPosition="start" label={t('agentsSystem.tabs.agents', 'Agent Status')} />
         <Tab icon={<BugReportIcon sx={{ fontSize: 18 }} />} iconPosition="start" label={t('agentsSystem.tabs.issues', 'Issues & Alerts')} />
         <Tab icon={<StorageIcon sx={{ fontSize: 18 }} />} iconPosition="start" label={t('agentsSystem.tabs.system', 'Systeem Info')} />
+        <Tab icon={<FavoriteIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Platform Health" />
       </Tabs>
 
       {tab === 0 && <AgentsPage embedded />}
       {tab === 1 && <IssuesPage embedded />}
+      {tab === 3 && <PlatformHealthDashboard />}
       {tab === 2 && (
         <Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
@@ -39,7 +43,7 @@ export default function AgentsSystemPage() {
             <InfoCard label="Environment" value={system.environment || '—'} />
             <InfoCard label="MySQL" value={system.mysql || '—'} color={system.mysql === 'connected' ? 'success.main' : 'error.main'} />
             <InfoCard label="MongoDB" value={system.mongodb || '—'} color={system.mongodb === 'connected' ? 'success.main' : 'error.main'} />
-            <InfoCard label="Redis" value={system.redis || '—'} color={system.redis === 'ok' ? 'success.main' : 'error.main'} />
+            <InfoCard label="Redis" value={system.redis || '—'} color={system.redis === 'connected' ? 'success.main' : 'error.main'} />
           </Box>
 
           <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>

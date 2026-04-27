@@ -119,6 +119,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
       }
 
       case 'navigation': {
+        // Wrapped in <nav> for ARIA landmark
         const configItems = tenant.config?.nav_items as Array<{
           label: Record<string, string> | string;
           href: string;
@@ -148,7 +149,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
             ];
 
         return (
-          <>
+          <nav aria-label={resolveTitle(col.title, locale) || (locale === 'nl' ? 'Navigatie' : 'Navigation')}>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-3 opacity-70">
               {resolveTitle(col.title, locale) || (locale === 'nl' ? 'Navigatie' : 'Navigation')}
             </h4>
@@ -161,7 +162,7 @@ export default function Footer({ tenant, locale }: FooterProps) {
                 </li>
               ))}
             </ul>
-          </>
+          </nav>
         );
       }
 
@@ -241,8 +242,21 @@ export default function Footer({ tenant, locale }: FooterProps) {
 
   const gridCols = columns.length <= 2 ? 'md:grid-cols-2' : columns.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-4';
 
+  // Schema.org Organization
+  const orgSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: tenant.displayName,
+    ...(tenant.branding?.logo && { logo: resolveAssetUrl(tenant.branding.logo) }),
+    ...(tenant.branding?.contactEmail && { email: tenant.branding.contactEmail }),
+    ...(activeSocials.length > 0 && {
+      sameAs: activeSocials.map(([, url]) => url).filter(Boolean),
+    }),
+  };
+
   return (
-    <footer className="bg-foreground text-white mt-auto">
+    <footer className="bg-foreground text-white mt-auto" role="contentinfo">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className={`grid grid-cols-1 ${gridCols} gap-8`}>
           {columns.map((col, i) => (
@@ -252,7 +266,11 @@ export default function Footer({ tenant, locale }: FooterProps) {
 
         <div className="border-t border-white/10 mt-8 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-sm opacity-60">
           <span>{copyright}</span>
-          <span>Gemaakt met ❤️ op {tenant.displayName || 'Texel'}</span>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:opacity-100 transition-opacity">Privacy</Link>
+            <span aria-hidden="true">·</span>
+            <span>Gemaakt met ❤️ op {tenant.displayName || 'Texel'}</span>
+          </div>
         </div>
       </div>
     </footer>

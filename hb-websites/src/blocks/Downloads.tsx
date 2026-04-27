@@ -15,20 +15,21 @@ export default function Downloads({ headline, files }: DownloadsProps) {
   if (!files || files.length === 0) return null;
 
   return (
-    <section className="py-12 sm:py-16">
+    <section className="py-12 sm:py-16" role="region" style={{ containerType: 'inline-size' }} aria-label={headline || 'Downloads'}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {headline && (
           <h2 className="text-2xl sm:text-3xl font-heading font-bold mb-6">
             {headline}
           </h2>
         )}
-        <div className="space-y-3">
+        <div className="space-y-3" role="list">
           {files.map((file, idx) => (
             <a
               key={idx}
               href={file.url}
               download
-              className="flex items-center gap-4 p-4 rounded-tenant border border-border hover:bg-surface transition-colors group"
+              role="listitem"
+              className="flex items-center gap-4 p-4 rounded-tenant border min-h-[48px] border-border hover:bg-surface transition-colors group"
             >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 24 24">

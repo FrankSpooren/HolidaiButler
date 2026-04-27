@@ -10,6 +10,7 @@ import apifyIntegration from "./apifyIntegration.js";
 import poiTierManager from "./poiTierManager.js";
 import imageDownloaderService from "../../imageDownloader.js";
 import { logAgent, logError } from "../../orchestrator/auditTrail/index.js";
+import notificationService from '../../notificationService.js';
 
 class POISyncService {
   constructor() {
@@ -239,6 +240,30 @@ class POISyncService {
 
       if (downloaded > 0) {
         console.log(`[POISyncService] Downloaded ${downloaded} new images for POI ${poiId}`);
+
+        // Notify admins about new images
+        try {
+          const destId = await this.getDestinationId(poiId);
+          const admins = await this.sequelize.query(
+            "SELECT id FROM admin_users WHERE role IN ('platform_admin', 'destination_admin')",
+            { type: QueryTypes.SELECT }
+          );
+          for (const admin of admins) {
+            await notificationService.create({
+              userId: admin.id,
+              destinationId: destId,
+              type: 'info',
+              severity: 'low',
+              title: `${downloaded} nieuwe afbeeldingen gedownload`,
+              message: `POI "${poiName || poiId}": ${downloaded} nieuwe afbeeldingen via Apify opgeslagen op de server.`,
+              actionUrl: '/pois?tab=1',
+              actionLabel: 'Bekijk Images',
+            });
+          }
+        } catch (notifErr) {
+          // Don't fail sync for notification errors
+          console.log('[POISyncService] Notification error:', notifErr.message);
+        }
       }
       return downloaded;
     } catch (error) {
