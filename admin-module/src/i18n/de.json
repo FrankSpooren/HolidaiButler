@@ -317,6 +317,7 @@
       "development": "Development",
       "strategy": "Strategy",
       "monitoring": "Monitoring",
+      "content": "Content",
       "destination": "Reiseziel"
     },
     "table": {

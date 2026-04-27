@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 27 april 2026
-**Versie**: 8.20
+**Versie**: 8.21
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1663,6 +1663,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **8.21** | **2026-04-27** | **Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS**. Image reorder pijltjes-patroon. BUTE destination-aware generatie (body_<sourceLang>). Backfill 20 items. PATCH enforcement single-language. destination_config in API response. Publiqio Apache CORS fix + ProxyTimeout 120s. MUI Icons bundel 9.5→2.8MB. CLAUDE.md v4.67.0. |
 | **8.20** | **2026-04-27** | **Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close**. 94 bestanden productie-deploy (VII-B/C/D code). Content Studio: image reorder, MUI tree-shaking 9.5→2.8MB, same-origin proxy. BUTE: destination-aware taal-pipeline. 12 nieuwe admin UI componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth). tierPromotionAgent #26. circuitBreaker refactor. 81 BullMQ jobs. CLAUDE.md v4.66.0. |
 | **8.19** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. 7 content-blokken (Gallery/Video/SocialFeed/Downloads/Banner/CardGroup/WeatherWidget). P0: Image srcset (image.ts, 3 blocks), ARIA 22/24 blocks, touch >=44px 7 blocks, container queries 16 blocks. P1: i18n 7 strings. Enterprise audit: 92% ARIA, 100% srcset/touch/schema. CLAUDE.md v4.64.0. |
 | **8.18** | **2026-04-25** | **Fase VII-C COMPLEET: Cluster B — 7 conversie-blokken enterprise**. Faq (FAQPage schema), Testimonials (AggregateRating+Review, eigen SVG), Newsletter+ContactForm (GDPR privacy links), Partners+TicketShop (container queries), ReservationWidget (ARIA). Admin: TestimonialsEditor +title, EventCalendarEditor +categoryFilter. CLAUDE.md v4.63.0. |
@@ -1779,4 +1780,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 27 april 2026 — Fase VII-A t/m VII-D COMPLEET + Content Studio fixes + BUTE taal-pipeline + Admin UI Gap-Close (12 componenten). 303 endpoints, adminPortal.js v3.48.0. 81 scheduled jobs. 26 agents. CLAUDE.md v4.66.0. MS v8.20.*
+*Laatst bijgewerkt: 27 april 2026 — Content Studio Enterprise + BUTE Taal-Pipeline + Publiqio CORS. 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.67.0. MS v8.21.*
