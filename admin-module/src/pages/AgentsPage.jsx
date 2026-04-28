@@ -131,7 +131,7 @@ export default function AgentsPage({ embedded = false }) {
     if (data?.agents) {
       const needsAttention = new Set();
       for (const a of data.agents) {
-        if (a.status === 'error' || a.status === 'warning') needsAttention.add(a.category);
+        if (a.status === 'error') needsAttention.add(a.category);
       }
       needsAttention.add('core'); setExpandedCategories(needsAttention);
     }
