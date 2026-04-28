@@ -86,6 +86,7 @@ export async function translateWithDeepL(text, targetLang, options = {}) {
   try {
     const baseUrl = apiKey.endsWith(':fx') ? 'https://api-free.deepl.com/v2' : 'https://api.deepl.com/v2';
     const response = await fetch(`${baseUrl}/translate`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: {
         'Authorization': `DeepL-Auth-Key ${apiKey}`,
@@ -148,6 +149,7 @@ export async function batchTranslate(texts, targetLang, options = {}) {
 
   const baseUrl = apiKey.endsWith(':fx') ? 'https://api-free.deepl.com/v2' : 'https://api.deepl.com/v2';
   const response = await fetch(`${baseUrl}/translate`, {
+    signal: AbortSignal.timeout(30000),
     method: 'POST',
     headers: {
       'Authorization': `DeepL-Auth-Key ${apiKey}`,
@@ -173,6 +175,7 @@ export async function getUsage() {
 
   const baseUrl = apiKey.endsWith(':fx') ? 'https://api-free.deepl.com/v2' : 'https://api.deepl.com/v2';
   const response = await fetch(`${baseUrl}/usage`, {
+    signal: AbortSignal.timeout(30000),
     headers: { 'Authorization': `DeepL-Auth-Key ${apiKey}` },
   });
 

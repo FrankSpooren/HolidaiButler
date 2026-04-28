@@ -33,6 +33,7 @@ async function sistrixRequest(endpoint, params = {}) {
 
   try {
     const response = await fetch(url.toString(), {
+      signal: AbortSignal.timeout(30000),
       method: 'GET',
       headers: { 'Accept': 'application/json' },
     });

@@ -40,7 +40,7 @@ class TrendspotterAgent extends BaseAgent {
       });
     } catch (error) {
       results.errors.push(error.message);
-      await logError('trendspotter', destinationId, 'trending-scan', error);
+      await logError('trendspotter', error, { action: 'trending-scan', destination_id: destinationId });
     }
 
     return results;

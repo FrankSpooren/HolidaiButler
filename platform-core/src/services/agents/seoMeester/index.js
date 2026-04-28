@@ -95,7 +95,7 @@ class SeoMeesterAgent extends BaseAgent {
       });
     } catch (error) {
       results.errors.push(error.message);
-      await logError('seo-meester', 'all', 'content-seo-audit', error);
+      await logError('seo-meester', error, { action: 'content-seo-audit', scope: 'all' });
     }
 
     return results;
