@@ -98,6 +98,13 @@ const AGENT_CATEGORIES = {
   'ux-ui-reviewer': 'performance'
 };
 
+// B4: Map actorName to unique agent key for issue attribution
+const ACTOR_TO_AGENT_KEY = {
+  'security-reviewer': 'bewaker',
+  'code-reviewer': 'corrector',
+  'ux-ui-reviewer': 'stylist'
+};
+
 /**
  * Voer anomaliedetectie uit voor alle dev agent metrieken.
  * Retourneert lijst van gedetecteerde anomalieën.
@@ -134,7 +141,7 @@ async function runAnomalyDetection() {
       // H3: automatisch issue aanmaken bij anomalie
       try {
         await raiseIssue({
-          agentName: check.agent,
+          agentName: ACTOR_TO_AGENT_KEY[check.agent] || check.agent,
           agentLabel: AGENT_LABELS[check.agent] || check.agent,
           severity: Math.abs(result.deviation) > 3 ? 'high' : 'medium',
           category: AGENT_CATEGORIES[check.agent] || 'other',

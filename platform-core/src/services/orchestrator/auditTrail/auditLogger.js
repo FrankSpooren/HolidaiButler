@@ -73,11 +73,12 @@ class AuditLogger {
 
   // Convenience methods
   async logAgentAction(agentName, action, details = {}) {
+    const { agentId, ...rest } = details;
     return this.log({
-      actor: { type: "agent", name: agentName },
+      actor: { type: "agent", name: agentName, ...(agentId ? { agentId } : {}) },
       action,
       category: "job",
-      ...this._sanitizeDetails(details)
+      ...this._sanitizeDetails(rest)
     });
   }
 

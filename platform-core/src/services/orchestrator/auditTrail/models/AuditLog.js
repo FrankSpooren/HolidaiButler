@@ -9,7 +9,8 @@ const auditLogSchema = new mongoose.Schema({
       required: true
     },
     name: String,
-    id: String
+    id: String,
+    agentId: String
   },
 
   // Wat
@@ -71,6 +72,7 @@ const auditLogSchema = new mongoose.Schema({
 
 // Indexes voor queries
 auditLogSchema.index({ "actor.type": 1, timestamp: -1 });
+auditLogSchema.index({ "actor.agentId": 1, timestamp: -1 });
 auditLogSchema.index({ category: 1, timestamp: -1 });
 auditLogSchema.index({ status: 1 });
 

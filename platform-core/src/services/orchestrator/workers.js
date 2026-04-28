@@ -1534,8 +1534,70 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         // De Stylist (UX/UI)
         'dev-dependency-audit': 'ux-ui-reviewer',
       };
+
+      // Fase B4: JOB_AGENT_MAP — maps job name to unique agent KEY (id)
+      // Unlike JOB_ACTOR_MAP (shared actorNames), these are 1:1 unique per agent
+      const JOB_AGENT_MAP = {
+        // Core
+        'seasonal-check': 'maestro', 'cache-warmup': 'maestro',
+        'daily-briefing': 'bode', 'weekly-cost-report': 'bode', 'content-weekly-report': 'bode',
+        // Operations
+        'health-check': 'dokter', 'health-report-daily': 'dokter', 'health-report-weekly': 'dokter',
+        'smoke-test': 'smokeTest', 'backup-recency-check': 'backupHealth',
+        'content-quality-audit': 'koerier', 'content-freshness-check': 'koerier',
+        'content-recycle-suggestions': 'koerier',
+        'poi-sync-tier1': 'koerier', 'poi-sync-tier2': 'koerier',
+        'poi-sync-tier3': 'koerier', 'poi-sync-tier4': 'koerier',
+        'qa-sync-tier12': 'koerier', 'qa-sync-tier34': 'koerier',
+        'review-sync-tier12': 'koerier', 'review-sync-tier34': 'koerier',
+        'review-retention': 'koerier', 'poi-deactivation-check': 'koerier',
+        'poi-discovery-annual': 'verkenner', 'poi-discovery-quarterly': 'verkenner',
+        'tier-promotion': 'tier-promotor', 'poi-tier-recalc': 'tier-promotor',
+        'chromadb-state-snapshot': 'geheugen', 'holibot-poi-sync': 'geheugen',
+        'holibot-qa-sync': 'geheugen', 'holibot-full-reindex': 'geheugen',
+        'holibot-cleanup': 'geheugen', 'content-holibot-insights': 'geheugen',
+        'session-cleanup': 'gastheer', 'comm-cleanup': 'gastheer',
+        'comm-journey-processor': 'gastheer', 'comm-user-sync': 'gastheer',
+        'reservation-reminder-24h': 'gastheer', 'reservation-reminder-1h': 'gastheer',
+        'intermediary-reminder': 'gastheer', 'intermediary-review-request': 'gastheer',
+        'media-consent-expiry-check': 'poortwachter', 'gdpr-consent-audit': 'poortwachter',
+        'gdpr-retention-check': 'poortwachter', 'guest-data-retention-cleanup': 'poortwachter',
+        'intermediary-guest-anonymize': 'poortwachter',
+        'gdpr-export-cleanup': 'poortwachter', 'gdpr-overdue-check': 'poortwachter',
+        // Development
+        'dev-security-scan': 'bewaker',
+        'dev-quality-report': 'corrector',
+        'dev-dependency-audit': 'stylist',
+        // Strategy
+        'agent-success-rate': 'weermeester',
+        'strategy-assessment': 'architect', 'strategy-learning': 'leermeester',
+        'strategy-prediction': 'weermeester', 'strategy-config-eval': 'thermostaat',
+        'cost-check': 'weermeester',
+        // Commerce
+        'intermediary-monitor': 'makelaar',
+        'financial-monitor': 'kassier', 'media-revenue-attribution': 'kassier',
+        'inventory-sync': 'magazijnier',
+        'release-expired-ticket-reservations': 'maestro',
+        'reservation-expired-cleanup': 'maestro',
+        'financial-auto-settlement': 'kassier',
+        'financial-unsettled-alert': 'kassier',
+        // Content
+        'content-trending-scan': 'trendspotter', 'content-website-traffic': 'trendspotter',
+        'content-feedback-loop': 'trendspotter', 'gsc-query-sync': 'trendspotter',
+        'trending-visual-discovery': 'trendspotter', 'trending-visual-analysis': 'trendspotter',
+        'trending-visual-cleanup': 'trendspotter', 'reddit-trend-discovery': 'trendspotter',
+        'google-images-discovery': 'trendspotter', 'content-top25-refresh': 'trendspotter',
+        'content-sources-health-check': 'trendspotter',
+        'content-gap-detector': 'trendspotter', 'media-performance-aggregator': 'trendspotter',
+        'content-readiness-analyzer': 'redacteur',
+        'content-seo-audit': 'seoMeester', 'content-score-calibration': 'seoMeester',
+        'content-publish-scheduled': 'uitgever', 'content-analytics-collect': 'uitgever',
+        'content-publish-retry': 'uitgever',
+      };
       const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
+      const agentId = JOB_AGENT_MAP[job.name] || 'maestro';
       await logAgent(actorName, "job_completed_" + job.name, {
+        agentId,
         description: "Completed job: " + job.name,
         duration: Date.now() - startTime,
         result: { success: true, data: result }

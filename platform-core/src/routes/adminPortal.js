@@ -2220,12 +2220,29 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
           }}
         ]).toArray();
 
+        // B4: Parallel aggregate by actor.agentId (unique per agent)
+        const lastRunsById = await auditLogs.aggregate([
+          { $match: { 'actor.type': 'agent', 'actor.agentId': { $exists: true }, timestamp: { $gte: since } } },
+          { $sort: { timestamp: -1 } },
+          { $group: {
+            _id: '$actor.agentId',
+            lastTimestamp: { $first: '$timestamp' },
+            lastAction: { $first: '$action' },
+            lastStatus: { $first: '$status' },
+            lastDuration: { $first: '$duration' },
+            lastDescription: { $first: '$description' },
+            lastResult: { $first: '$result' }
+          }}
+        ]).toArray();
+
         // Map audit log actors to agents
         for (const agent of agents) {
           const meta = AGENT_METADATA.find(m => m.id === agent.id);
           if (!meta) continue;
 
-          const matchingRuns = lastRuns.filter(r => meta.actorNames.includes(r._id));
+          // B4: Prefer agentId match (unique), fallback to actorName match (shared)
+          const agentIdMatch = lastRunsById.find(r => r._id === agent.id);
+          const matchingRuns = agentIdMatch ? [agentIdMatch] : lastRuns.filter(r => meta.actorNames.includes(r._id));
           if (matchingRuns.length > 0) {
             // Use the most recent run across all actor names
             const latest = matchingRuns.sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))[0];
