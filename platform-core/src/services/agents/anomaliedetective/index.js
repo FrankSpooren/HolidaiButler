@@ -3,9 +3,21 @@ import { logAgent } from '../../orchestrator/auditTrail/index.js';
 import { raiseIssue } from '../base/agentIssues.js';
 import mongoose from 'mongoose';
 
+// Sliding window anomaly detection with statistical baselines
+const AnomalySchema = new mongoose.Schema({
+  metric: String,
+  value: Number,
+  baseline_mean: Number,
+  baseline_stddev: Number,
+  deviation_sigma: Number,
+  severity: String,
+  detected_at: { type: Date, default: Date.now, expires: 30 * 24 * 3600 }
+}, { collection: 'anomalies', timestamps: true });
+const Anomaly = mongoose.models.Anomaly || mongoose.model('Anomaly', AnomalySchema);
+
 class AnomaliedetectiveAgent extends BaseAgent {
   constructor() {
-    super({ name: 'De Anomaliedetective', version: '1.0.0', category: 'operations', destinationAware: false });
+    super({ name: 'De Anomaliedetective', version: '2.0.0', category: 'operations', destinationAware: false });
   }
 
   async execute() {
@@ -13,65 +25,98 @@ class AnomaliedetectiveAgent extends BaseAgent {
     const now = new Date();
     const window5m = new Date(now - 5 * 60 * 1000);
     const window1h = new Date(now - 60 * 60 * 1000);
+    const window24h = new Date(now - 24 * 3600 * 1000);
 
-    // 1. Error spike detection (5min vs 1h baseline)
+    const metrics = {};
+    const anomalies = [];
+
+    // Metric 1: Error rate (5min window vs 24h baseline)
     const errors5m = await db.collection('audit_logs').countDocuments({ status: 'failed', timestamp: { $gte: window5m } });
-    const errors1h = await db.collection('audit_logs').countDocuments({ status: 'failed', timestamp: { $gte: window1h } });
-    const errorRate5m = errors5m / 5; // per minute
-    const errorRate1h = errors1h / 60;
-    const errorSpike = errorRate1h > 0 ? errorRate5m / errorRate1h : 0;
+    const errors24h = await db.collection('audit_logs').countDocuments({ status: 'failed', timestamp: { $gte: window24h } });
+    const errRate5m = errors5m / 5;
+    const errBaseline = errors24h / (24 * 60);
+    metrics.error_rate = { current: errRate5m, baseline: errBaseline };
 
-    // 2. Traffic volume anomaly
+    // Metric 2: Traffic volume
     const traffic5m = await db.collection('audit_logs').countDocuments({ timestamp: { $gte: window5m } });
     const traffic1h = await db.collection('audit_logs').countDocuments({ timestamp: { $gte: window1h } });
-    const trafficRate5m = traffic5m / 5;
-    const trafficRate1h = traffic1h / 60;
-    const trafficSpike = trafficRate1h > 0 ? trafficRate5m / trafficRate1h : 0;
+    metrics.traffic = { current_5m: traffic5m, current_1h: traffic1h };
 
-    // 3. Job failure clustering
-    const recentFailures = await db.collection('audit_logs').find(
-      { status: 'failed', timestamp: { $gte: window1h } }
-    ).project({ 'actor.name': 1, action: 1 }).toArray();
+    // Metric 3: Job failure rate per agent (1h window)
+    const agentFailures = await db.collection('audit_logs').aggregate([
+      { $match: { status: 'failed', 'actor.type': 'agent', timestamp: { $gte: window1h } } },
+      { $group: { _id: '$actor.agentId', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]).toArray();
+    metrics.agent_failures = agentFailures;
 
-    const failureClusters = {};
-    for (const f of recentFailures) {
-      const key = f.actor?.name || 'unknown';
-      failureClusters[key] = (failureClusters[key] || 0) + 1;
+    // Metric 4: 5xx proxy errors (if tracked via audit_logs)
+    const serverErrors = await db.collection('audit_logs').countDocuments({
+      category: 'error', timestamp: { $gte: window5m }
+    });
+    metrics.server_errors_5m = serverErrors;
+
+    // Statistical anomaly detection
+    // Error spike: >3x baseline AND >3 absolute errors
+    if (errBaseline > 0 && errRate5m > errBaseline * 3 && errors5m > 3) {
+      const deviation = errBaseline > 0 ? (errRate5m - errBaseline) / Math.max(errBaseline, 0.1) : errRate5m;
+      anomalies.push({
+        metric: 'error_rate', value: errRate5m, baseline_mean: errBaseline,
+        deviation_sigma: Math.round(deviation * 10) / 10,
+        severity: deviation > 5 ? 'critical' : 'high',
+        description: `Error spike: ${errors5m} errors in 5min (${deviation.toFixed(1)}x baseline)`
+      });
+    }
+
+    // Agent failure clustering: any agent with >3 failures in 1h
+    for (const af of agentFailures) {
+      if (af.count >= 3) {
+        anomalies.push({
+          metric: 'agent_failure_cluster', value: af.count, baseline_mean: 0,
+          deviation_sigma: af.count,
+          severity: af.count >= 5 ? 'high' : 'medium',
+          description: `Agent ${af._id || 'unknown'}: ${af.count} failures in 1h`
+        });
+      }
+    }
+
+    // Server error spike
+    if (serverErrors > 10) {
+      anomalies.push({
+        metric: 'server_errors', value: serverErrors, baseline_mean: 0,
+        deviation_sigma: serverErrors,
+        severity: serverErrors > 50 ? 'critical' : 'high',
+        description: `${serverErrors} server errors in 5min`
+      });
+    }
+
+    // Persist anomalies
+    for (const a of anomalies) {
+      await Anomaly.create(a);
     }
 
     const result = {
       timestamp: now.toISOString(),
-      error_spike: Math.round(errorSpike * 100) / 100,
-      traffic_spike: Math.round(trafficSpike * 100) / 100,
-      errors_5m: errors5m,
-      errors_1h: errors1h,
-      traffic_5m: traffic5m,
-      failure_clusters: failureClusters,
-      anomalies_detected: 0
+      metrics,
+      anomalies_detected: anomalies.length,
+      anomalies: anomalies.map(a => ({ metric: a.metric, severity: a.severity, description: a.description }))
     };
-
-    const issues = [];
-    if (errorSpike > 3 && errors5m > 5) {
-      result.anomalies_detected++;
-      issues.push({ severity: 'high', category: 'performance',
-        title: `Error spike: ${errorSpike.toFixed(1)}x normaal (${errors5m} errors in 5min)` });
-    }
-    if (trafficSpike > 5 && traffic5m > 100) {
-      result.anomalies_detected++;
-      issues.push({ severity: 'medium', category: 'performance',
-        title: `Traffic spike: ${trafficSpike.toFixed(1)}x normaal (${traffic5m} requests in 5min)` });
-    }
 
     await logAgent('anomaliedetective', 'anomaly_scan', {
       agentId: 'anomaliedetective',
-      description: `Anomaly: errorSpike=${errorSpike.toFixed(1)}x trafficSpike=${trafficSpike.toFixed(1)}x detected=${result.anomalies_detected}`,
-      status: 'completed', metadata: result
+      description: `Anomaly scan: ${anomalies.length} detected, errors=${errors5m}/5m, traffic=${traffic5m}/5m`,
+      status: anomalies.length > 0 ? 'completed' : 'completed',
+      metadata: result
     });
 
-    for (const issue of issues) {
-      await raiseIssue({ agentName: 'anomaliedetective', agentLabel: 'De Anomaliedetective',
-        severity: issue.severity, category: issue.category, title: issue.title,
-        details: result, fingerprint: `anomalie-${issue.title.substring(0, 25)}` });
+    for (const a of anomalies) {
+      await raiseIssue({
+        agentName: 'anomaliedetective', agentLabel: 'De Anomaliedetective',
+        severity: a.severity, category: 'performance',
+        title: a.description,
+        details: { metric: a.metric, value: a.value, baseline: a.baseline_mean, deviation: a.deviation_sigma },
+        fingerprint: `anomalie-${a.metric}-${Math.round(a.value)}`
+      });
     }
     return result;
   }
