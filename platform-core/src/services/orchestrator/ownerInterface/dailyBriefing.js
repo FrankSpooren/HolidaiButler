@@ -541,7 +541,7 @@ async function generateDailyBriefing() {
   const fields = {
     briefing_date: today,
     // Status (top)
-    status_summary: statusSummary,
+    status_summary: statusSummary + ' | Ecosystem: ' + ecosystemHealthLine,
     // Alerts (Fase 8B: includes Threema warning)
     alert_items: alertItems.length > 0 ? alertItems.join(" | ") : "Geen waarschuwingen",
     // Smoke Tests (8A+ + 8B Threema)
@@ -554,12 +554,14 @@ async function generateDailyBriefing() {
     calpe_reviews: String(destinationStats.calpe.reviewCount || "?"),
     texel_reviews: String(destinationStats.texel.reviewCount || "?"),
     // Content Quality (8A+)
-    content_quality_summary: contentQualitySummary,
+    content_quality_summary: contentQualitySummary + (newAgentSummary !== 'Geen bijzonderheden' ? ' | AGENTS: ' + newAgentSummary : ''),
     // Predictions
     prediction_alerts: String(predictionAlerts.length),
     prediction_summary: predictionAlerts.length > 0
       ? predictionAlerts.slice(0, 3).map(a => `${a.name || a.metric}: ${a.risk || a.trend}`).join("; ")
-      : "Geen waarschuwingen",
+      : (ecosystemInsights.some(i => i.includes('Anomalie') || i.includes('DOWN'))
+        ? ecosystemInsights.filter(i => i.includes('Anomalie') || i.includes('DOWN')).join('; ')
+        : "Geen waarschuwingen"),
     // Operations
     jobs_count: String(jobCount),
     alerts_count: String(alertCount),
