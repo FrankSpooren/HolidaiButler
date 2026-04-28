@@ -7,6 +7,51 @@
 
 ---
 
+
+## Agent Ecosystem Repair Command v2.0 — 28 april 2026
+
+### Scope
+Compleet herstel + uitbreiding agent-ecosysteem van 27 naar 39 agents, 81 naar 94 BullMQ jobs, conform Repair Command v2.0 document.
+
+### Fasen Uitgevoerd
+| Fase | Beschrijving | Commits |
+|------|-------------|---------|
+| 1 | Dashboard eerlijkheid: 0 unknown, calculateAgentStatus, JOB_ACTOR_MAP 84 | 194f5d1 |
+| 2 | actor.agentId migratie, agent_issues backfill | c5d5f27 |
+| 3 | 52 bare catch→0, 26 fetch timeouts, 6 logError fixes | 2f34b64, a34238d |
+| 4 | Corrector ESLint, Inspecteur project audit | 02da81d |
+| 5 | Thermostaat + Leermeester reactivated | b53aa1d |
+| 6 | 12 nieuwe agents + enterprise upgrades + 12 tekortkomingen | 876d87a → 7e38bf5 |
+| 7 | Frontend: 92s→1.5s performance, accordion UX, mockup redesign | 7766154 → 8dc77cf |
+
+### 12 Nieuwe Agents
+De Vertaler, De Beeldenmaker, De Personaliseerder, De Performance Wachter, De Anomaliedetective, De Auditeur, De Optimaliseerder, De Reisleider, De Verfrisser, De Boekhouder, De Onthaler, De Helpdeskmeester
+
+### Enterprise Fixes
+- 52 bare catch {} blocks → 0 (24 bestanden)
+- 26 fetch calls + AbortSignal.timeout(30000) (9 bestanden)
+- 6 logError argument volgorde fixes
+- holibot-sync toISOString crash fix
+- workers.js agentId in alle 94 job logs
+- Daily briefing 39-agent ecosystem health
+- MailerLite 7 custom fields + data in bestaande template velden
+- budgetConfig EUR515→EUR470 (12 providers)
+- baselineService 5 nieuwe agent metrics
+- agents/status endpoint 92s→1.5s ($facet aggregate)
+
+### Performance
+- agents/status: 92s → 1.5s (verse load), 50ms (cache hit)
+- Single $facet aggregate vervangt 120+ sequential MongoDB queries
+- 2 compound indexes toegevoegd
+- Window 120d → 30d
+
+### Deliverables
+- Agent Ecosystem Blueprint v1.0 (60 inter-agent flows)
+- CLAUDE.md v4.72.0
+- 20 commits op dev branch
+- 39 agents, 94 jobs, 15 MongoDB collections
+
+
 ## v4.67.0 — Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS (27 april 2026)
 
 ### Content Studio Image Reorder (definitieve fix)

@@ -375,9 +375,7 @@ class SecurityReviewer {
           const audit = JSON.parse(e.stdout);
           results.vulnerabilities = audit.metadata?.vulnerabilities || {};
           results.total = Object.values(results.vulnerabilities).reduce((a, b) => a + b, 0);
-        } catch {
-          results.error = 'Failed to parse npm audit output';
-        }
+        } catch (err) { console.debug('[securityReviewer.js]', err.message); results.error = 'Failed to parse npm audit output'; }
       } else {
         results.error = e.message;
       }

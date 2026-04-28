@@ -325,7 +325,7 @@
     "healthy": "Gezond",
     "warning": "Waarschuwing",
     "error": "Fout",
-    "unknown": "Onbekend",
+    "unknown": "Geen recente data",
     "deactivated": "Gedeactiveerd",
     "filter": {
       "all": "Alle",
@@ -335,7 +335,11 @@
       "strategy": "Strategy",
       "monitoring": "Monitoring",
       "content": "Content",
-      "destination": "Destination"
+      "destination": "Destination",
+      "intelligence": "Intelligentie",
+      "commerce": "Commerce",
+      "support": "Support",
+      "compliance": "Compliance"
     },
     "table": {
       "name": "Agent",
@@ -419,7 +423,19 @@
     "noResults": "Geen agents gevonden voor de geselecteerde filters.",
     "scheduledJobs": "Geplande Taken",
     "noActivity": "Geen recente activiteit",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "businessOutput": {
+      "delivering": "Levert resultaat",
+      "monitoring": "Bewaakt",
+      "standby": "Stand-by"
+    },
+    "diagnose": {
+      "title": "Diagnose",
+      "lastRuns": "Laatste runs",
+      "recommendedAction": "Aanbevolen actie"
+    },
+    "ecosystem": "Ecosysteem",
+    "agentCount": "{count} agents"
   },
   "pois": {
     "title": "POI Beheer",

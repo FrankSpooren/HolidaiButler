@@ -289,11 +289,11 @@ export async function getLanguages(destinationId) {
     );
     if (dest) {
       let supported = [];
-      try { supported = typeof dest.supported_languages === 'string' ? JSON.parse(dest.supported_languages) : (dest.supported_languages || []); } catch { /* empty */ }
+      try { supported = typeof dest.supported_languages === 'string' ? JSON.parse(dest.supported_languages) : (dest.supported_languages || []); } catch (err) { console.debug('[toneOfVoice.js] empty:', err.message); }
       if (supported.length > 0) return supported;
       if (dest.default_language) return [dest.default_language];
     }
-  } catch { /* fallback to tone config */ }
+  } catch (err) { console.debug('[toneOfVoice.js] fallback to tone config:', err.message); }
   // Fallback to tone config
   const tone = toneCache[destinationId] || FALLBACK_TONES[destinationId] || DEFAULT_TONE;
   return [tone.languages.primary, ...tone.languages.secondary];

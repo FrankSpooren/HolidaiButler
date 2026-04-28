@@ -76,7 +76,7 @@ class POISyncService {
         rating: p.rating || 0,
         latitude: p.latitude || 0,
         longitude: p.longitude || 0,
-        last_updated: p.last_updated ? p.last_updated.toISOString() : new Date().toISOString()
+        last_updated: p.last_updated ? (typeof p.last_updated === "string" ? p.last_updated : p.last_updated.toISOString()) : new Date().toISOString()
       }));
 
       // Generate embeddings

@@ -40,6 +40,7 @@ class PinterestClient {
     }
 
     const response = await fetch(`${PINTEREST_API_BASE}/pins`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

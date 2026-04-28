@@ -91,6 +91,91 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: dev-quality-report (Monday 06:00)');
 
+  // Fase 4: Monthly project audit (lint + deps + build check) — De Inspecteur
+  await scheduledQueue.add('dev-project-audit', { type: 'dev-layer', project: 'platform-core' }, {
+    repeat: { cron: '0 3 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'dev-project-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: dev-project-audit (1st of month 03:00)');
+
+  // === FASE 6 NEW AGENTS ===
+
+  // De Verfrisser — Content Freshness (Weekly Mon 02:00)
+  await scheduledQueue.add('content-freshness-audit', { type: 'content' }, {
+    repeat: { cron: '0 2 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'content-freshness-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-freshness-audit (Monday 02:00)');
+
+  // De Boekhouder — Cost Report (Daily 06:00)
+  await scheduledQueue.add('cost-optimization-report', { type: 'operations' }, {
+    repeat: { cron: '0 6 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'cost-optimization-report-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: cost-optimization-report (Daily 06:00)');
+
+  // De Reisleider — Journey Analysis (Daily 05:00)
+  await scheduledQueue.add('journey-analysis', { type: 'operations' }, {
+    repeat: { cron: '0 5 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'journey-analysis-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: journey-analysis (Daily 05:00)');
+
+  await scheduledQueue.add('translation-quality-check', { type: 'content' }, {
+    repeat: { cron: '0 4 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'translation-quality-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: translation-quality-check (Daily 04:00)');
+
+  await scheduledQueue.add('image-keyword-enrichment', { type: 'content' }, {
+    repeat: { cron: '0 3 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'image-keyword-enrichment-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: image-keyword-enrichment (Daily 03:00)');
+
+  await scheduledQueue.add('personalization-stats', { type: 'intelligence' }, {
+    repeat: { cron: '0 22 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'personalization-stats-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: personalization-stats (Daily 22:00)');
+
+  await scheduledQueue.add('performance-watch', { type: 'operations' }, {
+    repeat: { cron: '0 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'performance-watch-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: performance-watch (Hourly)');
+
+  await scheduledQueue.add('anomaly-detection', { type: 'operations' }, {
+    repeat: { cron: '*/5 * * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'anomaly-detection-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: anomaly-detection (Every 5 min)');
+
+  await scheduledQueue.add('eu-ai-act-audit', { type: 'operations' }, {
+    repeat: { cron: '0 23 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'eu-ai-act-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: eu-ai-act-audit (Daily 23:00)');
+
+  await scheduledQueue.add('content-optimization', { type: 'intelligence' }, {
+    repeat: { cron: '0 3 * * 3', tz: 'Europe/Amsterdam' },
+    jobId: 'content-optimization-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-optimization (Weekly Wed 03:00)');
+
+  await scheduledQueue.add('tenant-health-check', { type: 'operations' }, {
+    repeat: { cron: '0 1 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'tenant-health-check-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: tenant-health-check (Monthly 1st 01:00)');
+
+  await scheduledQueue.add('escalation-monitor', { type: 'operations' }, {
+    repeat: { cron: '0 9 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'escalation-monitor-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: escalation-monitor (Daily 09:00)');
+
+
   // === Fase 8A+ Monitoring Jobs ===
 
   // Content Quality Audit - weekly Monday at 05:00 (before daily briefing)

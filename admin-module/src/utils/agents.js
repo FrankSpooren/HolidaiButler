@@ -30,7 +30,19 @@ export const AGENT_ICONS = {
   'De SEO Meester': '\u{1F50E}',
   'De Uitgever': '\u{1F4F0}',
   'De Verkenner': '\u{1F9ED}',
-  'De Promotor': '\u{2B06}\uFE0F'
+  'De Promotor': '\u{2B06}\uFE0F',
+  'De Verfrisser': '\u{1F4A7}',
+  'De Boekhouder': '\u{1F4B8}',
+  'De Reisleider': '\u{1F9ED}',
+  'De Vertaler': '\u{1F310}',
+  'De Beeldenmaker': '\u{1F3A8}',
+  'De Personaliseerder': '\u{2728}',
+  'De Performance Wachter': '\u{23F1}\uFE0F',
+  'De Anomaliedetective': '\u{1F6A8}',
+  'De Auditeur': '\u{1F4DC}',
+  'De Optimaliseerder': '\u{1F4CA}',
+  'De Onthaler': '\u{1F3E0}',
+  'De Helpdeskmeester': '\u{1F4DE}'
 };
 
 export const CATEGORY_COLORS = {
@@ -39,7 +51,11 @@ export const CATEGORY_COLORS = {
   development: '#4a148c',
   strategy: '#01579b',
   monitoring: '#004d40',
-  content: '#b71c1c'
+  content: '#b71c1c',
+  intelligence: '#e65100',
+  commerce: '#1b5e20',
+  support: '#880e4f',
+  compliance: '#311b92'
 };
 
 export const STATUS_COLORS = {

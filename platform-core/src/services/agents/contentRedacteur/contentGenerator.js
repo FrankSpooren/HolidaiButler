@@ -364,7 +364,7 @@ export async function generateContent(suggestion, options = {}) {
       { replacements: { id: Number(destinationId) } }
     );
     if (destLangRow?.default_language) destSourceLang = destLangRow.default_language;
-  } catch { /* fallback to en */ }
+  } catch (err) { console.debug('[contentGenerator.js] fallback to en:', err.message); }
 
   // POI/Event grounding: find real places from our DB to constrain AI output
   const [relevantPOIs, relevantEvents] = await Promise.all([
@@ -405,7 +405,7 @@ export async function generateContent(suggestion, options = {}) {
       try {
         const { applyUtmToContent } = await import('../publisher/utmBuilder.js');
         trackedBody = applyUtmToContent(formattedBody, { id: 0, content_type: contentType, title: suggestion.title }, platform);
-      } catch { /* UTM builder not available, continue without */ }
+      } catch (err) { console.debug('[contentGenerator.js] UTM builder not available, continue without:', err.message); }
     }
 
     // Generate hashtags for social platforms
@@ -432,9 +432,7 @@ export async function generateContent(suggestion, options = {}) {
       try {
         const { buildUtmUrl } = await import('../publisher/utmBuilder.js');
         socialMetadata.link = buildUtmUrl(baseLink, { id: 0, content_type: contentType, title: suggestion.title }, platform);
-      } catch {
-        socialMetadata.link = baseLink;
-      }
+      } catch (err) { console.debug('[contentGenerator.js]', err.message); socialMetadata.link = baseLink; }
     }
 
     // Build result object — auto-generate SEO metadata if AI didn't provide them
@@ -557,7 +555,7 @@ export async function generateSuggestions(trendingKeywords, destinationId) {
       { replacements: { id: Number(destinationId) } }
     );
     if (destRow?.default_language) destLang = destRow.default_language;
-  } catch { /* fallback to en */ }
+  } catch (err) { console.debug('[contentGenerator.js] fallback to en:', err.message); }
 
   const LANG_NAMES = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
   const langName = LANG_NAMES[destLang] || 'English';
@@ -1243,7 +1241,7 @@ function buildPOIContext(poi) {
       if (Array.isArray(hours)) {
         parts.push(`Opening hours: ${hours.map(h => `${h.day || h.dayOfWeek}: ${h.hours || h.open + '-' + h.close}`).join(', ')}`);
       }
-    } catch { /* skip unparseable hours */ }
+    } catch (err) { console.debug('[contentGenerator.js] skip unparseable hours:', err.message); }
   }
   if (poi.enriched_detail_description) {
     const desc = poi.enriched_detail_description.substring(0, 500);
@@ -1333,7 +1331,7 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
       return typeof sourceItem.keyword_cluster === 'string'
         ? JSON.parse(sourceItem.keyword_cluster)
         : (sourceItem.keyword_cluster || []);
-    } catch { return []; }
+    } catch (err) { return []; }
   })();
 
   // POI/Event grounding for repurposed content
@@ -1503,7 +1501,7 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
           destId
         );
         seoScore = seoResult.overallScore;
-      } catch { /* SEO analysis is optional for repurposed content */ }
+      } catch (err) { console.debug('[contentGenerator.js] SEO analysis is optional for repurposed content:', err.message); }
 
       const result = {
         title: sourceItem.title,

@@ -1491,7 +1491,7 @@ const AGENT_METADATA = [
   { id: 'maestro', name: 'De Maestro', englishName: 'Orchestrator', category: 'core', type: 'A',
     description: 'Orkestreert alle agents en scheduled jobs',
     description_en: 'Orchestrates all agents and scheduled jobs',
-    tasks: ['Aansturing en coördinatie van alle 18 agents', 'Beheer van 40 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
+    tasks: ['Aansturing en coördinatie van alle 39 agents', 'Beheer van 94 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
     monitoring_scope: 'Alle agents, BullMQ queues, job statussen',
     output_description: 'Job scheduling, error logging, agent lifecycle management',
     schedule: null, actorNames: ['orchestrator'],
@@ -1656,7 +1656,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'architect', name: 'De Architect', englishName: 'Architecture Agent', category: 'strategy', type: 'B',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij 3+ destinations.',
+    active: false, deactivatedReason: 'Wacht op 3+ actieve destinations (Calpe+Texel+WarreWijzer). Reactivatie-criteria: multi-tenant config drift detectie, feature_flags consistentie check, pages layout divergentie monitoring.',
     deactivatedDate: '2026-02-26',
     description: 'Architectuur assessment en aanbevelingen',
     description_en: 'Architecture assessment and recommendations',
@@ -1670,8 +1670,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (zondag 03:00 UTC) — wacht op volgende run` } },
   { id: 'leermeester', name: 'De Leermeester', englishName: 'Learning Agent', category: 'strategy', type: 'A',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij voldoende gebruikersdata.',
-    deactivatedDate: '2026-02-26',
+    active: true, reactivatedDate: '2026-04-28', reactivatedReason: 'Fase 5: 67 learning patterns in MongoDB, 7 cycles/week actief',
     description: 'Pattern learning en optimalisatie',
     description_en: 'Pattern learning and optimization',
     tasks: ['Gebruikerspatronen herkennen', 'Optimalisatie suggesties genereren', 'A/B test resultaten analyseren', 'Learning patterns opslaan in MongoDB'],
@@ -1684,8 +1683,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 05:30 UTC) — wacht op volgende run` } },
   { id: 'thermostaat', name: 'De Thermostaat', englishName: 'Adaptive Config Agent', category: 'strategy', type: 'A',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij complexere configuratie-eisen.',
-    deactivatedDate: '2026-02-26',
+    active: true, reactivatedDate: '2026-04-28', reactivatedReason: 'Fase 5: Redis evaluatie actief, health-metrics gekoppeld',
     description: 'Configuratie evaluatie en alerting',
     description_en: 'Configuration evaluation and alerting',
     tasks: ['Systeem configuratie evalueren', 'Performance threshold monitoring', 'Configuratie drift detectie', 'Alerting bij afwijkingen'],
@@ -1886,7 +1884,104 @@ const AGENT_METADATA = [
 2. Controleer META/LINKEDIN env vars: grep "META_\\|LINKEDIN_" .env | sed 's/=.*/=***/'
 3. Controleer social_accounts: SELECT platform, status, token_expires_at FROM social_accounts
 4. Test Meta API: curl -s "https://graph.facebook.com/v25.0/me?access_token=$META_PAGE_ACCESS_TOKEN"
-5. Herstart API: pm2 restart holidaibutler-api` } }
+5. Herstart API: pm2 restart holidaibutler-api` } },
+  // === FASE 6 NEW AGENTS ===
+  { id: 'verfrisser', name: 'De Verfrisser', englishName: 'Content Freshness Agent', category: 'content', type: 'A',
+    description: 'Detecteert verouderde POI content en ontbrekende vertalingen',
+    description_en: 'Detects stale POI content and missing translations',
+    tasks: ['POI freshness monitoring (Apify sync >90d)', 'Missing translation detection (NL/DE/ES)', 'Content completeness tracking', 'Issue creation bij >30% stale content'],
+    monitoring_scope: 'POI content freshness, translation coverage',
+    output_description: 'Freshness rapport per destination + agent_issues bij kwaliteitsdaling',
+    schedule: '0 2 * * 1', actorNames: ['verfrisser'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep verfrisser\n2. Check MySQL: SELECT COUNT(*) FROM POI WHERE last_apify_sync < DATE_SUB(NOW(), INTERVAL 90 DAY)\n3. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'boekhouder', name: 'De Boekhouder', englishName: 'Cost Optimization Agent', category: 'operations', type: 'B',
+    description: 'Budget tracking per API provider, maandelijkse projectie, overschrijding alerts',
+    description_en: 'Budget tracking per API provider, monthly projection, overspend alerts',
+    tasks: ['Dagelijkse cost aggregatie per provider (Mistral/DeepL/Apify/ChromaDB)', 'Maandelijkse budget projectie', 'Alert bij projected overschrijding >110%', 'Cost trend analyse'],
+    monitoring_scope: 'API kosten per provider, budget compliance',
+    output_description: 'Dagelijks cost report + agent_issues bij budget overschrijding',
+    schedule: '0 6 * * *', actorNames: ['boekhouder'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep boekhouder\n2. Check MongoDB: cost_logs collection\n3. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'reisleider', name: 'De Reisleider', englishName: 'Customer Journey Agent', category: 'operations', type: 'A',
+    description: 'Analyseert user journeys, detecteert drop-offs, berekent conversie per destination',
+    description_en: 'Analyzes user journeys, detects drop-offs, calculates conversion per destination',
+    tasks: ['User journey funnel analyse (7d window)', 'Chatbot engagement monitoring', 'Pageview funnel analyse', 'Drop-off detectie bij <50% completion'],
+    monitoring_scope: 'User journeys, chatbot sessies, pageviews',
+    output_description: 'Journey analyse rapport + agent_issues bij hoge drop-off',
+    schedule: '0 5 * * *', actorNames: ['reisleider'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep reisleider\n2. Check MySQL: SELECT COUNT(*) FROM user_journeys WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)\n3. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'vertaler', name: 'De Vertaler', englishName: 'Translation Quality Agent', category: 'content', type: 'A',
+    description: 'Bewaakt vertaalkwaliteit: coverage per taal, ontbrekende vertalingen',
+    description_en: 'Monitors translation quality: coverage per language, missing translations',
+    tasks: ['POI vertaal-coverage per taal (NL/DE/ES)', 'Content items vertaalstatus', 'Issue bij coverage <90%'],
+    monitoring_scope: 'Bewaakt vertaalkwaliteit: coverage per taal, ontbrekende vertalingen',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 4 * * *', actorNames: ['vertaler'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep vertaler\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'beeldenmaker', name: 'De Beeldenmaker', englishName: 'Image AI Agent', category: 'content', type: 'A',
+    description: 'Bewaakt image coverage en keyword verrijking per POI',
+    description_en: 'Monitors image coverage and keyword enrichment per POI',
+    tasks: ['Image coverage per destination', 'Keyword coverage tracking', 'POIs zonder afbeeldingen detectie'],
+    monitoring_scope: 'Bewaakt image coverage en keyword verrijking per POI',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 3 * * *', actorNames: ['beeldenmaker'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep beeldenmaker\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'personaliseerder', name: 'De Personaliseerder', englishName: 'Personalization Agent', category: 'intelligence', type: 'A',
+    description: 'Analyseert chatbot sessie patronen voor recommendation insights',
+    description_en: 'Analyzes chatbot session patterns for recommendation insights',
+    tasks: ['Chatbot sessie analyse (24h)', 'Deep session detectie', 'Categorie trending'],
+    monitoring_scope: 'Analyseert chatbot sessie patronen voor recommendation insights',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 22 * * *', actorNames: ['personaliseerder'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep personaliseerder\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'performanceWachter', name: 'De Performance Wachter', englishName: 'Performance Watch Agent', category: 'operations', type: 'B',
+    description: 'Monitort API endpoint beschikbaarheid en response times',
+    description_en: 'Monitors API endpoint availability and response times',
+    tasks: ['Endpoint health checks (4 portals)', 'TTFB monitoring', 'Downtime detectie', 'Slow response alerts'],
+    monitoring_scope: 'Monitort API endpoint beschikbaarheid en response times',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 * * * *', actorNames: ['performance-wachter'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep performanceWachter\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'anomaliedetective', name: 'De Anomaliedetective', englishName: 'Anomaly Detection Agent', category: 'operations', type: 'B',
+    description: 'Real-time error spike en traffic anomalie detectie',
+    description_en: 'Real-time error spike and traffic anomaly detection',
+    tasks: ['Error spike detectie (5min vs 1h baseline)', 'Traffic anomalie monitoring', 'Failure clustering per agent'],
+    monitoring_scope: 'Real-time error spike en traffic anomalie detectie',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '*/5 * * * *', actorNames: ['anomaliedetective'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep anomaliedetective\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'auditeur', name: 'De Auditeur', englishName: 'EU AI Act Compliance Agent', category: 'operations', type: 'A',
+    description: 'EU AI Act compliance: AI beslissingen loggen, transparantie bewaken',
+    description_en: 'EU AI Act compliance: log AI decisions, monitor transparency',
+    tasks: ['AI beslissingen audit (24h)', 'Cost tracking per AI provider', 'Transparantie check', 'Content AI-flag verificatie'],
+    monitoring_scope: 'EU AI Act compliance: AI beslissingen loggen, transparantie bewaken',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 23 * * *', actorNames: ['auditeur'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep auditeur\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'optimaliseerder', name: 'De Optimaliseerder', englishName: 'Content Optimization Agent', category: 'intelligence', type: 'B',
+    description: 'Content performance analyse per platform, engagement insights',
+    description_en: 'Content performance analysis per platform, engagement insights',
+    tasks: ['Platform performance vergelijking', 'Engagement rate analyse', 'Best-performing content identificatie'],
+    monitoring_scope: 'Content performance analyse per platform, engagement insights',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 3 * * 3', actorNames: ['optimaliseerder'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep optimaliseerder\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'onthaler', name: 'De Onthaler', englishName: 'Tenant Onboarding Agent', category: 'operations', type: 'A',
+    description: 'Tenant infrastructuur health check: POIs, pages, content completeness',
+    description_en: 'Tenant infrastructure health check: POIs, pages, content completeness',
+    tasks: ['POI count verificatie', 'Pages aanwezigheid check', 'Content items status', 'Tenant completeness rapport'],
+    monitoring_scope: 'Tenant infrastructuur health check: POIs, pages, content completeness',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 1 1 * *', actorNames: ['onthaler'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep onthaler\n2. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'helpdeskmeester', name: 'De Helpdeskmeester', englishName: 'Support Escalation Agent', category: 'operations', type: 'A',
+    description: 'Monitort chatbot escalaties, SLA tracking, resolution rate',
+    description_en: 'Monitors chatbot escalations, SLA tracking, resolution rate',
+    tasks: ['Escalatie monitoring (7d window)', 'Resolution rate tracking', 'SLA risico detectie', 'Pending escalatie alerts'],
+    monitoring_scope: 'Monitort chatbot escalaties, SLA tracking, resolution rate',
+    output_description: 'Audit logs + agent_issues bij afwijkingen',
+    schedule: '0 9 * * *', actorNames: ['helpdeskmeester'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep helpdeskmeester\n2. Herstart: pm2 restart holidaibutler-api' } }
 ];
 
 /**
@@ -2198,74 +2293,142 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       // Non-critical: continue with static metadata
     }
 
-    // BRON 2: MongoDB audit_logs (last 24h)
+    // BRON 2: MongoDB audit_logs — OPTIMIZED (single $facet, was 120+ queries)
     try {
       if (mongoose.connection.readyState === 1) {
         const db = mongoose.connection.db;
         const auditLogs = db.collection('audit_logs');
-        const since = new Date(Date.now() - 120 * 24 * 3600 * 1000);
+        const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+        const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000);
 
-        // Get last runs per actor
-        const lastRuns = await auditLogs.aggregate([
-          { $match: { 'actor.type': 'agent', timestamp: { $gte: since } } },
-          { $sort: { timestamp: -1 } },
-          { $group: {
-            _id: '$actor.name',
-            lastTimestamp: { $first: '$timestamp' },
-            lastAction: { $first: '$action' },
-            lastStatus: { $first: '$status' },
-            lastDuration: { $first: '$duration' },
-            lastDescription: { $first: '$description' },
-            lastResult: { $first: '$result' }
+        // SINGLE aggregate with $facet: get all data in 1 roundtrip
+        const [facetResult] = await auditLogs.aggregate([
+          { $match: { 'actor.type': 'agent', timestamp: { $gte: since30d } } },
+          { $facet: {
+            // Facet 1: Last run per actor.name
+            byActorName: [
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: '$actor.name',
+                lastTimestamp: { $first: '$timestamp' },
+                lastAction: { $first: '$action' },
+                lastStatus: { $first: '$status' },
+                lastDuration: { $first: '$duration' },
+                lastDescription: { $first: '$description' },
+                lastResult: { $first: '$result' }
+              }}
+            ],
+            // Facet 2: Last run per agentId
+            byAgentId: [
+              { $match: { 'actor.agentId': { $exists: true, $ne: null } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: '$actor.agentId',
+                lastTimestamp: { $first: '$timestamp' },
+                lastStatus: { $first: '$status' },
+                lastDuration: { $first: '$duration' },
+                lastResult: { $first: '$result' }
+              }}
+            ],
+            // Facet 3: Last run per actor.name + destinationId
+            byDestination: [
+              { $match: { 'metadata.destinationId': { $exists: true } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: { actor: '$actor.name', dest: '$metadata.destinationId' },
+                lastTimestamp: { $first: '$timestamp' },
+                lastStatus: { $first: '$status' }
+              }}
+            ],
+            // Facet 4: Recent activity (last 50)
+            recentActivity: [
+              { $sort: { timestamp: -1 } },
+              { $limit: 50 },
+              { $project: { actor: 1, action: 1, status: 1, description: 1, duration: 1, timestamp: 1, 'metadata.destinationId': 1 } }
+            ],
+            // Facet 5: Recent runs per agentId (last 7d, max 5 per agent)
+            recentRuns: [
+              { $match: { timestamp: { $gte: since7d } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: { $ifNull: ['$actor.agentId', '$actor.name'] },
+                runs: { $push: { timestamp: '$timestamp', action: '$action', status: '$status', destination: '$metadata.destinationId' } }
+              }},
+              { $project: { runs: { $slice: ['$runs', 5] } } }
+            ]
           }}
         ]).toArray();
 
-        // Map audit log actors to agents
+        const lastRuns = facetResult?.byActorName || [];
+        const lastRunsById = facetResult?.byAgentId || [];
+        const destRuns = facetResult?.byDestination || [];
+        const recentRunsMap = {};
+        for (const r of (facetResult?.recentRuns || [])) {
+          recentRunsMap[r._id] = r.runs;
+        }
+
+        // Map to agents (in-memory, no more DB queries)
         for (const agent of agents) {
           const meta = AGENT_METADATA.find(m => m.id === agent.id);
           if (!meta) continue;
 
-          const matchingRuns = lastRuns.filter(r => meta.actorNames.includes(r._id));
+          // Prefer agentId match, fallback to actorName
+          const agentIdMatch = lastRunsById.find(r => r._id === agent.id);
+          const matchingRuns = agentIdMatch ? [agentIdMatch] : lastRuns.filter(r => meta.actorNames.includes(r._id));
           if (matchingRuns.length > 0) {
-            // Use the most recent run across all actor names
             const latest = matchingRuns.sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))[0];
             agent.lastRun = {
               timestamp: latest.lastTimestamp,
               duration: latest.lastDuration || null,
-              status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'unknown',
+              status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'warning',
               error: latest.lastResult?.success === false ? (latest.lastResult?.error || latest.lastDescription) : null
             };
             agent.status = calculateAgentStatus(agent.lastRun, meta.schedule, meta);
           }
-        }
 
-        // Populate per-destination status for Cat A agents from audit_logs
-        const destIds = { 1: 'calpe', 2: 'texel' };
-        for (const agent of agents) {
-          if (agent.type !== 'A' || !agent.destinations) continue;
-          const meta = AGENT_METADATA.find(m => m.id === agent.id);
-          if (!meta) continue;
-          for (const [numId, destKey] of Object.entries(destIds)) {
-            const destRun = await auditLogs.findOne(
-              { 'actor.name': { $in: meta.actorNames }, 'metadata.destinationId': parseInt(numId), timestamp: { $gte: since } },
-              { sort: { timestamp: -1 } }
-            );
-            if (destRun) {
-              const destStatus = (destRun.status === 'completed' || destRun.status === 'success') ? 'success'
-                : (destRun.status === 'error' || destRun.status === 'failed') ? 'error'
-                : 'partial';
-              agent.destinations[destKey] = {
-                lastRun: destRun.timestamp,
-                status: destStatus
-              };
-            } else if (agent.lastRun) {
-              // If agent ran but no destination-specific log, inherit overall status
-              agent.destinations[destKey] = {
-                lastRun: agent.lastRun.timestamp,
-                status: agent.lastRun.status === 'success' ? 'success' : agent.lastRun.status === 'error' ? 'error' : 'partial'
-              };
+          // Per-destination status (from destRuns facet, no extra queries)
+          if (agent.type === 'A' && agent.destinations) {
+            const destIds = { 1: 'calpe', 2: 'texel' };
+            for (const [numId, destKey] of Object.entries(destIds)) {
+              const destMatch = destRuns.find(d =>
+                meta.actorNames.includes(d._id.actor) && d._id.dest === parseInt(numId)
+              );
+              if (destMatch) {
+                agent.destinations[destKey] = {
+                  lastRun: destMatch.lastTimestamp,
+                  status: (destMatch.lastStatus === 'completed' || destMatch.lastStatus === 'success') ? 'success'
+                    : (destMatch.lastStatus === 'error' || destMatch.lastStatus === 'failed') ? 'error' : 'partial'
+                };
+              } else if (agent.lastRun) {
+                agent.destinations[destKey] = {
+                  lastRun: agent.lastRun.timestamp,
+                  status: agent.lastRun.status === 'success' ? 'success' : 'partial'
+                };
+              }
             }
           }
+
+          // Recent runs (from facet, no extra queries)
+          agent.recentRuns = (recentRunsMap[agent.id] || recentRunsMap[meta.actorNames?.[0]] || []).map(r => ({
+            timestamp: r.timestamp,
+            action: r.action,
+            status: (r.status === 'completed' || r.status === 'success') ? 'success' : r.status || 'warning',
+            destination: r.destination ? (r.destination === 1 ? 'calpe' : 'texel') : null
+          }));
+        }
+
+        // Recent activity (from facet)
+        for (const log of (facetResult?.recentActivity || [])) {
+          const matchedAgent = AGENT_METADATA.find(m => m.actorNames.includes(log.actor?.name));
+          recentActivity.push({
+            timestamp: log.timestamp,
+            agent: matchedAgent ? matchedAgent.name : (log.actor?.name || 'Unknown'),
+            action: log.action?.replace(/^job_(started|completed)_/, '') || log.description || 'unknown',
+            destination: log.metadata?.destinationId ? (log.metadata.destinationId === 1 ? 'calpe' : 'texel') : 'all',
+            status: log.status === 'completed' ? 'success' : log.status || 'warning',
+            details: log.description || null,
+            duration: log.duration || null
+          });
         }
 
         // Get recent activity (last 50 entries)
@@ -2400,27 +2563,8 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       }
     }
 
-    // Populate recentActivity per agent (last 5 entries)
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const db = mongoose.connection.db;
-        const auditLogs = db.collection('audit_logs');
-        const since = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-        for (const agent of agents) {
-          const meta = AGENT_METADATA.find(m => m.id === agent.id);
-          if (!meta) continue;
-          const logs = await auditLogs.find(
-            { 'actor.name': { $in: meta.actorNames }, timestamp: { $gte: since } }
-          ).sort({ timestamp: -1 }).limit(5).toArray();
-          agent.recentRuns = logs.map(l => ({
-            timestamp: l.timestamp,
-            action: l.action || l.description || 'unknown',
-            status: (l.status === 'completed' || l.status === 'success') ? 'success' : l.status || 'unknown',
-            destination: l.metadata?.destinationId ? (l.metadata.destinationId === 1 ? 'calpe' : 'texel') : null
-          }));
-        }
-      } catch { /* non-critical */ }
-    }
+    // recentRuns per agent: now included in $facet (no extra queries)
+
 
     // Build summary
     const summary = {
@@ -16587,40 +16731,38 @@ router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => 
 // GET /notifications — list notifications for current user
 
 // ─── Sidebar Badge Counts (studio mode) ────────────────────────────
-router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
+router.get('/content/studio/sidebar-badges', adminAuth('reviewer'), async (req, res) => {
   try {
     const destId = req.destinationId;
     if (!destId) return res.json({ success: true, data: {} });
 
-    const db = req.app.locals.db;
-
     // Drafts count
-    const [[draftsRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM content_items WHERE approval_status = 'draft' AND destination_id = ?`,
-      [destId]
-    );
+    const [[draftsRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM content_items WHERE approval_status = :status AND destination_id = :destId',
+      { replacements: { status: 'draft', destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // Pending ideas (suggestions)
-    const [[ideasRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM content_suggestions WHERE status = 'pending' AND destination_id = ?`,
-      [destId]
-    );
+    const [[ideasRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM content_suggestions WHERE status = :status AND destination_id = :destId',
+      { replacements: { status: 'pending', destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // New sources (trending data last 7 days)
-    const [[sourcesRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM trending_data WHERE destination_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-      [destId]
-    );
+    const [[sourcesRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM trending_data WHERE destination_id = :destId AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)',
+      { replacements: { destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // Calendar gaps (workdays without scheduled content in next 14 days)
     let gaps = 0;
     try {
-      const [scheduled] = await db.query(
+      const [scheduled] = await mysqlSequelize.query(
         `SELECT DATE(scheduled_at) as d FROM content_items
-         WHERE destination_id = ? AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
+         WHERE destination_id = :destId AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
          AND approval_status IN ('scheduled', 'published')
          GROUP BY DATE(scheduled_at)`,
-        [destId]
+        { replacements: { destId }, timeout: 5000 }
       );
       const scheduledDates = new Set(scheduled.map(r => r.d?.toISOString?.()?.slice(0,10) || ''));
       const now = new Date();
@@ -16628,7 +16770,7 @@ router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
         const d = new Date(now);
         d.setDate(d.getDate() + i);
         const day = d.getDay();
-        if (day === 0 || day === 6) continue; // skip weekends
+        if (day === 0 || day === 6) continue;
         const iso = d.toISOString().slice(0, 10);
         if (!scheduledDates.has(iso)) gaps++;
       }
@@ -16644,7 +16786,7 @@ router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[sidebar-badges]', err.message);
+    logger.error('[sidebar-badges] Error:', err.message);
     res.json({ success: true, data: {} });
   }
 });

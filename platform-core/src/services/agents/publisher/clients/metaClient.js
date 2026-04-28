@@ -54,6 +54,7 @@ class MetaClient {
       const photoIds = [];
       for (const imgUrl of imageUrls) {
         const photoRes = await fetch(`${META_API_BASE}/${pageId}/photos`, {
+          signal: AbortSignal.timeout(30000),
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ url: imgUrl, published: false, access_token: accessToken }),
@@ -73,6 +74,7 @@ class MetaClient {
         photoIds.forEach((pid, idx) => { feedBody[`attached_media[${idx}]`] = JSON.stringify({ media_fbid: pid }); });
 
         const feedRes = await fetch(`${META_API_BASE}/${pageId}/feed`, {
+          signal: AbortSignal.timeout(30000),
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(feedBody),
@@ -101,6 +103,7 @@ class MetaClient {
     }
 
     const response = await fetch(endpoint, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -128,6 +131,7 @@ class MetaClient {
   async _uploadToFbCdn(imageUrl, pageId, accessToken) {
     // Step 1: Upload as unpublished photo
     const uploadRes = await fetch(`${META_API_BASE}/${pageId}/photos`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: imageUrl, published: false, access_token: accessToken }),
@@ -139,7 +143,7 @@ class MetaClient {
     }
 
     // Step 2: Get CDN URL from the uploaded photo
-    const photoRes = await fetch(`${META_API_BASE}/${uploadData.id}?fields=images&access_token=${accessToken}`);
+    const photoRes = await fetch(`${META_API_BASE}/${uploadData.id}?fields=images&access_token=${accessToken}`, { signal: AbortSignal.timeout(30000) });
     const photoData = await photoRes.json();
     const cdnUrl = photoData.images?.[0]?.source;
     if (!cdnUrl) {
@@ -159,6 +163,7 @@ class MetaClient {
     const childIds = [];
     for (const imgUrl of imageUrls) {
       const childRes = await fetch(`${META_API_BASE}/${igAccountId}/media`, {
+        signal: AbortSignal.timeout(30000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,6 +186,7 @@ class MetaClient {
 
     // Step 2: Create carousel container
     const carouselRes = await fetch(`${META_API_BASE}/${igAccountId}/media`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -198,7 +204,7 @@ class MetaClient {
     // Step 3: Wait for carousel container to be ready (status FINISHED)
     let ready = false;
     for (let attempt = 0; attempt < 30; attempt++) {
-      const statusRes = await fetch(`${META_API_BASE}/${carouselData.id}?fields=status_code&access_token=${publishToken}`);
+      const statusRes = await fetch(`${META_API_BASE}/${carouselData.id}?fields=status_code&access_token=${publishToken}`, { signal: AbortSignal.timeout(30000) });
       const statusData = await statusRes.json();
       logger.info(`[MetaClient] Carousel status check ${attempt + 1}: ${statusData.status_code || 'unknown'}`);
       if (statusData.status_code === 'FINISHED') { ready = true; break; }
@@ -213,6 +219,7 @@ class MetaClient {
 
     // Step 4: Publish carousel
     const publishResponse = await fetch(`${META_API_BASE}/${igAccountId}/media_publish`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -300,6 +307,7 @@ class MetaClient {
 
     // Step 1: Create media container
     const containerResponse = await fetch(`${META_API_BASE}/${igAccountId}/media`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -316,7 +324,7 @@ class MetaClient {
 
     // Step 2: Wait for container to be ready
     for (let attempt = 0; attempt < 30; attempt++) {
-      const statusRes = await fetch(`${META_API_BASE}/${containerData.id}?fields=status_code&access_token=${publishToken}`);
+      const statusRes = await fetch(`${META_API_BASE}/${containerData.id}?fields=status_code&access_token=${publishToken}`, { signal: AbortSignal.timeout(30000) });
       const statusData = await statusRes.json();
       if (statusData.status_code === 'FINISHED') break;
       if (statusData.status_code === 'ERROR') {
@@ -327,6 +335,7 @@ class MetaClient {
 
     // Step 3: Publish the container
     const publishResponse = await fetch(`${META_API_BASE}/${igAccountId}/media_publish`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -439,7 +448,7 @@ class MetaClient {
       return this._pageTokenCache[pageId].token;
     }
     try {
-      const response = await fetch(`${META_API_BASE}/me/accounts?access_token=${systemUserToken}`);
+      const response = await fetch(`${META_API_BASE}/me/accounts?access_token=${systemUserToken}`, { signal: AbortSignal.timeout(30000) });
       const data = await response.json();
       if (data.error) throw new Error(data.error.message);
       const page = (data.data || []).find(p => p.id === pageId);

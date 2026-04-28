@@ -75,7 +75,7 @@ class QASyncService {
         destination: q.destination || 'calpe',
         language: q.language || 'en',
         priority: q.priority || 3,
-        updated_at: q.last_updated ? q.last_updated.toISOString() : new Date().toISOString()
+        updated_at: q.last_updated ? (typeof q.last_updated === "string" ? q.last_updated : q.last_updated.toISOString()) : new Date().toISOString()
       }));
 
       // Generate embeddings

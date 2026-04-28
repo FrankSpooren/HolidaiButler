@@ -38,7 +38,7 @@ class ContentRedacteurAgent extends BaseAgent {
 
       return suggestions;
     } catch (error) {
-      await logError('redacteur', destinationId, 'suggestions-generation', error);
+      await logError('redacteur', error, { action: 'suggestions-generation', destination_id: destinationId });
       throw error;
     }
   }
@@ -65,7 +65,7 @@ class ContentRedacteurAgent extends BaseAgent {
 
       return content;
     } catch (error) {
-      await logError('redacteur', destinationId, 'content-generation', error);
+      await logError('redacteur', error, { action: 'content-generation', destination_id: destinationId });
       throw error;
     }
   }
@@ -89,7 +89,7 @@ class ContentRedacteurAgent extends BaseAgent {
 
       return result;
     } catch (error) {
-      await logError('redacteur', destinationId, 'content-improvement', error);
+      await logError('redacteur', error, { action: 'content-improvement', destination_id: destinationId });
       throw error;
     }
   }

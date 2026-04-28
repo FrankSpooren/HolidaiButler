@@ -44,11 +44,7 @@ const smokeTestResultSchema = new mongoose.Schema({
 }, { collection: 'smoke_test_results' });
 
 let SmokeTestResult;
-try {
-  SmokeTestResult = mongoose.model('SmokeTestResult');
-} catch {
-  SmokeTestResult = mongoose.model('SmokeTestResult', smokeTestResultSchema);
-}
+SmokeTestResult = mongoose.models.SmokeTestResult || mongoose.model('SmokeTestResult', smokeTestResultSchema);
 
 class SmokeTestRunner {
   /**
@@ -356,9 +352,10 @@ class SmokeTestRunner {
   async getLatestResult() {
     try {
       return await SmokeTestResult.findOne().sort({ timestamp: -1 }).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[smokeTestRunner.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 
   /**

@@ -44,7 +44,7 @@ export async function searchFlickr(query, perPage = 5) {
       orientation: 'landscape',
     });
 
-    const response = await fetch(`${FLICKR_API_URL}?${params.toString()}`);
+    const response = await fetch(`${FLICKR_API_URL}?${params.toString()}`, { signal: AbortSignal.timeout(30000) });
 
     if (!response.ok) {
       const errorText = await response.text();

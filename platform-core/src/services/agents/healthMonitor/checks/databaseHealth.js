@@ -123,7 +123,7 @@ class DatabaseHealthCheck {
       if (redis) {
         try {
           await redis.quit();
-        } catch {
+        } catch (err) {
           // Ignore quit errors
         }
       }

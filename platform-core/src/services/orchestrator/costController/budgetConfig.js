@@ -1,12 +1,19 @@
-// Maandelijks budget zoals gedefinieerd in Fase 2 docs
+// Maandelijks budget (bijgewerkt april 2026 — werkelijke kosten basis)
 export const MONTHLY_BUDGET = {
-  total: 515,
+  total: 470,
   services: {
-    claude: 300,      // Claude API
-    mistral: 50,      // HoliBot LLM  
-    apify: 100,       // Data scraping
-    hetzner: 50,      // Server (fixed)
-    mailerlite: 15    // Email (fixed)
+    claude: 110,          // Claude Max plan
+    anthropic: 30,        // Anthropic extra tokens
+    mistral: 20,          // Mistral AI (S/M/L)
+    deepl: 30,            // DeepL vertalingen
+    apify: 85,            // Apify starterplan
+    perplexity: 25,       // Perplexity AI
+    simpleanalytics: 20,  // Simple Analytics (vast)
+    unsplash: 15,         // Unsplash images
+    hetzner: 15,          // Hetzner server (vast)
+    mailerlite: 15,       // MailerLite email (vast)
+    ovh: 25,              // OVH domeinnamen (vast)
+    meta: 80,             // Meta campagnes FB/Insta
   }
 };
 

@@ -52,7 +52,7 @@ class ServerHealthCheck {
       }
       // Fallback to os.freemem() for non-Linux or if parsing fails
       return os.freemem();
-    } catch {
+    } catch (err) {
       return os.freemem();
     }
   }
@@ -133,7 +133,7 @@ class ServerHealthCheck {
           } else {
             usagePercent = 0;
           }
-        } catch {
+        } catch (err) {
           usagePercent = 0;
         }
       } else {

@@ -158,9 +158,10 @@ class ContentFeedbackLoop {
         keywords.push(parsed.focus_keyword);
       }
       return keywords.map(k => k.toLowerCase());
-    } catch {
+    } catch (err) {
+      console.warn('[feedbackLoop.js] Query fallback:', err.message);
       return [];
-    }
+}
   }
 
   /**

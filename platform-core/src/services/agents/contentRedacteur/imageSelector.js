@@ -150,7 +150,7 @@ export async function selectImages(contentItem, destinationId, { forSuggestion =
       { replacements: { id: Number(destinationId) } }
     );
     isContentOnlyDest = destRow?.destination_type === 'content_only';
-  } catch { /* default to false */ }
+  } catch (err) { console.debug('[imageSelector.js] default to false:', err.message); }
 
   try {
     // Load already-used image IDs across all content items in this destination to ensure diversity

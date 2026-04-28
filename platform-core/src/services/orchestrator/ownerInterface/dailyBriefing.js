@@ -399,12 +399,149 @@ async function generateDailyBriefing() {
     console.log('[De Bode] Inventory sync data unavailable:', error.message);
   }
 
+  // === Agent Ecosystem Health — alle 39 agents ===
+  let ecosystemInsights = [];
+  let ecosystemSummary = { total: 0, healthy: 0, warning: 0, error: 0, stale: 0 };
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const db = mongoose.connection.db;
+      const since24h = new Date(Date.now() - 24 * 3600 * 1000);
+      const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+
+      // 1. Agent run health: per agentId, tel successes vs failures (24h)
+      const agentRuns = await db.collection('audit_logs').aggregate([
+        { $match: { 'actor.type': 'agent', timestamp: { $gte: since24h } } },
+        { $group: {
+          _id: { $ifNull: ['$actor.agentId', '$actor.name'] },
+          total: { $sum: 1 },
+          failed: { $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] } },
+          lastRun: { $max: '$timestamp' }
+        }},
+        { $sort: { failed: -1, total: -1 } }
+      ]).toArray();
+
+      const failingAgents = agentRuns.filter(a => a.failed > 0);
+      const activeAgents = agentRuns.length;
+      ecosystemSummary.total = 39;
+      ecosystemSummary.healthy = agentRuns.filter(a => a.failed === 0).length;
+      ecosystemSummary.error = failingAgents.length;
+
+      if (failingAgents.length > 0) {
+        ecosystemInsights.push(`[Errors] ${failingAgents.map(a => a._id + '(' + a.failed + ')').join(', ')}`);
+      }
+
+      // 2. Stale agents: geen run in verwacht window
+      const staleThreshold = new Date(Date.now() - 48 * 3600 * 1000);
+      const dailyAgents = ['dokter', 'bode', 'geheugen', 'gastheer', 'poortwachter', 'bewaker',
+        'koerier', 'kassier', 'vertaler', 'beeldenmaker', 'personaliseerder', 'auditeur',
+        'reisleider', 'boekhouder', 'performanceWachter', 'helpdeskmeester'];
+      for (const agentId of dailyAgents) {
+        const hasRun = agentRuns.find(a => a._id === agentId);
+        if (!hasRun) ecosystemSummary.stale++;
+      }
+      if (ecosystemSummary.stale > 0) {
+        ecosystemInsights.push(`[Stale] ${ecosystemSummary.stale} dagelijkse agents zonder run in 24u`);
+      }
+
+      // 3. Specifieke agent signalen (high-value)
+      // Vertaler
+      const vertaler = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'vertaler', action: 'translation_quality_check', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (vertaler?.metadata) {
+        const cov = vertaler.metadata.coverage || {};
+        const covStr = Object.entries(cov).map(([l, v]) => `${l.toUpperCase()}:${v.percent}%`).join(' ');
+        if (covStr) ecosystemInsights.push(`[Vertaler] ${covStr}`);
+      }
+
+      // Boekhouder
+      const boekhouder = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'boekhouder', action: 'cost_report', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (boekhouder?.metadata) {
+        ecosystemInsights.push(`[Kosten] EUR${(boekhouder.metadata.totalSpent || 0).toFixed(2)} spent, EUR${(boekhouder.metadata.projectedTotal || 0).toFixed(2)} projected`);
+      }
+
+      // Anomaliedetective
+      const anomalie = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'anomaliedetective', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (anomalie?.metadata?.anomalies_detected > 0) {
+        ecosystemInsights.push(`[Anomalie] ${anomalie.metadata.anomalies_detected} anomalie(en) gedetecteerd`);
+      }
+
+      // Performance Wachter
+      const perf = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'performance-wachter', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (perf?.metadata) {
+        const down = (perf.metadata.endpoints || []).filter(e => !e.ok);
+        if (down.length > 0) {
+          ecosystemInsights.push(`[Performance] DOWN: ${down.map(d => d.name).join(', ')}`);
+        } else {
+          ecosystemInsights.push(`[Performance] All UP, avg TTFB ${perf.metadata.avg_ttfb}ms [${perf.metadata.trend?.direction || '?'}]`);
+        }
+      }
+
+      // Auditeur
+      const auditeur = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'auditeur', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (auditeur?.metadata) {
+        ecosystemInsights.push(`[EU AI Act] Score ${auditeur.metadata.compliance_score}, ${auditeur.metadata.ai_decisions || 0} AI decisions`);
+      }
+
+      // Helpdeskmeester
+      const helpdesk = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'helpdeskmeester', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (helpdesk?.metadata?.open_tickets > 0) {
+        ecosystemInsights.push(`[Helpdesk] ${helpdesk.metadata.open_tickets} open tickets (${helpdesk.metadata.resolution_rate}% resolved)`);
+      }
+
+      // Verfrisser
+      const verfrisser = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'verfrisser', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (verfrisser?.metadata?.stale_percent > 10) {
+        ecosystemInsights.push(`[Content] ${verfrisser.metadata.stale_apify} stale POIs (${verfrisser.metadata.stale_percent}%)`);
+      }
+
+      // Reisleider + Simple Analytics
+      const reisleider = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'reisleider', timestamp: { $gte: since7d } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (reisleider?.metadata?.simple_analytics?.pageviews > 0) {
+        const sa = reisleider.metadata.simple_analytics;
+        ecosystemInsights.push(`[Traffic] ${sa.pageviews} pageviews, ${sa.visitors} visitors (7d)`);
+      }
+
+      // Open agent_issues
+      const openIssues = await db.collection('agent_issues').countDocuments({ status: { $in: ['open', 'acknowledged'] } });
+      if (openIssues > 0) {
+        ecosystemInsights.push(`[Issues] ${openIssues} open`);
+      }
+    }
+  } catch (err) {
+    console.log('[De Bode] Ecosystem health unavailable:', err.message);
+  }
+  const ecosystemHealthLine = `${ecosystemSummary.healthy}/${ecosystemSummary.total} healthy, ${ecosystemSummary.error} errors, ${ecosystemSummary.stale} stale`;
+  const newAgentSummary = ecosystemInsights.length > 0 ? ecosystemInsights.join(' | ') : 'Geen bijzonderheden';
+
   // Build fields for MailerLite template
   // Section ordering (Fase 8B): alerts → smoke → backups → destinations → content → predictions → agents → budget → commerce monitoring
   const fields = {
     briefing_date: today,
     // Status (top)
-    status_summary: statusSummary,
+    status_summary: statusSummary + ' | Ecosystem: ' + ecosystemHealthLine,
     // Alerts (Fase 8B: includes Threema warning)
     alert_items: alertItems.length > 0 ? alertItems.join(" | ") : "Geen waarschuwingen",
     // Smoke Tests (8A+ + 8B Threema)
@@ -417,12 +554,14 @@ async function generateDailyBriefing() {
     calpe_reviews: String(destinationStats.calpe.reviewCount || "?"),
     texel_reviews: String(destinationStats.texel.reviewCount || "?"),
     // Content Quality (8A+)
-    content_quality_summary: contentQualitySummary,
+    content_quality_summary: contentQualitySummary + (newAgentSummary !== 'Geen bijzonderheden' ? ' | AGENTS: ' + newAgentSummary : ''),
     // Predictions
     prediction_alerts: String(predictionAlerts.length),
     prediction_summary: predictionAlerts.length > 0
       ? predictionAlerts.slice(0, 3).map(a => `${a.name || a.metric}: ${a.risk || a.trend}`).join("; ")
-      : "Geen waarschuwingen",
+      : (ecosystemInsights.some(i => i.includes('Anomalie') || i.includes('DOWN'))
+        ? ecosystemInsights.filter(i => i.includes('Anomalie') || i.includes('DOWN')).join('; ')
+        : "Geen waarschuwingen"),
     // Operations
     jobs_count: String(jobCount),
     alerts_count: String(alertCount),
@@ -440,7 +579,10 @@ async function generateDailyBriefing() {
     // Fase IV-D: Commerce Monitoring
     intermediary_monitor_summary: intermediaryMonitorSummary,
     financial_monitor_summary: financialMonitorSummary,
-    inventory_sync_summary: inventorySyncSummary
+    inventory_sync_summary: inventorySyncSummary,
+    // Fase 6: Nieuwe agent signalen
+    new_agent_insights: newAgentSummary,
+    ecosystem_health: ecosystemHealthLine
   };
 
   return {
@@ -458,6 +600,8 @@ async function generateDailyBriefing() {
       backups: backupSummary,
       contentQuality: contentQualitySummary,
       devInsights: devInsightsSummary,
+      newAgentInsights: newAgentSummary,
+      ecosystemHealth: ecosystemHealthLine,
       threemaStatus,
       intermediaryMonitor: intermediaryMonitorSummary,
       financialMonitor: financialMonitorSummary,
@@ -479,7 +623,9 @@ async function sendDailyBriefing() {
 
   // Severity prefix based on error/alert count
   let prefix;
-  if (hasCriticalAgents || totalIssues >= 6) {
+  // Include new agent anomalies in severity
+  const hasNewAgentAlerts = ecosystemInsights.some(i => i.includes('DOWN') || i.includes('anomalie') || i.includes('Errors'));
+  if (hasCriticalAgents || totalIssues >= 6 || hasNewAgentAlerts) {
     prefix = '[URGENT]';
   } else if (totalIssues >= 3) {
     prefix = '[HOOG]';

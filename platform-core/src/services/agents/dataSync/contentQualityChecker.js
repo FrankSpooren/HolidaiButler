@@ -25,11 +25,7 @@ const contentQualityAuditSchema = new mongoose.Schema({
 }, { collection: 'content_quality_audits' });
 
 let ContentQualityAudit;
-try {
-  ContentQualityAudit = mongoose.model('ContentQualityAudit');
-} catch {
-  ContentQualityAudit = mongoose.model('ContentQualityAudit', contentQualityAuditSchema);
-}
+ContentQualityAudit = mongoose.models.ContentQualityAudit || mongoose.model('ContentQualityAudit', contentQualityAuditSchema);
 
 class ContentQualityChecker {
   /**
@@ -329,9 +325,10 @@ class ContentQualityChecker {
       return await ContentQualityAudit.findOne(
         { destination_id: destinationId }
       ).sort({ timestamp: -1 }).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[contentQualityChecker.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 }
 

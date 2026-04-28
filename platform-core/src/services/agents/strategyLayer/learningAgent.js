@@ -28,11 +28,7 @@ const LearningPatternSchema = new mongoose.Schema({
 });
 
 let LearningPattern;
-try {
-  LearningPattern = mongoose.model('LearningPattern');
-} catch {
-  LearningPattern = mongoose.model('LearningPattern', LearningPatternSchema);
-}
+LearningPattern = mongoose.models.LearningPattern || mongoose.model('LearningPattern', LearningPatternSchema);
 
 class LearningAgent {
   constructor() {

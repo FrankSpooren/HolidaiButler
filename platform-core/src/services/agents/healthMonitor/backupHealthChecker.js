@@ -27,11 +27,7 @@ const backupHealthCheckSchema = new mongoose.Schema({
 }, { collection: 'backup_health_checks' });
 
 let BackupHealthCheck;
-try {
-  BackupHealthCheck = mongoose.model('BackupHealthCheck');
-} catch {
-  BackupHealthCheck = mongoose.model('BackupHealthCheck', backupHealthCheckSchema);
-}
+BackupHealthCheck = mongoose.models.BackupHealthCheck || mongoose.model('BackupHealthCheck', backupHealthCheckSchema);
 
 class BackupHealthChecker {
   /**
@@ -117,7 +113,7 @@ class BackupHealthChecker {
           newestMtime = stat.mtimeMs;
           newestFile = { name: file, stat };
         }
-      } catch {
+      } catch (err) {
         // Skip files we can't stat
       }
     }
@@ -192,9 +188,7 @@ class BackupHealthChecker {
       if (backupMatch) {
         result.backup_dir_mb = parseInt(backupMatch[1], 10);
       }
-    } catch {
-      result.backup_dir_mb = -1;
-    }
+    } catch (err) { console.debug('[backupHealthChecker.js]', err.message); result.backup_dir_mb = -1; }
 
     try {
       // Images directory size
@@ -203,9 +197,7 @@ class BackupHealthChecker {
       if (imagesMatch) {
         result.images_dir_mb = parseInt(imagesMatch[1], 10);
       }
-    } catch {
-      result.images_dir_mb = -1;
-    }
+    } catch (err) { console.debug('[backupHealthChecker.js]', err.message); result.images_dir_mb = -1; }
 
     console.log(`[De Dokter] Disk: ${result.root_pct}% used, backups=${result.backup_dir_mb}MB, images=${result.images_dir_mb}MB`);
     return result;
@@ -285,9 +277,10 @@ class BackupHealthChecker {
   async getLatestCheck() {
     try {
       return await BackupHealthCheck.findOne().sort({ timestamp: -1 }).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[backupHealthChecker.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 }
 
