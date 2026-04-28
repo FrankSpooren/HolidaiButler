@@ -22,7 +22,238 @@ export function startWorkers() {
     console.log("[Orchestrator] Processing scheduled job: " + job.name);
 
     // Log job start
-    await logAgent("orchestrator", "job_started_" + job.name, {
+      const JOB_ACTOR_MAP = {
+        // De Corrector (Code)
+        'dev-quality-report': 'code-reviewer',
+        'dev-project-audit': 'dev-layer',
+
+        // De Gastheer (Communication Flow)
+        'comm-cleanup': 'communication-flow',
+        'comm-journey-processor': 'communication-flow',
+        'comm-user-sync': 'communication-flow',
+        'intermediary-reminder': 'communication-flow',
+        'intermediary-review-request': 'communication-flow',
+        'reservation-reminder-1h': 'communication-flow',
+        'reservation-reminder-24h': 'communication-flow',
+        'session-cleanup': 'communication-flow',
+
+        // De Koerier (Data Sync)
+        'content-freshness-check': 'data-sync',
+        'content-quality-audit': 'data-sync',
+        'content-recycle-suggestions': 'data-sync',
+        'poi-deactivation-check': 'data-sync',
+        'poi-sync-tier1': 'data-sync',
+        'poi-sync-tier2': 'data-sync',
+        'poi-sync-tier3': 'data-sync',
+        'poi-sync-tier4': 'data-sync',
+        'qa-sync-tier12': 'data-sync',
+        'qa-sync-tier34': 'data-sync',
+        'review-retention': 'data-sync',
+        'review-sync-tier12': 'data-sync',
+        'review-sync-tier34': 'data-sync',
+
+        // De Kassier (Financial Monitor)
+        'financial-monitor': 'financial-monitor',
+        'media-revenue-attribution': 'financial-monitor',
+
+        // De Poortwachter (GDPR)
+        'gdpr-consent-audit': 'gdpr',
+        'gdpr-export-cleanup': 'gdpr',
+        'gdpr-overdue-check': 'gdpr',
+        'gdpr-retention-check': 'gdpr',
+        'guest-data-retention-cleanup': 'gdpr',
+        'intermediary-guest-anonymize': 'gdpr',
+        'media-consent-expiry-check': 'gdpr',
+
+        // De Dokter (Health Monitor)
+        'backup-recency-check': 'health-monitor',
+        'health-check': 'health-monitor',
+        'health-report-daily': 'health-monitor',
+        'health-report-weekly': 'health-monitor',
+        'smoke-test': 'health-monitor',
+
+        // Het Geheugen (HoliBot Sync)
+        'chromadb-state-snapshot': 'holibot-sync',
+        'content-holibot-insights': 'holibot-sync',
+        'holibot-cleanup': 'holibot-sync',
+        'holibot-full-reindex': 'holibot-sync',
+        'holibot-poi-sync': 'holibot-sync',
+        'holibot-qa-sync': 'holibot-sync',
+
+        // De Makelaar (Intermediary Monitor)
+        'intermediary-monitor': 'intermediary-monitor',
+
+        // De Magazijnier (Inventory Sync)
+        'inventory-sync': 'inventory-sync',
+
+        // De Maestro (Orchestrator)
+        'cache-warmup': 'orchestrator',
+        'financial-auto-settlement': 'orchestrator',
+        'financial-unsettled-alert': 'orchestrator',
+        'release-expired-ticket-reservations': 'orchestrator',
+        'reservation-expired-cleanup': 'orchestrator',
+        'seasonal-check': 'orchestrator',
+
+        // De Bode (Owner Interface)
+        'content-weekly-report': 'owner-interface',
+        'daily-briefing': 'owner-interface',
+        'weekly-cost-report': 'owner-interface',
+
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performance-wachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
+
+        // De Verfrisser (Content Freshness)
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performanceWachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
+        'content-freshness-audit': 'verfrisser',
+
+        // De Boekhouder (Cost Optimization)
+        'cost-optimization-report': 'boekhouder',
+
+        // De Reisleider (Customer Journey)
+        'journey-analysis': 'reisleider',
+
+        // De Verkenner (POI Discovery)
+        'poi-discovery-annual': 'poi-discovery',
+        'poi-discovery-quarterly': 'poi-discovery',
+
+        // De Uitgever (Publisher)
+        'content-analytics-collect': 'publisher',
+        'content-publish-retry': 'publisher',
+        'content-publish-scheduled': 'publisher',
+
+        // De Redacteur
+        'content-readiness-analyzer': 'redacteur',
+
+        // De Bewaker (Security)
+        'dev-security-scan': 'security-reviewer',
+
+        // De SEO Meester
+        'content-score-calibration': 'seo-meester',
+        'content-seo-audit': 'seo-meester',
+
+        // Strategy Layer (shared)
+        'agent-success-rate': 'strategy-layer',
+        'cost-check': 'strategy-layer',
+        'strategy-assessment': 'strategy-layer',
+        'strategy-config-eval': 'strategy-layer',
+        'strategy-learning': 'strategy-layer',
+        'strategy-prediction': 'strategy-layer',
+
+        // De Promotor (Tier Promotion)
+        'poi-tier-recalc': 'tier-promotion',
+        'tier-promotion': 'tier-promotion',
+
+        // De Trendspotter
+        'content-feedback-loop': 'trendspotter',
+        'content-gap-detector': 'trendspotter',
+        'content-sources-health-check': 'trendspotter',
+        'content-top25-refresh': 'trendspotter',
+        'content-trending-scan': 'trendspotter',
+        'content-website-traffic': 'trendspotter',
+        'google-images-discovery': 'trendspotter',
+        'gsc-query-sync': 'trendspotter',
+        'media-performance-aggregator': 'trendspotter',
+        'reddit-trend-discovery': 'trendspotter',
+        'trending-visual-analysis': 'trendspotter',
+        'trending-visual-cleanup': 'trendspotter',
+        'trending-visual-discovery': 'trendspotter',
+
+        // De Stylist (UX/UI)
+        'dev-dependency-audit': 'ux-ui-reviewer',
+      };
+
+      // Fase B4: JOB_AGENT_MAP — maps job name to unique agent KEY (id)
+      // Unlike JOB_ACTOR_MAP (shared actorNames), these are 1:1 unique per agent
+      const JOB_AGENT_MAP = {
+        // Core
+        'seasonal-check': 'maestro', 'cache-warmup': 'maestro',
+        'daily-briefing': 'bode', 'weekly-cost-report': 'bode', 'content-weekly-report': 'bode',
+        // Operations
+        'health-check': 'dokter', 'health-report-daily': 'dokter', 'health-report-weekly': 'dokter',
+        'smoke-test': 'smokeTest', 'backup-recency-check': 'backupHealth',
+        'content-quality-audit': 'koerier', 'content-freshness-check': 'koerier',
+        'content-recycle-suggestions': 'koerier',
+        'poi-sync-tier1': 'koerier', 'poi-sync-tier2': 'koerier',
+        'poi-sync-tier3': 'koerier', 'poi-sync-tier4': 'koerier',
+        'qa-sync-tier12': 'koerier', 'qa-sync-tier34': 'koerier',
+        'review-sync-tier12': 'koerier', 'review-sync-tier34': 'koerier',
+        'review-retention': 'koerier', 'poi-deactivation-check': 'koerier',
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performanceWachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
+        'content-freshness-audit': 'verfrisser',
+        'cost-optimization-report': 'boekhouder',
+        'journey-analysis': 'reisleider',
+        'poi-discovery-annual': 'verkenner', 'poi-discovery-quarterly': 'verkenner',
+        'tier-promotion': 'tier-promotor', 'poi-tier-recalc': 'tier-promotor',
+        'chromadb-state-snapshot': 'geheugen', 'holibot-poi-sync': 'geheugen',
+        'holibot-qa-sync': 'geheugen', 'holibot-full-reindex': 'geheugen',
+        'holibot-cleanup': 'geheugen', 'content-holibot-insights': 'geheugen',
+        'session-cleanup': 'gastheer', 'comm-cleanup': 'gastheer',
+        'comm-journey-processor': 'gastheer', 'comm-user-sync': 'gastheer',
+        'reservation-reminder-24h': 'gastheer', 'reservation-reminder-1h': 'gastheer',
+        'intermediary-reminder': 'gastheer', 'intermediary-review-request': 'gastheer',
+        'media-consent-expiry-check': 'poortwachter', 'gdpr-consent-audit': 'poortwachter',
+        'gdpr-retention-check': 'poortwachter', 'guest-data-retention-cleanup': 'poortwachter',
+        'intermediary-guest-anonymize': 'poortwachter',
+        'gdpr-export-cleanup': 'poortwachter', 'gdpr-overdue-check': 'poortwachter',
+        // Development
+        'dev-security-scan': 'bewaker',
+        'dev-quality-report': 'corrector',
+        'dev-project-audit': 'inspecteur',
+        'dev-dependency-audit': 'stylist',
+        // Strategy
+        'agent-success-rate': 'weermeester',
+        'strategy-assessment': 'architect', 'strategy-learning': 'leermeester',
+        'strategy-prediction': 'weermeester', 'strategy-config-eval': 'thermostaat',
+        'cost-check': 'weermeester',
+        // Commerce
+        'intermediary-monitor': 'makelaar',
+        'financial-monitor': 'kassier', 'media-revenue-attribution': 'kassier',
+        'inventory-sync': 'magazijnier',
+        'release-expired-ticket-reservations': 'maestro',
+        'reservation-expired-cleanup': 'maestro',
+        'financial-auto-settlement': 'kassier',
+        'financial-unsettled-alert': 'kassier',
+        // Content
+        'content-trending-scan': 'trendspotter', 'content-website-traffic': 'trendspotter',
+        'content-feedback-loop': 'trendspotter', 'gsc-query-sync': 'trendspotter',
+        'trending-visual-discovery': 'trendspotter', 'trending-visual-analysis': 'trendspotter',
+        'trending-visual-cleanup': 'trendspotter', 'reddit-trend-discovery': 'trendspotter',
+        'google-images-discovery': 'trendspotter', 'content-top25-refresh': 'trendspotter',
+        'content-sources-health-check': 'trendspotter',
+        'content-gap-detector': 'trendspotter', 'media-performance-aggregator': 'trendspotter',
+        'content-readiness-analyzer': 'redacteur',
+        'content-seo-audit': 'seoMeester', 'content-score-calibration': 'seoMeester',
+        'content-publish-scheduled': 'uitgever', 'content-analytics-collect': 'uitgever',
+        'content-publish-retry': 'uitgever',
+      };
+      const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
+      const agentId = JOB_AGENT_MAP[job.name] || 'maestro';
+
+    await logAgent(actorName, "job_started_" + job.name, {
+      agentId,
       description: "Started job: " + job.name,
       metadata: job.data,
       status: "initiated"
@@ -154,7 +385,6 @@ export function startWorkers() {
           }
         }
 
-
         case "poi-discovery-auto":
         case "poi-discovery-quarterly":
         case "poi-discovery-annual": {
@@ -184,7 +414,6 @@ export function startWorkers() {
             throw error;
           }
         }
-
 
         case "poi-discovery-manual":
           try {
@@ -1330,7 +1559,6 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           }
           break;
 
-
         case "content-holibot-insights":
           try {
             const holibotInsightsService = (await import("../services/visual/holibotInsightsService.js")).default;
@@ -1372,7 +1600,6 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
             result = { type: "gsc-query-sync", status: "error", error: error.message };
           }
           break;
-
 
         case "trending-visual-discovery":
           try {
@@ -1459,7 +1686,6 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           }
           break;
 
-
         case "content-top25-refresh":
           try {
             const top25Svc = (await import("../services/visual/contentTop25Service.js")).default;
@@ -1525,7 +1751,6 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           break;
         }
 
-
         case 'content-readiness-analyzer': {
           const { getReadinessReport, storeReport } = await import('../media/contentReadinessService.js');
           const rdDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
@@ -1537,7 +1762,6 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           result = { type: 'content-readiness-analyzer', destinations: rdDests.length };
           break;
         }
-
 
         case 'content-gap-detector': {
           const gapDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
@@ -1562,242 +1786,13 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
           break;
         }
 
-
         default:
           console.log("[Orchestrator] Unknown job type: " + job.name);
           result = { type: job.name, status: "unknown" };
       }
 
       // Map job names to their owning agent for accurate status tracking
-      const JOB_ACTOR_MAP = {
-        // De Corrector (Code)
-        'dev-quality-report': 'code-reviewer',
-        'dev-project-audit': 'dev-layer',
 
-        // De Gastheer (Communication Flow)
-        'comm-cleanup': 'communication-flow',
-        'comm-journey-processor': 'communication-flow',
-        'comm-user-sync': 'communication-flow',
-        'intermediary-reminder': 'communication-flow',
-        'intermediary-review-request': 'communication-flow',
-        'reservation-reminder-1h': 'communication-flow',
-        'reservation-reminder-24h': 'communication-flow',
-        'session-cleanup': 'communication-flow',
-
-        // De Koerier (Data Sync)
-        'content-freshness-check': 'data-sync',
-        'content-quality-audit': 'data-sync',
-        'content-recycle-suggestions': 'data-sync',
-        'poi-deactivation-check': 'data-sync',
-        'poi-sync-tier1': 'data-sync',
-        'poi-sync-tier2': 'data-sync',
-        'poi-sync-tier3': 'data-sync',
-        'poi-sync-tier4': 'data-sync',
-        'qa-sync-tier12': 'data-sync',
-        'qa-sync-tier34': 'data-sync',
-        'review-retention': 'data-sync',
-        'review-sync-tier12': 'data-sync',
-        'review-sync-tier34': 'data-sync',
-
-        // De Kassier (Financial Monitor)
-        'financial-monitor': 'financial-monitor',
-        'media-revenue-attribution': 'financial-monitor',
-
-        // De Poortwachter (GDPR)
-        'gdpr-consent-audit': 'gdpr',
-        'gdpr-export-cleanup': 'gdpr',
-        'gdpr-overdue-check': 'gdpr',
-        'gdpr-retention-check': 'gdpr',
-        'guest-data-retention-cleanup': 'gdpr',
-        'intermediary-guest-anonymize': 'gdpr',
-        'media-consent-expiry-check': 'gdpr',
-
-        // De Dokter (Health Monitor)
-        'backup-recency-check': 'health-monitor',
-        'health-check': 'health-monitor',
-        'health-report-daily': 'health-monitor',
-        'health-report-weekly': 'health-monitor',
-        'smoke-test': 'health-monitor',
-
-        // Het Geheugen (HoliBot Sync)
-        'chromadb-state-snapshot': 'holibot-sync',
-        'content-holibot-insights': 'holibot-sync',
-        'holibot-cleanup': 'holibot-sync',
-        'holibot-full-reindex': 'holibot-sync',
-        'holibot-poi-sync': 'holibot-sync',
-        'holibot-qa-sync': 'holibot-sync',
-
-        // De Makelaar (Intermediary Monitor)
-        'intermediary-monitor': 'intermediary-monitor',
-
-        // De Magazijnier (Inventory Sync)
-        'inventory-sync': 'inventory-sync',
-
-        // De Maestro (Orchestrator)
-        'cache-warmup': 'orchestrator',
-        'financial-auto-settlement': 'orchestrator',
-        'financial-unsettled-alert': 'orchestrator',
-        'release-expired-ticket-reservations': 'orchestrator',
-        'reservation-expired-cleanup': 'orchestrator',
-        'seasonal-check': 'orchestrator',
-
-        // De Bode (Owner Interface)
-        'content-weekly-report': 'owner-interface',
-        'daily-briefing': 'owner-interface',
-        'weekly-cost-report': 'owner-interface',
-
-        'translation-quality-check': 'vertaler',
-        'image-keyword-enrichment': 'beeldenmaker',
-        'personalization-stats': 'personaliseerder',
-        'performance-watch': 'performance-wachter',
-        'anomaly-detection': 'anomaliedetective',
-        'eu-ai-act-audit': 'auditeur',
-        'content-optimization': 'optimaliseerder',
-        'tenant-health-check': 'onthaler',
-        'escalation-monitor': 'helpdeskmeester',
-
-        // De Verfrisser (Content Freshness)
-        'translation-quality-check': 'vertaler',
-        'image-keyword-enrichment': 'beeldenmaker',
-        'personalization-stats': 'personaliseerder',
-        'performance-watch': 'performanceWachter',
-        'anomaly-detection': 'anomaliedetective',
-        'eu-ai-act-audit': 'auditeur',
-        'content-optimization': 'optimaliseerder',
-        'tenant-health-check': 'onthaler',
-        'escalation-monitor': 'helpdeskmeester',
-        'content-freshness-audit': 'verfrisser',
-
-        // De Boekhouder (Cost Optimization)
-        'cost-optimization-report': 'boekhouder',
-
-        // De Reisleider (Customer Journey)
-        'journey-analysis': 'reisleider',
-
-        // De Verkenner (POI Discovery)
-        'poi-discovery-annual': 'poi-discovery',
-        'poi-discovery-quarterly': 'poi-discovery',
-
-        // De Uitgever (Publisher)
-        'content-analytics-collect': 'publisher',
-        'content-publish-retry': 'publisher',
-        'content-publish-scheduled': 'publisher',
-
-        // De Redacteur
-        'content-readiness-analyzer': 'redacteur',
-
-        // De Bewaker (Security)
-        'dev-security-scan': 'security-reviewer',
-
-        // De SEO Meester
-        'content-score-calibration': 'seo-meester',
-        'content-seo-audit': 'seo-meester',
-
-        // Strategy Layer (shared)
-        'agent-success-rate': 'strategy-layer',
-        'cost-check': 'strategy-layer',
-        'strategy-assessment': 'strategy-layer',
-        'strategy-config-eval': 'strategy-layer',
-        'strategy-learning': 'strategy-layer',
-        'strategy-prediction': 'strategy-layer',
-
-        // De Promotor (Tier Promotion)
-        'poi-tier-recalc': 'tier-promotion',
-        'tier-promotion': 'tier-promotion',
-
-        // De Trendspotter
-        'content-feedback-loop': 'trendspotter',
-        'content-gap-detector': 'trendspotter',
-        'content-sources-health-check': 'trendspotter',
-        'content-top25-refresh': 'trendspotter',
-        'content-trending-scan': 'trendspotter',
-        'content-website-traffic': 'trendspotter',
-        'google-images-discovery': 'trendspotter',
-        'gsc-query-sync': 'trendspotter',
-        'media-performance-aggregator': 'trendspotter',
-        'reddit-trend-discovery': 'trendspotter',
-        'trending-visual-analysis': 'trendspotter',
-        'trending-visual-cleanup': 'trendspotter',
-        'trending-visual-discovery': 'trendspotter',
-
-        // De Stylist (UX/UI)
-        'dev-dependency-audit': 'ux-ui-reviewer',
-      };
-
-      // Fase B4: JOB_AGENT_MAP — maps job name to unique agent KEY (id)
-      // Unlike JOB_ACTOR_MAP (shared actorNames), these are 1:1 unique per agent
-      const JOB_AGENT_MAP = {
-        // Core
-        'seasonal-check': 'maestro', 'cache-warmup': 'maestro',
-        'daily-briefing': 'bode', 'weekly-cost-report': 'bode', 'content-weekly-report': 'bode',
-        // Operations
-        'health-check': 'dokter', 'health-report-daily': 'dokter', 'health-report-weekly': 'dokter',
-        'smoke-test': 'smokeTest', 'backup-recency-check': 'backupHealth',
-        'content-quality-audit': 'koerier', 'content-freshness-check': 'koerier',
-        'content-recycle-suggestions': 'koerier',
-        'poi-sync-tier1': 'koerier', 'poi-sync-tier2': 'koerier',
-        'poi-sync-tier3': 'koerier', 'poi-sync-tier4': 'koerier',
-        'qa-sync-tier12': 'koerier', 'qa-sync-tier34': 'koerier',
-        'review-sync-tier12': 'koerier', 'review-sync-tier34': 'koerier',
-        'review-retention': 'koerier', 'poi-deactivation-check': 'koerier',
-        'translation-quality-check': 'vertaler',
-        'image-keyword-enrichment': 'beeldenmaker',
-        'personalization-stats': 'personaliseerder',
-        'performance-watch': 'performanceWachter',
-        'anomaly-detection': 'anomaliedetective',
-        'eu-ai-act-audit': 'auditeur',
-        'content-optimization': 'optimaliseerder',
-        'tenant-health-check': 'onthaler',
-        'escalation-monitor': 'helpdeskmeester',
-        'content-freshness-audit': 'verfrisser',
-        'cost-optimization-report': 'boekhouder',
-        'journey-analysis': 'reisleider',
-        'poi-discovery-annual': 'verkenner', 'poi-discovery-quarterly': 'verkenner',
-        'tier-promotion': 'tier-promotor', 'poi-tier-recalc': 'tier-promotor',
-        'chromadb-state-snapshot': 'geheugen', 'holibot-poi-sync': 'geheugen',
-        'holibot-qa-sync': 'geheugen', 'holibot-full-reindex': 'geheugen',
-        'holibot-cleanup': 'geheugen', 'content-holibot-insights': 'geheugen',
-        'session-cleanup': 'gastheer', 'comm-cleanup': 'gastheer',
-        'comm-journey-processor': 'gastheer', 'comm-user-sync': 'gastheer',
-        'reservation-reminder-24h': 'gastheer', 'reservation-reminder-1h': 'gastheer',
-        'intermediary-reminder': 'gastheer', 'intermediary-review-request': 'gastheer',
-        'media-consent-expiry-check': 'poortwachter', 'gdpr-consent-audit': 'poortwachter',
-        'gdpr-retention-check': 'poortwachter', 'guest-data-retention-cleanup': 'poortwachter',
-        'intermediary-guest-anonymize': 'poortwachter',
-        'gdpr-export-cleanup': 'poortwachter', 'gdpr-overdue-check': 'poortwachter',
-        // Development
-        'dev-security-scan': 'bewaker',
-        'dev-quality-report': 'corrector',
-        'dev-project-audit': 'inspecteur',
-        'dev-dependency-audit': 'stylist',
-        // Strategy
-        'agent-success-rate': 'weermeester',
-        'strategy-assessment': 'architect', 'strategy-learning': 'leermeester',
-        'strategy-prediction': 'weermeester', 'strategy-config-eval': 'thermostaat',
-        'cost-check': 'weermeester',
-        // Commerce
-        'intermediary-monitor': 'makelaar',
-        'financial-monitor': 'kassier', 'media-revenue-attribution': 'kassier',
-        'inventory-sync': 'magazijnier',
-        'release-expired-ticket-reservations': 'maestro',
-        'reservation-expired-cleanup': 'maestro',
-        'financial-auto-settlement': 'kassier',
-        'financial-unsettled-alert': 'kassier',
-        // Content
-        'content-trending-scan': 'trendspotter', 'content-website-traffic': 'trendspotter',
-        'content-feedback-loop': 'trendspotter', 'gsc-query-sync': 'trendspotter',
-        'trending-visual-discovery': 'trendspotter', 'trending-visual-analysis': 'trendspotter',
-        'trending-visual-cleanup': 'trendspotter', 'reddit-trend-discovery': 'trendspotter',
-        'google-images-discovery': 'trendspotter', 'content-top25-refresh': 'trendspotter',
-        'content-sources-health-check': 'trendspotter',
-        'content-gap-detector': 'trendspotter', 'media-performance-aggregator': 'trendspotter',
-        'content-readiness-analyzer': 'redacteur',
-        'content-seo-audit': 'seoMeester', 'content-score-calibration': 'seoMeester',
-        'content-publish-scheduled': 'uitgever', 'content-analytics-collect': 'uitgever',
-        'content-publish-retry': 'uitgever',
-      };
-      const actorName = JOB_ACTOR_MAP[job.name] || 'orchestrator';
-      const agentId = JOB_AGENT_MAP[job.name] || 'maestro';
       await logAgent(actorName, "job_completed_" + job.name, {
         agentId,
         description: "Completed job: " + job.name,
@@ -1808,7 +1803,8 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
       return { success: true, processedAt: new Date().toISOString(), result };
 
     } catch (error) {
-      await logError("orchestrator", error, {
+      await logError(actorName, error, {
+        agentId,
         job: job.name,
         data: job.data,
         duration: Date.now() - startTime
