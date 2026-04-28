@@ -7,7 +7,7 @@ import { translateWithDeepL, isConfigured as deeplConfigured } from '../contentR
 import mongoose from 'mongoose';
 import costTracker from '../../orchestrator/costController/costTracker.js';
 
-const LANGS = ['nl', 'de', 'es'];
+// Talen worden dynamisch opgehaald per destination (supported_languages)
 const SAMPLE_SIZE = 30;
 const SIMILARITY_THRESHOLD = 0.75;
 
@@ -42,6 +42,16 @@ class VertalerAgent extends BaseAgent {
     const startTime = Date.now();
     const result = { destination_id: destinationId, checked: 0, flagged: 0, backtranslated: 0, scores: [], coverage: {}, issues: [] };
     const useDeepL = deeplConfigured();
+
+    // Dynamische talen per destination (supported_languages uit DB)
+    const [destRow] = await mysqlSequelize.query(
+      'SELECT supported_languages FROM destinations WHERE id = :destId',
+      { replacements: { destId: destinationId }, type: QueryTypes.SELECT }
+    );
+    let supportedLangs;
+    try { supportedLangs = JSON.parse(destRow?.supported_languages || '[]'); } catch { supportedLangs = ['nl', 'en', 'de', 'es']; }
+    // Filter: alleen niet-EN talen controleren (EN = base content)
+    const LANGS = supportedLangs.filter(l => l !== 'en' && ['nl', 'de', 'es', 'fr', 'sv', 'pl'].includes(l));
 
     // 1. Coverage per taal
     for (const lang of LANGS) {

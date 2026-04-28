@@ -55,6 +55,32 @@ class ReisleiderAgent extends BaseAgent {
       LIMIT 10
     `, { replacements: { destId: destinationId }, type: QueryTypes.SELECT });
 
+    // 4. Simple Analytics data (website traffic)
+    let saData = { pageviews: 0, visitors: 0, top_pages: [] };
+    try {
+      const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
+      const domains = { 1: 'holidaibutler.com', 2: 'texelmaps.nl' };
+      const domain = domains[destinationId];
+      if (domain) {
+        const end = new Date().toISOString().substring(0, 10);
+        const start = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().substring(0, 10);
+        const saRes = await fetch(
+          `https://simpleanalytics.com/${domain}.json?version=6&fields=pageviews,visitors,pages&start=${start}&end=${end}`,
+          { headers: { 'Api-Key': SA_API_KEY }, signal: AbortSignal.timeout(10000) }
+        );
+        if (saRes.ok) {
+          const saJson = await saRes.json();
+          saData = {
+            pageviews: saJson.pageviews || 0,
+            visitors: saJson.visitors || 0,
+            top_pages: (saJson.pages || []).slice(0, 5).map(p => ({ path: p.value, views: p.pageviews }))
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[reisleider] Simple Analytics failed:', err.message);
+    }
+
     const result = {
       destination_id: destinationId,
       period: '7d',
@@ -73,7 +99,8 @@ class ReisleiderAgent extends BaseAgent {
         engagement_rate: chatStats[0]?.total_sessions > 0
           ? Math.round(chatStats[0].engaged_sessions / chatStats[0].total_sessions * 100) : 0
       },
-      top_pages: pageviews
+      top_pages: pageviews,
+      simple_analytics: saData
     };
 
     // Issues
@@ -96,7 +123,7 @@ class ReisleiderAgent extends BaseAgent {
     // Log
     await logAgent('reisleider', 'journey_analysis', {
       agentId: 'reisleider',
-      description: `Journey: ${result.journeys.length} types, chatbot ${result.chatbot.total_sessions} sessions (${result.chatbot.engagement_rate}% engaged)`,
+      description: `Journey: ${result.journeys.length} types, chatbot ${result.chatbot.total_sessions} sessions (${result.chatbot.engagement_rate}% engaged), SA ${saData.pageviews} pageviews ${saData.visitors} visitors`,
       status: 'completed',
       metadata: result
     });

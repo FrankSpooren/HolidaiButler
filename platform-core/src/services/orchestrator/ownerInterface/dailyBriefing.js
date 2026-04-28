@@ -399,6 +399,109 @@ async function generateDailyBriefing() {
     console.log('[De Bode] Inventory sync data unavailable:', error.message);
   }
 
+  // === Fase 6: Nieuwe Agent Signalen ===
+  let newAgentInsights = [];
+  try {
+    if (mongoose.connection.readyState === 1) {
+      const db = mongoose.connection.db;
+      const since24h = new Date(Date.now() - 24 * 3600 * 1000);
+
+      // Vertaler: translation coverage
+      const vertaler = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'vertaler', action: 'translation_quality_check', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (vertaler?.metadata) {
+        const cov = vertaler.metadata.coverage || {};
+        const covStr = Object.entries(cov).map(([l, v]) => `${l.toUpperCase()}:${v.percent}%`).join(' ');
+        newAgentInsights.push(`[Vertaler] Coverage: ${covStr}, flagged: ${vertaler.metadata.flagged || 0}`);
+      }
+
+      // Boekhouder: cost report
+      const boekhouder = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'boekhouder', action: 'cost_report', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (boekhouder?.metadata) {
+        const m = boekhouder.metadata;
+        newAgentInsights.push(`[Boekhouder] Spent: EUR${(m.totalSpent || 0).toFixed(2)}, projected: EUR${(m.projectedTotal || 0).toFixed(2)}, ${(m.issues || []).length} alerts`);
+      }
+
+      // Anomaliedetective
+      const anomalie = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'anomaliedetective', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (anomalie?.metadata?.anomalies_detected > 0) {
+        newAgentInsights.push(`[Anomaliedetective] ${anomalie.metadata.anomalies_detected} anomalie(en) gedetecteerd`);
+      }
+
+      // Performance Wachter
+      const perf = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'performance-wachter', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (perf?.metadata) {
+        const m = perf.metadata;
+        const downList = (m.endpoints || []).filter(e => !e.ok).map(e => e.name);
+        if (downList.length > 0) {
+          newAgentInsights.push(`[Performance Wachter] DOWN: ${downList.join(', ')}`);
+        } else {
+          newAgentInsights.push(`[Performance Wachter] All ${(m.endpoints || []).length} endpoints UP, avg TTFB ${m.avg_ttfb}ms [${m.trend?.direction || '?'}]`);
+        }
+      }
+
+      // Auditeur: EU AI Act
+      const auditeur = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'auditeur', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (auditeur?.metadata) {
+        newAgentInsights.push(`[Auditeur] EU AI Act: ${auditeur.metadata.compliance_score}, ${auditeur.metadata.ai_decisions || 0} AI decisions`);
+      }
+
+      // Helpdeskmeester
+      const helpdesk = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'helpdeskmeester', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (helpdesk?.metadata) {
+        const m = helpdesk.metadata;
+        if (m.open_tickets > 0) {
+          newAgentInsights.push(`[Helpdeskmeester] ${m.open_tickets} open tickets, resolution ${m.resolution_rate}%`);
+        }
+      }
+
+      // Reisleider
+      const reisleider = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'reisleider', timestamp: { $gte: since24h } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (reisleider?.metadata?.simple_analytics) {
+        const sa = reisleider.metadata.simple_analytics;
+        newAgentInsights.push(`[Reisleider] SA: ${sa.pageviews} pageviews, ${sa.visitors} visitors (7d)`);
+      }
+
+      // Verfrisser
+      const verfrisser = await db.collection('audit_logs').findOne(
+        { 'actor.name': 'verfrisser', timestamp: { $gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } },
+        { sort: { timestamp: -1 }, projection: { metadata: 1 } }
+      );
+      if (verfrisser?.metadata) {
+        newAgentInsights.push(`[Verfrisser] ${verfrisser.metadata.stale_apify || 0} stale POIs (${verfrisser.metadata.stale_percent || 0}%)`);
+      }
+
+      // Open agent_issues count
+      const openIssues = await db.collection('agent_issues').countDocuments({ status: { $in: ['open', 'acknowledged'] } });
+      if (openIssues > 0) {
+        newAgentInsights.push(`[Issues] ${openIssues} open agent issues`);
+      }
+    }
+  } catch (err) {
+    console.log('[De Bode] New agent insights unavailable:', err.message);
+  }
+  const newAgentSummary = newAgentInsights.length > 0 ? newAgentInsights.join(' | ') : 'Geen signalen';
+
   // Build fields for MailerLite template
   // Section ordering (Fase 8B): alerts → smoke → backups → destinations → content → predictions → agents → budget → commerce monitoring
   const fields = {
@@ -440,7 +543,9 @@ async function generateDailyBriefing() {
     // Fase IV-D: Commerce Monitoring
     intermediary_monitor_summary: intermediaryMonitorSummary,
     financial_monitor_summary: financialMonitorSummary,
-    inventory_sync_summary: inventorySyncSummary
+    inventory_sync_summary: inventorySyncSummary,
+    // Fase 6: Nieuwe agent signalen
+    new_agent_insights: newAgentSummary
   };
 
   return {
@@ -458,6 +563,7 @@ async function generateDailyBriefing() {
       backups: backupSummary,
       contentQuality: contentQualitySummary,
       devInsights: devInsightsSummary,
+      newAgentInsights: newAgentSummary,
       threemaStatus,
       intermediaryMonitor: intermediaryMonitorSummary,
       financialMonitor: financialMonitorSummary,
@@ -479,7 +585,9 @@ async function sendDailyBriefing() {
 
   // Severity prefix based on error/alert count
   let prefix;
-  if (hasCriticalAgents || totalIssues >= 6) {
+  // Include new agent anomalies in severity
+  const hasNewAgentAlerts = newAgentInsights.some(i => i.includes('DOWN') || i.includes('anomalie'));
+  if (hasCriticalAgents || totalIssues >= 6 || hasNewAgentAlerts) {
     prefix = '[URGENT]';
   } else if (totalIssues >= 3) {
     prefix = '[HOOG]';

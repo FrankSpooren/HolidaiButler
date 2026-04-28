@@ -1491,7 +1491,7 @@ const AGENT_METADATA = [
   { id: 'maestro', name: 'De Maestro', englishName: 'Orchestrator', category: 'core', type: 'A',
     description: 'Orkestreert alle agents en scheduled jobs',
     description_en: 'Orchestrates all agents and scheduled jobs',
-    tasks: ['Aansturing en coördinatie van alle 18 agents', 'Beheer van 40 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
+    tasks: ['Aansturing en coördinatie van alle 39 agents', 'Beheer van 94 scheduled jobs via BullMQ', 'Foutafhandeling en retry-logica bij gefaalde jobs', 'Prioritering van taken bij hoge systeembelasting'],
     monitoring_scope: 'Alle agents, BullMQ queues, job statussen',
     output_description: 'Job scheduling, error logging, agent lifecycle management',
     schedule: null, actorNames: ['orchestrator'],

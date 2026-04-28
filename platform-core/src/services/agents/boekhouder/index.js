@@ -26,8 +26,8 @@ class BoekhouderAgent extends BaseAgent {
     const costs = await db.collection('cost_logs').aggregate([
       { $match: { timestamp: { $gte: monthStart } } },
       { $group: {
-        _id: '$provider',
-        totalSpent: { $sum: '$amount' },
+        _id: '$service',
+        totalSpent: { $sum: { $ifNull: ['$amount', 0] } },
         totalTokens: { $sum: '$tokens' },
         callCount: { $sum: 1 }
       }},
@@ -35,8 +35,20 @@ class BoekhouderAgent extends BaseAgent {
     ]).toArray();
 
     // Budgetten per provider (maandelijks)
+    // Actuele maandbudgetten (bijgewerkt april 2026)
     const BUDGETS = {
-      mistral: 50, deepl: 10, apify: 30, chromadb: 5, mailerlite: 15
+      mistral: 20,          // Mistral AI content generatie
+      deepl: 30,            // DeepL vertalingen
+      apify: 85,            // Apify scraping (starterplan)
+      claude: 110,          // Claude Max plan
+      anthropic: 30,        // Anthropic extra tokens
+      mailerlite: 15,       // MailerLite email
+      hetzner: 15,          // Hetzner server (vast)
+      perplexity: 25,       // Perplexity AI
+      simpleanalytics: 20,  // Simple Analytics (vast)
+      unsplash: 15,         // Unsplash images
+      ovh: 25,              // OVH domeinnamen (vast)
+      meta: 80,             // Meta campagnes FB/Insta
     };
 
     const report = {
@@ -51,7 +63,7 @@ class BoekhouderAgent extends BaseAgent {
     };
 
     for (const cost of costs) {
-      const provider = cost._id || 'unknown';
+      const provider = cost._id || 'untracked';
       const budget = BUDGETS[provider] || 100;
       const dailyRate = cost.totalSpent / Math.max(dayOfMonth, 1);
       const projected = dailyRate * daysInMonth;

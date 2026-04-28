@@ -35,7 +35,17 @@ class PersonaliseerderAgent extends BaseAgent {
       .update((sessionId || 'anon') + (process.env.SESSION_SALT || 'hb-salt'))
       .digest('hex').substring(0, 32);
 
-    const enriched = this._enrichContext(context);
+    const enriched = await this._enrichContext(context);
+
+    // Load brand profile for destination-aware scoring
+    const [destConfig] = await mysqlSequelize.query(
+      'SELECT brand_profile, supported_languages FROM destinations WHERE id = :destId',
+      { replacements: { destId: destinationId }, type: QueryTypes.SELECT }
+    );
+    let brandProfile = {};
+    try { brandProfile = JSON.parse(destConfig?.brand_profile || '{}'); } catch { brandProfile = {}; }
+    const brandCategories = (brandProfile.focus_categories || []).map(c => c.toLowerCase());
+    const brandTone = brandProfile.tone_of_voice || {};
 
     // Top 50 candidates
     const candidates = await mysqlSequelize.query(`
@@ -52,7 +62,9 @@ class PersonaliseerderAgent extends BaseAgent {
       const tierWeight = { 1: 1.5, 2: 1.2, 3: 1.0, 4: 0.8 }[poi.tier] || 1.0;
       const ratingScore = (poi.google_rating - 3.5) / 1.5;
       const diversityPenalty = (context.discussed_categories || []).includes(poi.category) ? 0.5 : 1.0;
-      const score = ratingScore * timeBoost * tierWeight * diversityPenalty;
+      // Brand profile boost: categorieën die matchen met merk-focus krijgen boost
+      const brandBoost = brandCategories.some(bc => (poi.category || '').toLowerCase().includes(bc)) ? 1.3 : 1.0;
+      const score = ratingScore * timeBoost * tierWeight * diversityPenalty * brandBoost;
       return { poi_id: poi.id, name: poi.name, category: poi.category, score: Math.round(score * 1000) / 1000 };
     }).sort((a, b) => b.score - a.score).slice(0, limit);
 
@@ -97,14 +109,39 @@ class PersonaliseerderAgent extends BaseAgent {
     return result;
   }
 
-  _enrichContext(ctx) {
+  async _enrichContext(ctx) {
     const now = new Date();
     const h = now.getHours();
     return {
       time_of_day: ctx.time_of_day || (h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 22 ? 'evening' : 'night'),
       weekend: ctx.weekend ?? (now.getDay() === 0 || now.getDay() === 6),
-      season: ctx.season || (['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][now.getMonth()])
+      season: ctx.season || (['winter','winter','spring','spring','spring','summer','summer','summer','fall','fall','fall','winter'][now.getMonth()]),
+      weather: ctx.weather || await this._getWeather(destinationId)
     };
+  }
+
+  async _getWeather(destinationId) {
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) return 'unknown';
+    try {
+      const [dest] = await mysqlSequelize.query(
+        'SELECT lat, lng FROM destinations WHERE id = :id',
+        { replacements: { id: destinationId }, type: QueryTypes.SELECT }
+      );
+      if (!dest?.lat || !dest?.lng) return 'unknown';
+      const res = await fetch(
+        `https://api.openweathermap.org/data/2.5/weather?lat=${dest.lat}&lon=${dest.lng}&units=metric&appid=${apiKey}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+      if (!res.ok) return 'unknown';
+      const data = await res.json();
+      const main = data.weather?.[0]?.main?.toLowerCase() || 'unknown';
+      if (['clear', 'sun'].some(w => main.includes(w))) return 'sunny';
+      if (main.includes('rain') || main.includes('drizzle')) return 'rainy';
+      if (main.includes('cloud')) return 'cloudy';
+      if (main.includes('snow')) return 'snowy';
+      return main;
+    } catch { return 'unknown'; }
   }
 }
 export default new PersonaliseerderAgent();
