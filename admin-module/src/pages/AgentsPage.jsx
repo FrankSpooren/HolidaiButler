@@ -32,6 +32,8 @@ export default function AgentsPage({ embedded = false }) {
   const [destinationFilter, setDestinationFilter] = useState('all');
   const [sortBy, setSortBy] = useState('category');
   const [groupByCategory, setGroupByCategory] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [diagnoseAgent, setDiagnoseAgent] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [activityExpanded, setActivityExpanded] = useState(false);
@@ -55,6 +57,16 @@ export default function AgentsPage({ embedded = false }) {
     if (!data?.agents) return [];
     let list = [...data.agents];
     if (categoryFilter !== 'all') list = list.filter(a => a.category === categoryFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(a =>
+        a.name?.toLowerCase().includes(q) ||
+        a.id?.toLowerCase().includes(q) ||
+        a.category?.toLowerCase().includes(q) ||
+        a.scheduleHuman?.toLowerCase().includes(q) ||
+        a.description?.toLowerCase().includes(q)
+      );
+    }
     // Sort
     list.sort((a, b) => {
       let cmp = 0;
@@ -68,7 +80,7 @@ export default function AgentsPage({ embedded = false }) {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return list;
-  }, [data?.agents, categoryFilter, sortDir, sortBy]);
+  }, [data?.agents, categoryFilter, sortDir, sortBy, searchQuery]);
 
   // Grouped by category for collapsible view
   const groupedAgents = useMemo(() => {
@@ -91,6 +103,48 @@ export default function AgentsPage({ embedded = false }) {
     }
     return sorted;
   }, [filteredAgents]);
+
+  // Relative time helper
+  const timeAgo = (ts) => {
+    if (!ts) return '';
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  // Toggle category accordion
+  const toggleCategory = (cat) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  };
+
+  // Auto-expand categories with errors/warnings
+  useEffect(() => {
+    if (data?.agents) {
+      const needsAttention = new Set();
+      for (const a of data.agents) {
+        if (a.status === 'error' || a.status === 'warning') needsAttention.add(a.category);
+      }
+      setExpandedCategories(needsAttention);
+    }
+  }, [data?.agents]);
+
+  // Business output helper
+  const getBusinessOutput = (agent) => {
+    if (!agent.lastRun) return 'standby';
+    const ageMs = Date.now() - new Date(agent.lastRun.timestamp).getTime();
+    if (agent.lastRun.status === 'success' && ageMs < 48 * 3600 * 1000) return 'delivering';
+    if (agent.status === 'healthy') return 'monitoring';
+    return 'standby';
+  };
 
   const summary = data?.summary || { total: 0, healthy: 0, warning: 0, error: 0, unknown: 0, deactivated: 0 };
   const visibleActivity = activityExpanded ? (data?.recentActivity || []).slice(0, 50) : (data?.recentActivity || []).slice(0, 10);
@@ -190,199 +244,157 @@ export default function AgentsPage({ embedded = false }) {
         <Alert severity="warning" sx={{ mb: 2 }}>{t('agents.partial')}</Alert>
       )}
 
-      {/* ROW 2: Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+            {/* OVERVIEW BLOCKS */}
+      <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>OVERVIEW</Typography>
+      <Grid container spacing={1.5} sx={{ mb: 3 }}>
         {[
-          { key: 'healthy', value: summary.healthy, color: STATUS_COLORS.healthy },
-          { key: 'warning', value: summary.warning, color: STATUS_COLORS.warning },
-          { key: 'error', value: summary.error, color: STATUS_COLORS.error },
-          
-          { key: 'deactivated', value: summary.deactivated, color: STATUS_COLORS.deactivated }
-        ].map(({ key, value, color }) => (
-          <Grid item xs={6} md={3} key={key}>
-            <Card sx={{ borderTop: `3px solid ${color}` }}>
-              <CardContent sx={{ textAlign: 'center', py: 2, '&:last-child': { pb: 2 } }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, color }}>{value}</Typography>
-                <Typography variant="body2" color="text.secondary">{t(`agents.${key}`)}</Typography>
-              </CardContent>
-            </Card>
+          { key: 'total', value: summary.total, bg: '#f5f5f5', tc: '#333' },
+          { key: 'healthy', value: summary.healthy, bg: '#e8f5e9', tc: '#2e7d32' },
+          { key: 'warning', value: summary.warning, bg: '#fff3e0', tc: '#e65100' },
+          { key: 'error', value: summary.error, bg: '#ffebee', tc: '#c62828' },
+          { key: 'deactivated', value: summary.deactivated, bg: '#fafafa', tc: '#9e9e9e' }
+        ].map(({ key, value, bg, tc }) => (
+          <Grid item xs={4} sm={2.4} key={key}>
+            <Box sx={{ bgcolor: bg, borderRadius: 2, p: 2, textAlign: 'center', minHeight: 70, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: tc, lineHeight: 1 }}>{value}</Typography>
+              <Typography variant="caption" sx={{ color: tc, opacity: 0.8 }}>{t(`agents.${key}`)}</Typography>
+            </Box>
           </Grid>
         ))}
       </Grid>
 
-      {/* ROW 3: Filter Bar */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-        {CATEGORIES.map(cat => (
-          <Chip
-            key={cat}
-            label={t(`agents.filter.${cat}`)}
-            variant={categoryFilter === cat ? 'filled' : 'outlined'}
-            onClick={() => setCategoryFilter(cat)}
-            sx={{
-              fontWeight: categoryFilter === cat ? 700 : 400,
-              bgcolor: categoryFilter === cat ? (CATEGORY_COLORS[cat] || '#1976d2') : undefined,
-              color: categoryFilter === cat ? '#fff' : undefined,
-              borderColor: CATEGORY_COLORS[cat] || undefined,
-              '&:hover': { opacity: 0.85 }
-            }}
-          />
-        ))}
-        <Select
-          size="small"
-          value={destinationFilter}
-          onChange={e => setDestinationFilter(e.target.value)}
-          sx={{ ml: 'auto', minWidth: 130 }}
-        >
-          <MenuItem value="all">{t('agents.filter.destination')}: {t('agents.filter.all')}</MenuItem>
-          <MenuItem value="calpe">{'🇪🇸'} Calpe</MenuItem>
-          <MenuItem value="texel">{'🇳🇱'} Texel</MenuItem>
-        </Select>
+      {/* SEARCH BAR */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 3, alignItems: 'center' }}>
+        <TextField size="small" fullWidth placeholder="Search agents by name, schedule, or category..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} sx={{ maxWidth: 500 }} />
+        <Button variant="outlined" size="small" onClick={handleRefresh} disabled={isFetching} startIcon={<RefreshIcon />}>
+          {isFetching ? '...' : 'Refresh'}
+        </Button>
       </Box>
 
-      {/* ROW 4: Agent Table */}
+{/* AGENT CATEGORIES — Accordion Layout */}
       {filteredAgents.length === 0 ? (
         <Alert severity="info" sx={{ mb: 2 }}>{t('agents.noResults')}</Alert>
       ) : (
-        <TableContainer component={Paper} sx={{ mb: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell sx={{ width: 40 }}>#</TableCell>
-                <TableCell>
-                  <TableSortLabel active={sortBy === 'name'} direction={sortBy === 'name' ? sortDir : 'asc'} onClick={() => handleSort('name')}>
-                    {t('agents.table.name')}
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell>
-                  <TableSortLabel active={sortBy === 'category'} direction={sortBy === 'category' ? sortDir : 'asc'} onClick={() => handleSort('category')}>
-                    {t('agents.table.category')}
-                  </TableSortLabel>
-                </TableCell>
-                {!isMobile && (
-                  <TableCell>
-                    <TableSortLabel active={sortBy === 'type'} direction={sortBy === 'type' ? sortDir : 'asc'} onClick={() => handleSort('type')}>
-                      {t('agents.table.type')}
-                    </TableSortLabel>
-                  </TableCell>
-                )}
-                <TableCell>{t('agents.table.schedule')}</TableCell>
-                <TableCell>{'🇪🇸'} Calpe</TableCell>
-                <TableCell>{'🇳🇱'} Texel</TableCell>
-                <TableCell>
-                  <TableSortLabel active={sortBy === 'status'} direction={sortBy === 'status' ? sortDir : 'asc'} onClick={() => handleSort('status')}>
-                    {t('agents.table.status')}
-                  </TableSortLabel>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {groupByCategory ? (
-                Object.entries(groupedAgents).map(([category, agents]) => (
-                  <React.Fragment key={category}>
-                    <TableRow sx={{ bgcolor: CATEGORY_COLORS[category] ? `${CATEGORY_COLORS[category]}15` : 'action.hover' }}>
-                      <TableCell colSpan={isMobile ? 6 : 8} sx={{ py: 0.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip label={t(`agents.filter.${category}`)} size="small" sx={{ bgcolor: CATEGORY_COLORS[category] || '#607d8b', color: '#fff', fontWeight: 700, fontSize: '0.75rem' }} />
-                          <Typography variant="caption" color="text.secondary">{agents.length} agents</Typography>
-                          {agents.some(a => a.status === 'error') && <ErrorOutlineIcon sx={{ fontSize: 14, color: STATUS_COLORS.error }} />}
-                          {agents.some(a => a.status === 'warning') && <WarningAmberIcon sx={{ fontSize: 14, color: STATUS_COLORS.warning }} />}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                    {agents.map((agent, idx) => (
-                <TableRow
-                  key={agent.id}
-                  onClick={() => setSelectedAgent(agent)}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 3 }}>
+          {Object.entries(groupedAgents).map(([category, catAgents]) => {
+            const isExpanded = expandedCategories.has(category);
+            const hasIssues = catAgents.some(a => a.status === 'error' || a.status === 'warning');
+            const errorCount = catAgents.filter(a => a.status === 'error').length;
+            const warningCount = catAgents.filter(a => a.status === 'warning').length;
+            const catSummary = hasIssues
+              ? `${errorCount > 0 ? errorCount + ' error' : ''}${errorCount > 0 && warningCount > 0 ? ' · ' : ''}${warningCount > 0 ? warningCount + ' attention' : ''}`
+              : 'all healthy';
+
+            return (
+              <Paper key={category} variant="outlined" sx={{ overflow: 'hidden' }}>
+                {/* Category Header — clickable */}
+                <Box
+                  onClick={() => toggleCategory(category)}
                   sx={{
-                    cursor: 'pointer',
-                    bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : agent.status === 'deactivated' ? 'rgba(0,0,0,0.03)' : undefined,
-                    opacity: agent.status === 'deactivated' ? 0.6 : 1,
-                    '&:hover': { bgcolor: 'action.hover' }
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    px: 2, py: 1.5, cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    borderLeft: `4px solid ${CATEGORY_COLORS[category] || '#607d8b'}`
                   }}
                 >
-                  <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{idx + 1}</TableCell>
-                  <TableCell>
-                    <Tooltip title={getAgentDescription(agent.name) || agent.description} arrow>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <span style={{ fontSize: '1.1rem' }}>{getAgentIcon(agent.name)}</span>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{agent.name}</Typography>
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={t(`agents.filter.${agent.category}`)}
-                      size="small"
-                      sx={{
-                        bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b',
-                        color: '#fff',
-                        fontSize: '0.7rem',
-                        height: 22
-                      }}
-                    />
-                  </TableCell>
-                  {!isMobile && <TableCell><Typography variant="body2">{agent.type}</Typography></TableCell>}
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{agent.scheduleHuman}</Typography>
-                  </TableCell>
-                  {agent.type === 'B' ? (
-                    <TableCell colSpan={2}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: '0.8rem' }}>
-                        {t('agents.table.shared')}
-                      </Typography>
-                    </TableCell>
-                  ) : (
-                    <>
-                      <TableCell><DestCell destData={agent.destinations?.calpe} /></TableCell>
-                      <TableCell><DestCell destData={agent.destinations?.texel} /></TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    <Tooltip title={agent.lastRun?.error || (agent.lastRun ? `${agent.lastRun.status} \u2014 ${agent.lastRun.duration ? `${agent.lastRun.duration}ms` : ''}` : t('agents.unknown'))} arrow>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <StatusDot status={agent.status} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                      {isExpanded ? '▾' : '▸'}
+                    </Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t(`agents.filter.${category}`)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {hasIssues && (
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: errorCount > 0 ? STATUS_COLORS.error : STATUS_COLORS.warning }} />
+                    )}
+                    <Typography variant="body2" color="text.secondary">
+                      {catAgents.length} agents{hasIssues ? ` · ${catSummary}` : ' · all healthy'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Category Content — collapsible */}
+                <Collapse in={isExpanded}>
+                  <Divider />
+                  {catAgents.map(agent => {
+                    const bo = getBusinessOutput(agent);
+                    const boColor = { delivering: '#e8f5e9', monitoring: '#e3f2fd', standby: '#f5f5f5' }[bo] || '#f5f5f5';
+                    const boTextColor = { delivering: '#2e7d32', monitoring: '#1565c0', standby: '#9e9e9e' }[bo] || '#9e9e9e';
+
+                    return (
+                      <Box
+                        key={agent.id}
+                        onClick={() => setSelectedAgent(agent)}
+                        sx={{
+                          display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1.5,
+                          cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' },
+                          borderBottom: '1px solid', borderColor: 'divider',
+                          opacity: agent.status === 'deactivated' ? 0.5 : 1
+                        }}
+                      >
+                        {/* Icon + Name + Subtitle */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 220, flex: 1 }}>
+                          <Box sx={{
+                            width: 36, height: 36, borderRadius: 1, bgcolor: `${CATEGORY_COLORS[category] || '#607d8b'}15`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0
+                          }}>
+                            {getAgentIcon(agent.name)}
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>{agent.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {agent.scheduleHuman || agent.schedule || 'On-demand'} · {(agent.description || '').substring(0, 40)}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Status Chips */}
+                        <Box sx={{ display: 'flex', gap: 0.5, minWidth: 160 }}>
+                          <Chip
+                            label={t(`agents.${agent.status}`)}
+                            size="small"
+                            sx={{
+                              bgcolor: `${STATUS_COLORS[agent.status]}20`,
+                              color: STATUS_COLORS[agent.status],
+                              fontWeight: 600, fontSize: '0.7rem', height: 22
+                            }}
+                          />
+                          <Chip
+                            label={t(`agents.businessOutput.${bo}`)}
+                            size="small"
+                            sx={{ bgcolor: boColor, color: boTextColor, fontSize: '0.7rem', height: 22 }}
+                          />
+                        </Box>
+
+                        {/* Timestamp */}
                         {!isMobile && (
-                          <Typography variant="caption" sx={{ color: STATUS_COLORS[agent.status] }}>
-                            {agent.lastRun ? formatTimestamp(agent.lastRun.timestamp) : ''}
+                          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 70, textAlign: 'right' }}>
+                            {timeAgo(agent.lastRun?.timestamp)}
                           </Typography>
                         )}
+
+                        {/* Diagnose button for warning/error */}
+                        {(agent.status === 'warning' || agent.status === 'error') && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color={agent.status === 'error' ? 'error' : 'warning'}
+                            onClick={(e) => { e.stopPropagation(); setDiagnoseAgent(agent); }}
+                            sx={{ fontSize: '0.7rem', minWidth: 70 }}
+                          >
+                            Diagnose
+                          </Button>
+                        )}
                       </Box>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-                    ))}
-                  </React.Fragment>
-                ))
-              ) : (
-                filteredAgents.map((agent, idx) => (
-                  <TableRow
-                    key={agent.id}
-                    onClick={() => setSelectedAgent(agent)}
-                    sx={{
-                      cursor: 'pointer',
-                      bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : agent.status === 'deactivated' ? 'rgba(0,0,0,0.03)' : undefined,
-                      opacity: agent.status === 'deactivated' ? 0.6 : 1,
-                      '&:hover': { bgcolor: 'action.hover' }
-                    }}
-                  >
-                    <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{idx + 1}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <span style={{ fontSize: '1.1rem' }}>{getAgentIcon(agent.name)}</span>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{agent.name}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell><Chip label={t(`agents.filter.${agent.category}`)} size="small" sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 22 }} /></TableCell>
-                    <TableCell><Typography variant="body2">{agent.scheduleHuman || agent.schedule || '—'}</Typography></TableCell>
-                    <TableCell><DestCell destData={agent.destinations?.calpe} /></TableCell>
-                    <TableCell><DestCell destData={agent.destinations?.texel} /></TableCell>
-                    <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><StatusDot status={agent.status} /><Typography variant="body2">{t(`agents.${agent.status}`)}</Typography></Box></TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                    );
+                  })}
+                </Collapse>
+              </Paper>
+            );
+          })}
+        </Box>
       )}
 
 
