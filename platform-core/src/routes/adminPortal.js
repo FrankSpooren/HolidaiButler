@@ -1656,7 +1656,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 06:00 UTC) — wacht op volgende run` } },
   { id: 'architect', name: 'De Architect', englishName: 'Architecture Agent', category: 'strategy', type: 'B',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij 3+ destinations.',
+    active: false, deactivatedReason: 'Wacht op 3+ actieve destinations (Calpe+Texel+WarreWijzer). Reactivatie-criteria: multi-tenant config drift detectie, feature_flags consistentie check, pages layout divergentie monitoring.',
     deactivatedDate: '2026-02-26',
     description: 'Architectuur assessment en aanbevelingen',
     description_en: 'Architecture assessment and recommendations',
@@ -1670,8 +1670,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (zondag 03:00 UTC) — wacht op volgende run` } },
   { id: 'leermeester', name: 'De Leermeester', englishName: 'Learning Agent', category: 'strategy', type: 'A',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij voldoende gebruikersdata.',
-    deactivatedDate: '2026-02-26',
+    active: true, reactivatedDate: '2026-04-28', reactivatedReason: 'Fase 5: 67 learning patterns in MongoDB, 7 cycles/week actief',
     description: 'Pattern learning en optimalisatie',
     description_en: 'Pattern learning and optimization',
     tasks: ['Gebruikerspatronen herkennen', 'Optimalisatie suggesties genereren', 'A/B test resultaten analyseren', 'Learning patterns opslaan in MongoDB'],
@@ -1684,8 +1683,7 @@ const AGENT_METADATA = [
 4. Herstart API: pm2 restart holidaibutler-api
 5. Agent draait wekelijks (maandag 05:30 UTC) — wacht op volgende run` } },
   { id: 'thermostaat', name: 'De Thermostaat', englishName: 'Adaptive Config Agent', category: 'strategy', type: 'A',
-    active: false, deactivatedReason: 'Onvoldoende waarde in huidige fase (★★☆☆☆). Reactiveren bij complexere configuratie-eisen.',
-    deactivatedDate: '2026-02-26',
+    active: true, reactivatedDate: '2026-04-28', reactivatedReason: 'Fase 5: Redis evaluatie actief, health-metrics gekoppeld',
     description: 'Configuratie evaluatie en alerting',
     description_en: 'Configuration evaluation and alerting',
     tasks: ['Systeem configuratie evalueren', 'Performance threshold monitoring', 'Configuratie drift detectie', 'Alerting bij afwijkingen'],
@@ -16604,40 +16602,38 @@ router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => 
 // GET /notifications — list notifications for current user
 
 // ─── Sidebar Badge Counts (studio mode) ────────────────────────────
-router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
+router.get('/content/studio/sidebar-badges', adminAuth('reviewer'), async (req, res) => {
   try {
     const destId = req.destinationId;
     if (!destId) return res.json({ success: true, data: {} });
 
-    const db = req.app.locals.db;
-
     // Drafts count
-    const [[draftsRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM content_items WHERE approval_status = 'draft' AND destination_id = ?`,
-      [destId]
-    );
+    const [[draftsRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM content_items WHERE approval_status = :status AND destination_id = :destId',
+      { replacements: { status: 'draft', destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // Pending ideas (suggestions)
-    const [[ideasRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM content_suggestions WHERE status = 'pending' AND destination_id = ?`,
-      [destId]
-    );
+    const [[ideasRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM content_suggestions WHERE status = :status AND destination_id = :destId',
+      { replacements: { status: 'pending', destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // New sources (trending data last 7 days)
-    const [[sourcesRow]] = await db.query(
-      `SELECT COUNT(*) as c FROM trending_data WHERE destination_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`,
-      [destId]
-    );
+    const [[sourcesRow]] = await mysqlSequelize.query(
+      'SELECT COUNT(*) as c FROM trending_data WHERE destination_id = :destId AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)',
+      { replacements: { destId }, type: QueryTypes.SELECT, timeout: 5000 }
+    ).catch(() => [{ c: 0 }]);
 
     // Calendar gaps (workdays without scheduled content in next 14 days)
     let gaps = 0;
     try {
-      const [scheduled] = await db.query(
+      const [scheduled] = await mysqlSequelize.query(
         `SELECT DATE(scheduled_at) as d FROM content_items
-         WHERE destination_id = ? AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
+         WHERE destination_id = :destId AND scheduled_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 14 DAY)
          AND approval_status IN ('scheduled', 'published')
          GROUP BY DATE(scheduled_at)`,
-        [destId]
+        { replacements: { destId }, timeout: 5000 }
       );
       const scheduledDates = new Set(scheduled.map(r => r.d?.toISOString?.()?.slice(0,10) || ''));
       const now = new Date();
@@ -16645,7 +16641,7 @@ router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
         const d = new Date(now);
         d.setDate(d.getDate() + i);
         const day = d.getDay();
-        if (day === 0 || day === 6) continue; // skip weekends
+        if (day === 0 || day === 6) continue;
         const iso = d.toISOString().slice(0, 10);
         if (!scheduledDates.has(iso)) gaps++;
       }
@@ -16661,7 +16657,7 @@ router.get('/content/studio/sidebar-badges', adminAuth, async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('[sidebar-badges]', err.message);
+    logger.error('[sidebar-badges] Error:', err.message);
     res.json({ success: true, data: {} });
   }
 });
