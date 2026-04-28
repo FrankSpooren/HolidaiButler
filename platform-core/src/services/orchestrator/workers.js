@@ -566,6 +566,105 @@ export function startWorkers() {
           }
           break;
 
+        
+        case "translation-quality-check":
+          try {
+            const mod = await import("../agents/vertaler/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Vertaler:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Vertaler failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "image-keyword-enrichment":
+          try {
+            const mod = await import("../agents/beeldenmaker/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Beeldenmaker:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Beeldenmaker failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "personalization-stats":
+          try {
+            const mod = await import("../agents/personaliseerder/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Personaliseerder:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Personaliseerder failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "performance-watch":
+          try {
+            const mod = await import("../agents/performanceWachter/index.js");
+            result = await mod.default.run();
+            console.log("[Orchestrator] De Performance Wachter:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Performance Wachter failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "anomaly-detection":
+          try {
+            const mod = await import("../agents/anomaliedetective/index.js");
+            result = await mod.default.run();
+            console.log("[Orchestrator] De Anomaliedetective:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Anomaliedetective failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "eu-ai-act-audit":
+          try {
+            const mod = await import("../agents/auditeur/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Auditeur:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Auditeur failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "content-optimization":
+          try {
+            const mod = await import("../agents/optimaliseerder/index.js");
+            result = await mod.default.run();
+            console.log("[Orchestrator] De Optimaliseerder:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Optimaliseerder failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "tenant-health-check":
+          try {
+            const mod = await import("../agents/onthaler/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Onthaler:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Onthaler failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "escalation-monitor":
+          try {
+            const mod = await import("../agents/helpdeskmeester/index.js");
+            result = await mod.default.run(job.data?.destinationId || "all");
+            console.log("[Orchestrator] De Helpdeskmeester:", JSON.stringify({ success: result.success }));
+          } catch (error) {
+            console.error("[Orchestrator] De Helpdeskmeester failed:", error.message);
+            throw error;
+          }
+          break;
         // === STRATEGY LAYER AGENT JOBS ===
         case "strategy-assessment":
           try {
@@ -1547,7 +1646,26 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'daily-briefing': 'owner-interface',
         'weekly-cost-report': 'owner-interface',
 
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performance-wachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
+
         // De Verfrisser (Content Freshness)
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performanceWachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
         'content-freshness-audit': 'verfrisser',
 
         // De Boekhouder (Cost Optimization)
@@ -1622,6 +1740,15 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'qa-sync-tier12': 'koerier', 'qa-sync-tier34': 'koerier',
         'review-sync-tier12': 'koerier', 'review-sync-tier34': 'koerier',
         'review-retention': 'koerier', 'poi-deactivation-check': 'koerier',
+        'translation-quality-check': 'vertaler',
+        'image-keyword-enrichment': 'beeldenmaker',
+        'personalization-stats': 'personaliseerder',
+        'performance-watch': 'performanceWachter',
+        'anomaly-detection': 'anomaliedetective',
+        'eu-ai-act-audit': 'auditeur',
+        'content-optimization': 'optimaliseerder',
+        'tenant-health-check': 'onthaler',
+        'escalation-monitor': 'helpdeskmeester',
         'content-freshness-audit': 'verfrisser',
         'cost-optimization-report': 'boekhouder',
         'journey-analysis': 'reisleider',
