@@ -28,7 +28,7 @@ export async function buildBrandContext(destinationId, personaId = null, content
 
     if (dest) {
       let profile = {};
-      try { profile = typeof dest.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest.brand_profile || {}); } catch { /* empty */ }
+      try { profile = typeof dest.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest.brand_profile || {}); } catch (err) { console.debug('[brandContext.js] empty:', err.message); }
 
       parts.push(`BRAND: ${profile.company_name || dest.display_name || dest.name}`);
       if (profile.industry) parts.push(`INDUSTRY: ${profile.industry}`);
@@ -74,7 +74,7 @@ export async function buildBrandContext(destinationId, personaId = null, content
         if (persona.tone_notes) parts.push(`- Preferred tone: ${persona.tone_notes}`);
 
         let channels = [];
-        try { channels = typeof persona.preferred_channels === 'string' ? JSON.parse(persona.preferred_channels) : (persona.preferred_channels || []); } catch { /* empty */ }
+        try { channels = typeof persona.preferred_channels === 'string' ? JSON.parse(persona.preferred_channels) : (persona.preferred_channels || []); } catch (err) { console.debug('[brandContext.js] empty:', err.message); }
         if (channels.length) parts.push(`- Preferred channels: ${channels.join(', ')}`);
       }
     }

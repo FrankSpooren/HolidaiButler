@@ -308,7 +308,7 @@
     "healthy": "Saludable",
     "warning": "Advertencia",
     "error": "Error",
-    "unknown": "Desconocido",
+    "unknown": "Sin datos recientes",
     "deactivated": "Desactivado",
     "filter": {
       "all": "Todos",
@@ -318,7 +318,11 @@
       "strategy": "Strategy",
       "monitoring": "Monitoring",
       "content": "Contenido",
-      "destination": "Destino"
+      "destination": "Destino",
+      "intelligence": "Inteligencia",
+      "commerce": "Comercio",
+      "support": "Soporte",
+      "compliance": "Cumplimiento"
     },
     "table": {
       "name": "Agente",
@@ -402,7 +406,19 @@
     "noResults": "No se encontraron agentes para los filtros seleccionados.",
     "scheduledJobs": "Tareas programadas",
     "noActivity": "Sin actividad reciente",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "businessOutput": {
+      "delivering": "Entregando",
+      "monitoring": "Monitoreando",
+      "standby": "En espera"
+    },
+    "diagnose": {
+      "title": "Diagnostico",
+      "lastRuns": "Ejecuciones recientes",
+      "recommendedAction": "Accion recomendada"
+    },
+    "ecosystem": "Ecosistema",
+    "agentCount": "{count} agentes"
   },
   "pois": {
     "title": "Gestión de POIs",

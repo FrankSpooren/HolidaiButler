@@ -267,7 +267,7 @@ async function runFreshnessCheck(destinationId) {
       duration_ms: duration
     };
   } catch (error) {
-    await logError('data-sync', 'freshness_check', error, { destination_id: destinationId });
+    await logError('data-sync', error, { action: 'freshness_check', destination_id: destinationId });
     return { success: false, error: error.message };
   }
 }

@@ -50,6 +50,7 @@ class LinkedInClient {
     }
 
     const response = await fetch(`${LINKEDIN_API_BASE}/rest/posts`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -127,6 +128,7 @@ class LinkedInClient {
    */
   static async exchangeCodeForToken(code, redirectUri) {
     const response = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -156,6 +158,7 @@ class LinkedInClient {
    */
   static async refreshAccessToken(refreshToken) {
     const response = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({

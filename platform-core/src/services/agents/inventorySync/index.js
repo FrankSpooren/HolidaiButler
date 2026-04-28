@@ -39,11 +39,7 @@ const inventorySyncResultSchema = new mongoose.Schema({
 }, { collection: 'inventory_sync_results' });
 
 let InventorySyncResult;
-try {
-  InventorySyncResult = mongoose.model('InventorySyncResult');
-} catch {
-  InventorySyncResult = mongoose.model('InventorySyncResult', inventorySyncResultSchema);
-}
+InventorySyncResult = mongoose.models.InventorySyncResult || mongoose.model('InventorySyncResult', inventorySyncResultSchema);
 
 // ============================================================================
 // DE MAGAZIJNIER
@@ -64,7 +60,7 @@ class InventorySyncAgent {
       if (!destCode) return false;
       const config = (await import(`../../../config/destinations/${destCode}.config.js`)).default;
       return config?.commerce?.hasTicketing || config?.commerce?.hasReservations || false;
-    } catch {
+    } catch (err) {
       return false;
     }
   }
@@ -99,7 +95,7 @@ class InventorySyncAgent {
         const pattern = `ticket:reserve:${item.id}:*`;
         const keys = await this._scanKeys(redisClient, pattern);
         redisReserveCount = keys.length;
-      } catch {
+      } catch (err) {
         // Redis SCAN failure — skip this item
         continue;
       }
@@ -341,9 +337,10 @@ class InventorySyncAgent {
         null,
         { sort: { timestamp: -1 } }
       ).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[index.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 }
 

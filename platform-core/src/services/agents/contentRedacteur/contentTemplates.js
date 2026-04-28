@@ -371,7 +371,7 @@ export async function getTemplates(destinationId) {
       { replacements: { id: Number(destinationId) } }
     );
     isContentOnly = dest?.destination_type === 'content_only';
-  } catch { /* default to tourism */ }
+  } catch (err) { console.debug('[contentTemplates.js] default to tourism:', err.message); }
 
   if (isContentOnly) {
     // Content-only: generic templates first, then global (no destination-specific tourism templates)

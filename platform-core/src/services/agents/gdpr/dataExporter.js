@@ -268,7 +268,7 @@ class DataExporter {
     try {
       await fs.access(filePath);
       return filePath;
-    } catch {
+    } catch (err) {
       throw new Error(`Export file not found: ${filename}`);
     }
   }

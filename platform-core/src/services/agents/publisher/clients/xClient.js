@@ -22,6 +22,7 @@ class XClient {
     const text = this._getPostBody(contentItem);
 
     const response = await fetch(`${X_API_BASE}/tweets`, {
+      signal: AbortSignal.timeout(30000),
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

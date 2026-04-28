@@ -26,6 +26,7 @@ export async function searchPexels(query, perPage = 5) {
   try {
     const url = `${PEXELS_API_URL}/search?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=landscape`;
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(30000),
       headers: {
         'Authorization': apiKey,
       },

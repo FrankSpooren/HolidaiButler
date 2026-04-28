@@ -81,13 +81,13 @@ class PublisherAgent extends BaseAgent {
             const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
             // Ensure social_metadata has the tracked link
             let meta = {};
-            try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
+            try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
             if (!meta.link) {
               meta.link = trackedUrl;
               contentItem.social_metadata = JSON.stringify(meta);
             }
           }
-        } catch { /* non-blocking — UTM link is nice-to-have */ }
+        } catch (err) { console.debug('[index.js] non-blocking — UTM link is nice-to-have:', err.message); }
       }
 
       // Auto-crop attached images to platform-conformant dimensions (TO DO 4b+4d)
@@ -144,7 +144,7 @@ class PublisherAgent extends BaseAgent {
 
             if (resolvedUrls.length > 0) {
               let meta = {};
-              try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch { /* */ }
+              try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
               meta.image_url = resolvedUrls[0];
               if (resolvedUrls.length > 1) {
                 meta.image_urls = resolvedUrls;
@@ -197,7 +197,7 @@ class PublisherAgent extends BaseAgent {
         { replacements: { error: error.message, id: contentItemId } }
       );
 
-      await logError('publisher', contentItem.destination_id, 'publish-failed', error);
+      await logError('publisher', error, { action: 'publish-failed', destination_id: contentItem.destination_id });
       throw error;
     }
   }

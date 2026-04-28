@@ -26,6 +26,7 @@ export async function searchUnsplash(query, perPage = 5) {
   try {
     const url = `${UNSPLASH_API_URL}/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}&orientation=landscape`;
     const response = await fetch(url, {
+      signal: AbortSignal.timeout(30000),
       headers: {
         'Authorization': `Client-ID ${accessKey}`,
         'Accept-Version': 'v1',
@@ -74,6 +75,7 @@ export async function trackDownload(downloadLocation) {
 
   try {
     await fetch(downloadLocation, {
+      signal: AbortSignal.timeout(30000),
       headers: { 'Authorization': `Client-ID ${accessKey}` },
     });
   } catch (e) {

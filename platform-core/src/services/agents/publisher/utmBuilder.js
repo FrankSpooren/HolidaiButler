@@ -33,7 +33,7 @@ export function buildUtmUrl(baseUrl, contentItem, platform) {
     }
 
     return url.toString();
-  } catch {
+  } catch (err) {
     // If URL parsing fails, append as query string
     const separator = baseUrl.includes('?') ? '&' : '?';
     const params = new URLSearchParams({
