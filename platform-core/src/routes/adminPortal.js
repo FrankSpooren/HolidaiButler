@@ -2293,91 +2293,142 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       // Non-critical: continue with static metadata
     }
 
-    // BRON 2: MongoDB audit_logs (last 24h)
+    // BRON 2: MongoDB audit_logs — OPTIMIZED (single $facet, was 120+ queries)
     try {
       if (mongoose.connection.readyState === 1) {
         const db = mongoose.connection.db;
         const auditLogs = db.collection('audit_logs');
-        const since = new Date(Date.now() - 120 * 24 * 3600 * 1000);
+        const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+        const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000);
 
-        // Get last runs per actor
-        const lastRuns = await auditLogs.aggregate([
-          { $match: { 'actor.type': 'agent', timestamp: { $gte: since } } },
-          { $sort: { timestamp: -1 } },
-          { $group: {
-            _id: '$actor.name',
-            lastTimestamp: { $first: '$timestamp' },
-            lastAction: { $first: '$action' },
-            lastStatus: { $first: '$status' },
-            lastDuration: { $first: '$duration' },
-            lastDescription: { $first: '$description' },
-            lastResult: { $first: '$result' }
+        // SINGLE aggregate with $facet: get all data in 1 roundtrip
+        const [facetResult] = await auditLogs.aggregate([
+          { $match: { 'actor.type': 'agent', timestamp: { $gte: since30d } } },
+          { $facet: {
+            // Facet 1: Last run per actor.name
+            byActorName: [
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: '$actor.name',
+                lastTimestamp: { $first: '$timestamp' },
+                lastAction: { $first: '$action' },
+                lastStatus: { $first: '$status' },
+                lastDuration: { $first: '$duration' },
+                lastDescription: { $first: '$description' },
+                lastResult: { $first: '$result' }
+              }}
+            ],
+            // Facet 2: Last run per agentId
+            byAgentId: [
+              { $match: { 'actor.agentId': { $exists: true, $ne: null } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: '$actor.agentId',
+                lastTimestamp: { $first: '$timestamp' },
+                lastStatus: { $first: '$status' },
+                lastDuration: { $first: '$duration' },
+                lastResult: { $first: '$result' }
+              }}
+            ],
+            // Facet 3: Last run per actor.name + destinationId
+            byDestination: [
+              { $match: { 'metadata.destinationId': { $exists: true } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: { actor: '$actor.name', dest: '$metadata.destinationId' },
+                lastTimestamp: { $first: '$timestamp' },
+                lastStatus: { $first: '$status' }
+              }}
+            ],
+            // Facet 4: Recent activity (last 50)
+            recentActivity: [
+              { $sort: { timestamp: -1 } },
+              { $limit: 50 },
+              { $project: { actor: 1, action: 1, status: 1, description: 1, duration: 1, timestamp: 1, 'metadata.destinationId': 1 } }
+            ],
+            // Facet 5: Recent runs per agentId (last 7d, max 5 per agent)
+            recentRuns: [
+              { $match: { timestamp: { $gte: since7d } } },
+              { $sort: { timestamp: -1 } },
+              { $group: {
+                _id: { $ifNull: ['$actor.agentId', '$actor.name'] },
+                runs: { $push: { timestamp: '$timestamp', action: '$action', status: '$status', destination: '$metadata.destinationId' } }
+              }},
+              { $project: { runs: { $slice: ['$runs', 5] } } }
+            ]
           }}
         ]).toArray();
 
-        // B4: Parallel aggregate by actor.agentId (unique per agent)
-        const lastRunsById = await auditLogs.aggregate([
-          { $match: { 'actor.type': 'agent', 'actor.agentId': { $exists: true }, timestamp: { $gte: since } } },
-          { $sort: { timestamp: -1 } },
-          { $group: {
-            _id: '$actor.agentId',
-            lastTimestamp: { $first: '$timestamp' },
-            lastAction: { $first: '$action' },
-            lastStatus: { $first: '$status' },
-            lastDuration: { $first: '$duration' },
-            lastDescription: { $first: '$description' },
-            lastResult: { $first: '$result' }
-          }}
-        ]).toArray();
+        const lastRuns = facetResult?.byActorName || [];
+        const lastRunsById = facetResult?.byAgentId || [];
+        const destRuns = facetResult?.byDestination || [];
+        const recentRunsMap = {};
+        for (const r of (facetResult?.recentRuns || [])) {
+          recentRunsMap[r._id] = r.runs;
+        }
 
-        // Map audit log actors to agents
+        // Map to agents (in-memory, no more DB queries)
         for (const agent of agents) {
           const meta = AGENT_METADATA.find(m => m.id === agent.id);
           if (!meta) continue;
 
-          // B4: Prefer agentId match (unique), fallback to actorName match (shared)
+          // Prefer agentId match, fallback to actorName
           const agentIdMatch = lastRunsById.find(r => r._id === agent.id);
           const matchingRuns = agentIdMatch ? [agentIdMatch] : lastRuns.filter(r => meta.actorNames.includes(r._id));
           if (matchingRuns.length > 0) {
-            // Use the most recent run across all actor names
             const latest = matchingRuns.sort((a, b) => new Date(b.lastTimestamp) - new Date(a.lastTimestamp))[0];
             agent.lastRun = {
               timestamp: latest.lastTimestamp,
               duration: latest.lastDuration || null,
-              status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'unknown',
+              status: latest.lastStatus === 'completed' ? 'success' : latest.lastStatus || 'warning',
               error: latest.lastResult?.success === false ? (latest.lastResult?.error || latest.lastDescription) : null
             };
             agent.status = calculateAgentStatus(agent.lastRun, meta.schedule, meta);
           }
-        }
 
-        // Populate per-destination status for Cat A agents from audit_logs
-        const destIds = { 1: 'calpe', 2: 'texel' };
-        for (const agent of agents) {
-          if (agent.type !== 'A' || !agent.destinations) continue;
-          const meta = AGENT_METADATA.find(m => m.id === agent.id);
-          if (!meta) continue;
-          for (const [numId, destKey] of Object.entries(destIds)) {
-            const destRun = await auditLogs.findOne(
-              { 'actor.name': { $in: meta.actorNames }, 'metadata.destinationId': parseInt(numId), timestamp: { $gte: since } },
-              { sort: { timestamp: -1 } }
-            );
-            if (destRun) {
-              const destStatus = (destRun.status === 'completed' || destRun.status === 'success') ? 'success'
-                : (destRun.status === 'error' || destRun.status === 'failed') ? 'error'
-                : 'partial';
-              agent.destinations[destKey] = {
-                lastRun: destRun.timestamp,
-                status: destStatus
-              };
-            } else if (agent.lastRun) {
-              // If agent ran but no destination-specific log, inherit overall status
-              agent.destinations[destKey] = {
-                lastRun: agent.lastRun.timestamp,
-                status: agent.lastRun.status === 'success' ? 'success' : agent.lastRun.status === 'error' ? 'error' : 'partial'
-              };
+          // Per-destination status (from destRuns facet, no extra queries)
+          if (agent.type === 'A' && agent.destinations) {
+            const destIds = { 1: 'calpe', 2: 'texel' };
+            for (const [numId, destKey] of Object.entries(destIds)) {
+              const destMatch = destRuns.find(d =>
+                meta.actorNames.includes(d._id.actor) && d._id.dest === parseInt(numId)
+              );
+              if (destMatch) {
+                agent.destinations[destKey] = {
+                  lastRun: destMatch.lastTimestamp,
+                  status: (destMatch.lastStatus === 'completed' || destMatch.lastStatus === 'success') ? 'success'
+                    : (destMatch.lastStatus === 'error' || destMatch.lastStatus === 'failed') ? 'error' : 'partial'
+                };
+              } else if (agent.lastRun) {
+                agent.destinations[destKey] = {
+                  lastRun: agent.lastRun.timestamp,
+                  status: agent.lastRun.status === 'success' ? 'success' : 'partial'
+                };
+              }
             }
           }
+
+          // Recent runs (from facet, no extra queries)
+          agent.recentRuns = (recentRunsMap[agent.id] || recentRunsMap[meta.actorNames?.[0]] || []).map(r => ({
+            timestamp: r.timestamp,
+            action: r.action,
+            status: (r.status === 'completed' || r.status === 'success') ? 'success' : r.status || 'warning',
+            destination: r.destination ? (r.destination === 1 ? 'calpe' : 'texel') : null
+          }));
+        }
+
+        // Recent activity (from facet)
+        for (const log of (facetResult?.recentActivity || [])) {
+          const matchedAgent = AGENT_METADATA.find(m => m.actorNames.includes(log.actor?.name));
+          recentActivity.push({
+            timestamp: log.timestamp,
+            agent: matchedAgent ? matchedAgent.name : (log.actor?.name || 'Unknown'),
+            action: log.action?.replace(/^job_(started|completed)_/, '') || log.description || 'unknown',
+            destination: log.metadata?.destinationId ? (log.metadata.destinationId === 1 ? 'calpe' : 'texel') : 'all',
+            status: log.status === 'completed' ? 'success' : log.status || 'warning',
+            details: log.description || null,
+            duration: log.duration || null
+          });
         }
 
         // Get recent activity (last 50 entries)
@@ -2512,27 +2563,8 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       }
     }
 
-    // Populate recentActivity per agent (last 5 entries)
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const db = mongoose.connection.db;
-        const auditLogs = db.collection('audit_logs');
-        const since = new Date(Date.now() - 7 * 24 * 3600 * 1000);
-        for (const agent of agents) {
-          const meta = AGENT_METADATA.find(m => m.id === agent.id);
-          if (!meta) continue;
-          const logs = await auditLogs.find(
-            { 'actor.name': { $in: meta.actorNames }, timestamp: { $gte: since } }
-          ).sort({ timestamp: -1 }).limit(5).toArray();
-          agent.recentRuns = logs.map(l => ({
-            timestamp: l.timestamp,
-            action: l.action || l.description || 'unknown',
-            status: (l.status === 'completed' || l.status === 'success') ? 'success' : l.status || 'unknown',
-            destination: l.metadata?.destinationId ? (l.metadata.destinationId === 1 ? 'calpe' : 'texel') : null
-          }));
-        }
-      } catch { /* non-critical */ }
-    }
+    // recentRuns per agent: now included in $facet (no extra queries)
+
 
     // Build summary
     const summary = {
