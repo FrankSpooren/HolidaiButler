@@ -89,20 +89,32 @@ async function detectAnomaly(agentName, action, metricPath, currentValue) {
 const AGENT_LABELS = {
   'security-reviewer': 'De Bewaker',
   'code-reviewer': 'De Corrector',
-  'ux-ui-reviewer': 'De Stylist'
+  'ux-ui-reviewer': 'De Stylist',
+  'performance-wachter': 'De Performance Wachter',
+  'boekhouder': 'De Boekhouder',
+  'vertaler': 'De Vertaler',
+  'anomaliedetective': 'De Anomaliedetective'
 };
 
 const AGENT_CATEGORIES = {
   'security-reviewer': 'security',
   'code-reviewer': 'code_quality',
-  'ux-ui-reviewer': 'performance'
+  'ux-ui-reviewer': 'performance',
+  'performance-wachter': 'performance',
+  'boekhouder': 'other',
+  'vertaler': 'other',
+  'anomaliedetective': 'performance'
 };
 
 // B4: Map actorName to unique agent key for issue attribution
 const ACTOR_TO_AGENT_KEY = {
   'security-reviewer': 'bewaker',
   'code-reviewer': 'corrector',
-  'ux-ui-reviewer': 'stylist'
+  'ux-ui-reviewer': 'stylist',
+  'performance-wachter': 'performanceWachter',
+  'boekhouder': 'boekhouder',
+  'vertaler': 'vertaler',
+  'anomaliedetective': 'anomaliedetective'
 };
 
 /**
@@ -114,7 +126,13 @@ async function runAnomalyDetection() {
     { agent: 'security-reviewer', action: 'npm_audit_scan', metric: 'total', label: 'Total npm vulnerabilities' },
     { agent: 'security-reviewer', action: 'npm_audit_scan', metric: 'vulnerabilities.critical', label: 'Critical vulnerabilities' },
     { agent: 'code-reviewer', action: 'code_quality_scan', metric: 'consoleLogs', label: 'Console.log count' },
-    { agent: 'ux-ui-reviewer', action: 'performance_check', metric: 'trend.avgTtfb', label: 'Average TTFB' }
+    { agent: 'ux-ui-reviewer', action: 'performance_check', metric: 'trend.avgTtfb', label: 'Average TTFB' },
+    // Fase 6: nieuwe agent metrics voor anomaliedetectie
+    { agent: 'performance-wachter', action: 'performance_check', metric: 'avg_ttfb', label: 'Endpoint avg TTFB' },
+    { agent: 'performance-wachter', action: 'performance_check', metric: 'down_count', label: 'Endpoints down' },
+    { agent: 'boekhouder', action: 'cost_report', metric: 'totalSpent', label: 'Monthly cost spent' },
+    { agent: 'vertaler', action: 'translation_quality_check', metric: 'flagged', label: 'Translation flags' },
+    { agent: 'anomaliedetective', action: 'anomaly_scan', metric: 'anomalies_detected', label: 'Anomalies detected' }
   ];
 
   const anomalies = [];

@@ -27,9 +27,10 @@ class BoekhouderAgent extends BaseAgent {
       { $match: { timestamp: { $gte: monthStart } } },
       { $group: {
         _id: '$service',
-        totalSpent: { $sum: { $ifNull: ['$amount', 0] } },
-        totalTokens: { $sum: '$tokens' },
-        callCount: { $sum: 1 }
+        totalSpent: { $sum: { $ifNull: ['$cost', 0] } },
+        totalTokens: { $sum: { $ifNull: ['$tokens', 0] } },
+        callCount: { $sum: 1 },
+        lastOp: { $last: '$operation' }
       }},
       { $sort: { totalSpent: -1 } }
     ]).toArray();

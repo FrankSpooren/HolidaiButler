@@ -37,10 +37,14 @@ class OnthalerAgent extends BaseAgent {
     const [pages] = await mysqlSequelize.query('SELECT COUNT(*) as c FROM pages WHERE destination_id = :id', { replacements: { id: destinationId }, type: QueryTypes.SELECT }).catch(() => [{ c: 0 }]);
     checks.push({ check: 'pages', value: pages?.c || 0, required: 1, ok: (pages?.c || 0) >= 1 });
 
-    // 6. ChromaDB collection
-    const chromaCollections = await db.collection('chromadb_state_snapshots').findOne({}, { sort: { timestamp: -1 } });
-    const hasChroma = chromaCollections?.collections && Object.keys(chromaCollections.collections).length > 0;
-    checks.push({ check: 'chromadb_collection', value: hasChroma ? 'present' : 'missing', required: 'present', ok: hasChroma });
+    // 6. ChromaDB collection per destination
+    const destCodes = { 1: 'calpe_pois', 2: 'texel_pois', 4: 'warrewijzer_pois' };
+    const expectedCollection = destCodes[destinationId];
+    const chromaSnapshot = await db.collection('chromadb_state_snapshots').findOne({}, { sort: { timestamp: -1 } });
+    const chromaCollections = chromaSnapshot?.collections || {};
+    const chromaCount = expectedCollection ? (chromaCollections[expectedCollection] || 0) : 0;
+    const hasChroma = chromaCount > 0;
+    checks.push({ check: 'chromadb_vectors', value: hasChroma ? chromaCount : 'missing', required: '>0', ok: hasChroma });
 
     // 7. Reviews
     const [reviews] = await mysqlSequelize.query('SELECT COUNT(*) as c FROM reviews WHERE destination_id = :id', { replacements: { id: destinationId }, type: QueryTypes.SELECT }).catch(() => [{ c: 0 }]);
