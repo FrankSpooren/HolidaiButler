@@ -132,7 +132,7 @@ class HolibotSyncAgent {
       let ChromaDBSnapshot;
       try {
         ChromaDBSnapshot = mongoose.model('ChromaDBStateSnapshot');
-      } catch {
+      } catch (err) {
         const schema = new mongoose.Schema({
           timestamp: { type: Date, default: Date.now },
           collections: { type: mongoose.Schema.Types.Mixed }

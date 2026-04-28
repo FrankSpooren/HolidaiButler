@@ -36,11 +36,7 @@ const intermediaryMonitorResultSchema = new mongoose.Schema({
 }, { collection: 'intermediary_monitor_results' });
 
 let IntermediaryMonitorResult;
-try {
-  IntermediaryMonitorResult = mongoose.model('IntermediaryMonitorResult');
-} catch {
-  IntermediaryMonitorResult = mongoose.model('IntermediaryMonitorResult', intermediaryMonitorResultSchema);
-}
+IntermediaryMonitorResult = mongoose.models.IntermediaryMonitorResult || mongoose.model('IntermediaryMonitorResult', intermediaryMonitorResultSchema);
 
 // ============================================================================
 // DE MAKELAAR
@@ -274,9 +270,10 @@ class IntermediaryMonitor {
         null,
         { sort: { timestamp: -1 } }
       ).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[index.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 }
 

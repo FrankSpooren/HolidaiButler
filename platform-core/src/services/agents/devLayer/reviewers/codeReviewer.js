@@ -515,7 +515,7 @@ class CodeReviewer {
         );
         results.consoleLogs = clOutput.trim().split('\n')
           .reduce((sum, line) => sum + (parseInt(line.split(':').pop()) || 0), 0);
-      } catch { results.consoleLogs = -1; }
+      } catch (err) { console.debug('[codeReviewer.js]', err.message); results.consoleLogs = -1; }
 
       // 2. Detect potential hardcoded secrets (password, apikey, secret with string values)
       try {
@@ -525,7 +525,7 @@ class CodeReviewer {
         );
         results.hardcodedStrings = hsOutput.trim().split('\n')
           .reduce((sum, line) => sum + (parseInt(line.split(':').pop()) || 0), 0);
-      } catch { results.hardcodedStrings = -1; }
+      } catch (err) { console.debug('[codeReviewer.js]', err.message); results.hardcodedStrings = -1; }
 
       // 3. Count TODO/FIXME/HACK comments
       try {
@@ -535,7 +535,7 @@ class CodeReviewer {
         );
         const totalTodos = parseInt(todoOutput.trim()) || 0;
         results.todos = totalTodos;
-      } catch { results.todos = -1; }
+      } catch (err) { console.debug('[codeReviewer.js]', err.message); results.todos = -1; }
 
       // 4. File count + line count
       try {
@@ -544,7 +544,7 @@ class CodeReviewer {
           { encoding: 'utf8', timeout: 15000 }
         );
         results.fileCount = parseInt(fcOutput.trim()) || 0;
-      } catch { results.fileCount = -1; }
+      } catch (err) { console.debug('[codeReviewer.js]', err.message); results.fileCount = -1; }
 
       try {
         const lcOutput = execSync(
@@ -552,7 +552,7 @@ class CodeReviewer {
           { encoding: 'utf8', timeout: 30000 }
         );
         results.lineCount = parseInt(lcOutput.trim()) || 0;
-      } catch { results.lineCount = -1; }
+      } catch (err) { console.debug('[codeReviewer.js]', err.message); results.lineCount = -1; }
 
     } catch (e) {
       results.error = e.message;

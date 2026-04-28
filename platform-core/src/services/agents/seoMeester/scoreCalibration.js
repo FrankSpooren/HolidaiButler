@@ -51,7 +51,7 @@ export async function calibrateScoring(destinationId) {
       // Extract predicted score from seo_data
       let seoData = item.seo_data;
       if (typeof seoData === 'string') {
-        try { seoData = JSON.parse(seoData); } catch { seoData = {}; }
+        try { seoData = JSON.parse(seoData); } catch (err) { seoData = {}; }
       }
       const predictedScore = seoData?.overallScore || seoData?.score || 0;
       if (!predictedScore) continue;

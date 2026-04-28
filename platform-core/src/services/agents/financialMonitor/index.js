@@ -36,11 +36,7 @@ const financialMonitorResultSchema = new mongoose.Schema({
 }, { collection: 'financial_monitor_results' });
 
 let FinancialMonitorResult;
-try {
-  FinancialMonitorResult = mongoose.model('FinancialMonitorResult');
-} catch {
-  FinancialMonitorResult = mongoose.model('FinancialMonitorResult', financialMonitorResultSchema);
-}
+FinancialMonitorResult = mongoose.models.FinancialMonitorResult || mongoose.model('FinancialMonitorResult', financialMonitorResultSchema);
 
 // ============================================================================
 // DE KASSIER
@@ -300,9 +296,10 @@ class FinancialMonitor {
         null,
         { sort: { timestamp: -1 } }
       ).lean();
-    } catch {
+    } catch (err) {
+      console.warn('[index.js] Query fallback:', err.message);
       return null;
-    }
+}
   }
 }
 

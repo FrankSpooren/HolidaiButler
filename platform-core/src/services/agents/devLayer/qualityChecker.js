@@ -268,7 +268,7 @@ class QualityChecker {
             warnings: fileResult.warningCount || 0,
             messages: fileResult.messages || []
           };
-        } catch {
+        } catch (err) {
           // Parse failed
         }
       }
@@ -382,7 +382,7 @@ class QualityChecker {
             moderate: audit.metadata?.vulnerabilities?.moderate || 0,
             low: audit.metadata?.vulnerabilities?.low || 0
           };
-        } catch {
+        } catch (err) {
           // Parse failed
         }
       }
