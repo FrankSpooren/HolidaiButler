@@ -133,7 +133,7 @@ export default function AgentsPage({ embedded = false }) {
       for (const a of data.agents) {
         if (a.status === 'error' || a.status === 'warning') needsAttention.add(a.category);
       }
-      setExpandedCategories(needsAttention);
+      needsAttention.add('core'); setExpandedCategories(needsAttention);
     }
   }, [data?.agents]);
 
@@ -298,7 +298,7 @@ export default function AgentsPage({ embedded = false }) {
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                    <Typography sx={{ fontSize: '1.1rem', color: 'text.secondary', cursor: 'pointer' }}>
                       {isExpanded ? '▾' : '▸'}
                     </Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
