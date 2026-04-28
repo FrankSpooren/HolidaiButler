@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Chip, Select, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel,
@@ -22,7 +22,7 @@ import { useAgentStatus, useAgentConfigs, useUpdateAgentConfig, useAgentResults 
 import useAuthStore from '../stores/authStore.js';
 import { getAgentIcon, getAgentDescription, getAgentTasks, formatTimestamp, CATEGORY_COLORS, STATUS_COLORS } from '../utils/agents';
 
-const CATEGORIES = ['all', 'core', 'operations', 'development', 'strategy', 'monitoring'];
+const CATEGORIES = ['all', 'core', 'operations', 'development', 'strategy', 'monitoring', 'content', 'intelligence', 'commerce', 'support', 'compliance'];
 
 export default function AgentsPage({ embedded = false }) {
   const { t } = useTranslation();
@@ -31,6 +31,8 @@ export default function AgentsPage({ embedded = false }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [destinationFilter, setDestinationFilter] = useState('all');
   const [sortBy, setSortBy] = useState('category');
+  const [groupByCategory, setGroupByCategory] = useState(true);
+  const [diagnoseAgent, setDiagnoseAgent] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -67,6 +69,28 @@ export default function AgentsPage({ embedded = false }) {
     });
     return list;
   }, [data?.agents, categoryFilter, sortDir, sortBy]);
+
+  // Grouped by category for collapsible view
+  const groupedAgents = useMemo(() => {
+    if (!filteredAgents) return {};
+    const groups = {};
+    for (const agent of filteredAgents) {
+      const cat = agent.category || 'other';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(agent);
+    }
+    // Sort categories: error/warning first
+    const catOrder = ['core', 'operations', 'content', 'intelligence', 'development', 'strategy', 'commerce', 'monitoring', 'support', 'compliance'];
+    const sorted = {};
+    for (const cat of catOrder) {
+      if (groups[cat]) sorted[cat] = groups[cat];
+    }
+    // Add any remaining
+    for (const cat of Object.keys(groups)) {
+      if (!sorted[cat]) sorted[cat] = groups[cat];
+    }
+    return sorted;
+  }, [filteredAgents]);
 
   const summary = data?.summary || { total: 0, healthy: 0, warning: 0, error: 0, unknown: 0, deactivated: 0 };
   const visibleActivity = activityExpanded ? (data?.recentActivity || []).slice(0, 50) : (data?.recentActivity || []).slice(0, 10);
@@ -147,6 +171,14 @@ export default function AgentsPage({ embedded = false }) {
           </Button>
         </Box>
       </Box>}
+
+      {/* Group toggle */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+        <FormControlLabel
+          control={<Switch checked={groupByCategory} onChange={e => setGroupByCategory(e.target.checked)} size="small" />}
+          label={<Typography variant="caption">Groepeer per categorie</Typography>}
+        />
+      </Box>
 
       {/* Error / Partial warning */}
       {error && (
@@ -244,7 +276,20 @@ export default function AgentsPage({ embedded = false }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredAgents.map((agent, idx) => (
+              {groupByCategory ? (
+                Object.entries(groupedAgents).map(([category, agents]) => (
+                  <React.Fragment key={category}>
+                    <TableRow sx={{ bgcolor: CATEGORY_COLORS[category] ? `${CATEGORY_COLORS[category]}15` : 'action.hover' }}>
+                      <TableCell colSpan={isMobile ? 6 : 8} sx={{ py: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip label={t(`agents.filter.${category}`)} size="small" sx={{ bgcolor: CATEGORY_COLORS[category] || '#607d8b', color: '#fff', fontWeight: 700, fontSize: '0.75rem' }} />
+                          <Typography variant="caption" color="text.secondary">{agents.length} agents</Typography>
+                          {agents.some(a => a.status === 'error') && <ErrorOutlineIcon sx={{ fontSize: 14, color: STATUS_COLORS.error }} />}
+                          {agents.some(a => a.status === 'warning') && <WarningAmberIcon sx={{ fontSize: 14, color: STATUS_COLORS.warning }} />}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                    {agents.map((agent, idx) => (
                 <TableRow
                   key={agent.id}
                   onClick={() => setSelectedAgent(agent)}
@@ -305,10 +350,77 @@ export default function AgentsPage({ embedded = false }) {
                     </Tooltip>
                   </TableCell>
                 </TableRow>
-              ))}
+                    ))}
+                  </React.Fragment>
+                ))
+              ) : (
+                filteredAgents.map((agent, idx) => (
+                  <TableRow
+                    key={agent.id}
+                    onClick={() => setSelectedAgent(agent)}
+                    sx={{
+                      cursor: 'pointer',
+                      bgcolor: agent.status === 'error' ? 'rgba(244,67,54,0.04)' : agent.status === 'deactivated' ? 'rgba(0,0,0,0.03)' : undefined,
+                      opacity: agent.status === 'deactivated' ? 0.6 : 1,
+                      '&:hover': { bgcolor: 'action.hover' }
+                    }}
+                  >
+                    <TableCell sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>{idx + 1}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <span style={{ fontSize: '1.1rem' }}>{getAgentIcon(agent.name)}</span>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{agent.name}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell><Chip label={t(`agents.filter.${agent.category}`)} size="small" sx={{ bgcolor: CATEGORY_COLORS[agent.category] || '#607d8b', color: '#fff', fontSize: '0.7rem', height: 22 }} /></TableCell>
+                    <TableCell><Typography variant="body2">{agent.scheduleHuman || agent.schedule || '—'}</Typography></TableCell>
+                    <TableCell><DestCell destData={agent.destinations?.calpe} /></TableCell>
+                    <TableCell><DestCell destData={agent.destinations?.texel} /></TableCell>
+                    <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><StatusDot status={agent.status} /><Typography variant="body2">{t(`agents.${agent.status}`)}</Typography></Box></TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+
+      {/* Diagnose Dialog */}
+      {diagnoseAgent && (
+        <Dialog open={!!diagnoseAgent} onClose={() => setDiagnoseAgent(null)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <ErrorOutlineIcon color={diagnoseAgent.status === "error" ? "error" : "warning"} />
+            Diagnose: {diagnoseAgent.name}
+          </DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="subtitle2" gutterBottom>Laatste runs</Typography>
+            {(diagnoseAgent.recentRuns || []).slice(0, 5).map((run, i) => (
+              <Box key={i} sx={{ display: "flex", gap: 1, alignItems: "center", mb: 0.5 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: run.status === "success" ? "#4caf50" : "#f44336" }} />
+                <Typography variant="body2" sx={{ fontSize: "0.8rem" }}>
+                  {new Date(run.timestamp).toLocaleString("nl-NL")} — {run.action || run.status}
+                </Typography>
+              </Box>
+            ))}
+            {diagnoseAgent.warningDetail && (
+              <Alert severity={diagnoseAgent.status === "error" ? "error" : "warning"} sx={{ mt: 2, mb: 1 }}>
+                {diagnoseAgent.warningDetail}
+              </Alert>
+            )}
+            {diagnoseAgent.errorInstructions?.default && (
+              <>
+                <Typography variant="subtitle2" sx={{ mt: 2 }}>Troubleshooting</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-line", fontFamily: "monospace", fontSize: "0.8rem", bgcolor: "action.hover", p: 1, borderRadius: 1, mt: 0.5 }}>
+                  {diagnoseAgent.errorInstructions.default}
+                </Typography>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDiagnoseAgent(null)}>Sluiten</Button>
+          </DialogActions>
+        </Dialog>
       )}
 
       {/* Agent Detail Dialog */}

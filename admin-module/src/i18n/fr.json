@@ -335,7 +335,11 @@
       "strategy": "Strategy",
       "monitoring": "Monitoring",
       "content": "Contenu",
-      "destination": "Destination"
+      "destination": "Destination",
+      "intelligence": "Intelligence",
+      "commerce": "Commerce",
+      "support": "Support",
+      "compliance": "Conformite"
     },
     "table": {
       "name": "Agent",
@@ -419,7 +423,19 @@
     "noResults": "No agents found for the selected filters.",
     "scheduledJobs": "Scheduled Jobs",
     "noActivity": "No recent activity",
-    "close": "Close"
+    "close": "Close",
+    "businessOutput": {
+      "delivering": "En production",
+      "monitoring": "Surveillance",
+      "standby": "En attente"
+    },
+    "diagnose": {
+      "title": "Diagnostic",
+      "lastRuns": "Executions recentes",
+      "recommendedAction": "Action recommandee"
+    },
+    "ecosystem": "Ecosysteme",
+    "agentCount": "{count} agents"
   },
   "pois": {
     "title": "POI Management",
