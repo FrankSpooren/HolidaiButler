@@ -1884,7 +1884,32 @@ const AGENT_METADATA = [
 2. Controleer META/LINKEDIN env vars: grep "META_\\|LINKEDIN_" .env | sed 's/=.*/=***/'
 3. Controleer social_accounts: SELECT platform, status, token_expires_at FROM social_accounts
 4. Test Meta API: curl -s "https://graph.facebook.com/v25.0/me?access_token=$META_PAGE_ACCESS_TOKEN"
-5. Herstart API: pm2 restart holidaibutler-api` } }
+5. Herstart API: pm2 restart holidaibutler-api` } },
+  // === FASE 6 NEW AGENTS ===
+  { id: 'verfrisser', name: 'De Verfrisser', englishName: 'Content Freshness Agent', category: 'content', type: 'A',
+    description: 'Detecteert verouderde POI content en ontbrekende vertalingen',
+    description_en: 'Detects stale POI content and missing translations',
+    tasks: ['POI freshness monitoring (Apify sync >90d)', 'Missing translation detection (NL/DE/ES)', 'Content completeness tracking', 'Issue creation bij >30% stale content'],
+    monitoring_scope: 'POI content freshness, translation coverage',
+    output_description: 'Freshness rapport per destination + agent_issues bij kwaliteitsdaling',
+    schedule: '0 2 * * 1', actorNames: ['verfrisser'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep verfrisser\n2. Check MySQL: SELECT COUNT(*) FROM POI WHERE last_apify_sync < DATE_SUB(NOW(), INTERVAL 90 DAY)\n3. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'boekhouder', name: 'De Boekhouder', englishName: 'Cost Optimization Agent', category: 'operations', type: 'B',
+    description: 'Budget tracking per API provider, maandelijkse projectie, overschrijding alerts',
+    description_en: 'Budget tracking per API provider, monthly projection, overspend alerts',
+    tasks: ['Dagelijkse cost aggregatie per provider (Mistral/DeepL/Apify/ChromaDB)', 'Maandelijkse budget projectie', 'Alert bij projected overschrijding >110%', 'Cost trend analyse'],
+    monitoring_scope: 'API kosten per provider, budget compliance',
+    output_description: 'Dagelijks cost report + agent_issues bij budget overschrijding',
+    schedule: '0 6 * * *', actorNames: ['boekhouder'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep boekhouder\n2. Check MongoDB: cost_logs collection\n3. Herstart: pm2 restart holidaibutler-api' } },
+  { id: 'reisleider', name: 'De Reisleider', englishName: 'Customer Journey Agent', category: 'operations', type: 'A',
+    description: 'Analyseert user journeys, detecteert drop-offs, berekent conversie per destination',
+    description_en: 'Analyzes user journeys, detects drop-offs, calculates conversion per destination',
+    tasks: ['User journey funnel analyse (7d window)', 'Chatbot engagement monitoring', 'Pageview funnel analyse', 'Drop-off detectie bij <50% completion'],
+    monitoring_scope: 'User journeys, chatbot sessies, pageviews',
+    output_description: 'Journey analyse rapport + agent_issues bij hoge drop-off',
+    schedule: '0 5 * * *', actorNames: ['reisleider'],
+    errorInstructions: { default: '1. Check PM2 logs: pm2 logs holidaibutler-api | grep reisleider\n2. Check MySQL: SELECT COUNT(*) FROM user_journeys WHERE created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)\n3. Herstart: pm2 restart holidaibutler-api' } }
 ];
 
 /**

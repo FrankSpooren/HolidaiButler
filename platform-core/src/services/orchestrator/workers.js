@@ -523,6 +523,49 @@ export function startWorkers() {
           }
           break;
 
+                // === FASE 6 NEW AGENTS ===
+        case "content-freshness-audit":
+          try {
+            const verfrisser = await import("../agents/verfrisser/index.js");
+            result = await verfrisser.default.run(job.data?.destinationId || 'all');
+            console.log("[Orchestrator] Freshness audit:", JSON.stringify({
+              destinations: result.destinations_total,
+              success: result.success
+            }));
+          } catch (error) {
+            console.error("[Orchestrator] Freshness audit failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "cost-optimization-report":
+          try {
+            const boekhouder = await import("../agents/boekhouder/index.js");
+            result = await boekhouder.default.run();
+            console.log("[Orchestrator] Cost report:", JSON.stringify({
+              spent: result.totalSpent,
+              projected: result.projectedTotal
+            }));
+          } catch (error) {
+            console.error("[Orchestrator] Cost report failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "journey-analysis":
+          try {
+            const reisleider = await import("../agents/reisleider/index.js");
+            result = await reisleider.default.run(job.data?.destinationId || 'all');
+            console.log("[Orchestrator] Journey analysis:", JSON.stringify({
+              destinations: result.destinations_total,
+              success: result.success
+            }));
+          } catch (error) {
+            console.error("[Orchestrator] Journey analysis failed:", error.message);
+            throw error;
+          }
+          break;
+
         // === STRATEGY LAYER AGENT JOBS ===
         case "strategy-assessment":
           try {
@@ -1504,6 +1547,15 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'daily-briefing': 'owner-interface',
         'weekly-cost-report': 'owner-interface',
 
+        // De Verfrisser (Content Freshness)
+        'content-freshness-audit': 'verfrisser',
+
+        // De Boekhouder (Cost Optimization)
+        'cost-optimization-report': 'boekhouder',
+
+        // De Reisleider (Customer Journey)
+        'journey-analysis': 'reisleider',
+
         // De Verkenner (POI Discovery)
         'poi-discovery-annual': 'poi-discovery',
         'poi-discovery-quarterly': 'poi-discovery',
@@ -1570,6 +1622,9 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         'qa-sync-tier12': 'koerier', 'qa-sync-tier34': 'koerier',
         'review-sync-tier12': 'koerier', 'review-sync-tier34': 'koerier',
         'review-retention': 'koerier', 'poi-deactivation-check': 'koerier',
+        'content-freshness-audit': 'verfrisser',
+        'cost-optimization-report': 'boekhouder',
+        'journey-analysis': 'reisleider',
         'poi-discovery-annual': 'verkenner', 'poi-discovery-quarterly': 'verkenner',
         'tier-promotion': 'tier-promotor', 'poi-tier-recalc': 'tier-promotor',
         'chromadb-state-snapshot': 'geheugen', 'holibot-poi-sync': 'geheugen',

@@ -98,6 +98,29 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: dev-project-audit (1st of month 03:00)');
 
+  // === FASE 6 NEW AGENTS ===
+
+  // De Verfrisser — Content Freshness (Weekly Mon 02:00)
+  await scheduledQueue.add('content-freshness-audit', { type: 'content' }, {
+    repeat: { cron: '0 2 * * 1', tz: 'Europe/Amsterdam' },
+    jobId: 'content-freshness-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: content-freshness-audit (Monday 02:00)');
+
+  // De Boekhouder — Cost Report (Daily 06:00)
+  await scheduledQueue.add('cost-optimization-report', { type: 'operations' }, {
+    repeat: { cron: '0 6 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'cost-optimization-report-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: cost-optimization-report (Daily 06:00)');
+
+  // De Reisleider — Journey Analysis (Daily 05:00)
+  await scheduledQueue.add('journey-analysis', { type: 'operations' }, {
+    repeat: { cron: '0 5 * * *', tz: 'Europe/Amsterdam' },
+    jobId: 'journey-analysis-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: journey-analysis (Daily 05:00)');
+
   // === Fase 8A+ Monitoring Jobs ===
 
   // Content Quality Audit - weekly Monday at 05:00 (before daily briefing)
