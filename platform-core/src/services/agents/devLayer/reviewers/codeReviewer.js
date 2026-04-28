@@ -503,6 +503,8 @@ class CodeReviewer {
       hacks: 0,
       fileCount: 0,
       lineCount: 0,
+      eslintErrors: 0,
+      eslintWarnings: 0,
       error: null
     };
 
@@ -554,6 +556,17 @@ class CodeReviewer {
         results.lineCount = parseInt(lcOutput.trim()) || 0;
       } catch (err) { console.debug('[codeReviewer.js]', err.message); results.lineCount = -1; }
 
+      // 5. ESLint scan (enterprise activation — Fase 4)
+      try {
+        const eslintOutput = execSync(
+          'npx eslint src/ --format json --quiet 2>/dev/null || true',
+          { cwd: '/var/www/api.holidaibutler.com/platform-core', encoding: 'utf8', timeout: 120000 }
+        );
+        const eslintResults = JSON.parse(eslintOutput || '[]');
+        results.eslintErrors = eslintResults.reduce((s, f) => s + (f.errorCount || 0), 0);
+        results.eslintWarnings = eslintResults.reduce((s, f) => s + (f.warningCount || 0), 0);
+      } catch (err) { console.debug('[codeReviewer.js] ESLint scan:', err.message); }
+
     } catch (e) {
       results.error = e.message;
     }
@@ -565,7 +578,7 @@ class CodeReviewer {
 
     try {
       await logAgent('code-reviewer', 'code_quality_scan', {
-        description: `Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs [${trend.direction}]`,
+        description: `Code scan: ${results.fileCount} files, ${results.lineCount} lines, ${results.consoleLogs} console.logs, ${results.todos} TODOs, ESLint ${results.eslintErrors}E/${results.eslintWarnings}W [${trend.direction}]`,
         status: results.error ? 'failed' : 'completed',
         metadata: results
       });
@@ -593,6 +606,16 @@ class CodeReviewer {
           description: 'Overmatig gebruik van console.log kan performance beinvloeden en logs vervuilen',
           details: results,
           fingerprint: 'code-consolelogs-high'
+        });
+      }
+      if (results.eslintErrors > 0) {
+        await raiseIssue({
+          agentName: 'corrector', agentLabel: 'De Corrector',
+          severity: 'medium', category: 'code_quality',
+          title: `${results.eslintErrors} ESLint errors in platform-core`,
+          description: `ESLint scan detecteerde ${results.eslintErrors} errors en ${results.eslintWarnings} warnings`,
+          details: { errors: results.eslintErrors, warnings: results.eslintWarnings },
+          fingerprint: 'eslint-errors-' + results.eslintErrors
         });
       }
     } catch (issueErr) {

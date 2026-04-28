@@ -91,6 +91,13 @@ export async function initializeScheduler() {
   });
   console.log('[Orchestrator] Scheduled: dev-quality-report (Monday 06:00)');
 
+  // Fase 4: Monthly project audit (lint + deps + build check) — De Inspecteur
+  await scheduledQueue.add('dev-project-audit', { type: 'dev-layer', project: 'platform-core' }, {
+    repeat: { cron: '0 3 1 * *', tz: 'Europe/Amsterdam' },
+    jobId: 'dev-project-audit-recurring'
+  });
+  console.log('[Orchestrator] Scheduled: dev-project-audit (1st of month 03:00)');
+
   // === Fase 8A+ Monitoring Jobs ===
 
   // Content Quality Audit - weekly Monday at 05:00 (before daily briefing)

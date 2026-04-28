@@ -496,11 +496,29 @@ export function startWorkers() {
             console.log("[Orchestrator] Quality report generated:", JSON.stringify({
               files: qualityReport.fileCount,
               consoleLogs: qualityReport.consoleLogs,
-              todos: qualityReport.todos
+              todos: qualityReport.todos,
+              eslintErrors: qualityReport.eslintErrors
             }));
             result = qualityReport;
           } catch (error) {
             console.error("[Orchestrator] Quality report failed:", error.message);
+            throw error;
+          }
+          break;
+
+        case "dev-project-audit":
+          try {
+            const qualityChecker = await import("../agents/devLayer/qualityChecker.js");
+            const auditResult = await qualityChecker.default.checkProject('platform-core');
+            console.log("[Orchestrator] Project audit completed:", JSON.stringify({
+              project: auditResult.project,
+              status: auditResult.overallStatus,
+              lint: auditResult.lint?.success,
+              deps: auditResult.dependencyAudit?.total
+            }));
+            result = auditResult;
+          } catch (error) {
+            console.error("[Orchestrator] Project audit failed:", error.message);
             throw error;
           }
           break;
@@ -1412,6 +1430,7 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
       const JOB_ACTOR_MAP = {
         // De Corrector (Code)
         'dev-quality-report': 'code-reviewer',
+        'dev-project-audit': 'dev-layer',
 
         // De Gastheer (Communication Flow)
         'comm-cleanup': 'communication-flow',
@@ -1567,6 +1586,7 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         // Development
         'dev-security-scan': 'bewaker',
         'dev-quality-report': 'corrector',
+        'dev-project-audit': 'inspecteur',
         'dev-dependency-audit': 'stylist',
         // Strategy
         'agent-success-rate': 'weermeester',
