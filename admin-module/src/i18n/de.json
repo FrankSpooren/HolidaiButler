@@ -418,7 +418,8 @@
       "recommendedAction": "Empfohlene Aktion"
     },
     "ecosystem": "Okosystem",
-    "agentCount": "{count} Agents"
+    "agentCount": "{count} Agents",
+    "total": "Gesamt"
   },
   "pois": {
     "title": "POI-Verwaltung",

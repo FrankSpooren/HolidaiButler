@@ -435,7 +435,8 @@
       "recommendedAction": "Action recommandee"
     },
     "ecosystem": "Ecosysteme",
-    "agentCount": "{count} agents"
+    "agentCount": "{count} agents",
+    "total": "Total"
   },
   "pois": {
     "title": "POI Management",
