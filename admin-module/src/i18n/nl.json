@@ -435,7 +435,8 @@
       "recommendedAction": "Aanbevolen actie"
     },
     "ecosystem": "Ecosysteem",
-    "agentCount": "{count} agents"
+    "agentCount": "{count} agents",
+    "total": "Totaal"
   },
   "pois": {
     "title": "POI Beheer",

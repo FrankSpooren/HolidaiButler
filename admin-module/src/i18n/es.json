@@ -418,7 +418,8 @@
       "recommendedAction": "Accion recomendada"
     },
     "ecosystem": "Ecosistema",
-    "agentCount": "{count} agentes"
+    "agentCount": "{count} agentes",
+    "total": "Total"
   },
   "pois": {
     "title": "Gestión de POIs",

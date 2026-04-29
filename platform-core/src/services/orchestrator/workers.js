@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { connection } from "./queues.js";
 import { logAgent, logError, logSystem, logAlert } from "./auditTrail/index.js";
+import { updateAgentStatus } from '../../a2a/agentStatusService.js';
 
 import { startMediaWorker, stopMediaWorker, mediaWorker } from "../media/mediaProcessingWorker.js";
 let scheduledWorker = null;
@@ -1798,6 +1799,15 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         description: "Completed job: " + job.name,
         duration: Date.now() - startTime,
         result: { success: true, data: result }
+      });
+
+      // Materialized agent status update (Laag 2 — enterprise dashboard)
+      await updateAgentStatus(agentId, {
+        jobName: job.name,
+        action: "job_completed_" + job.name,
+        status: 'completed',
+        duration: Date.now() - startTime,
+        destinationId: job.data?.destinationId || null
       });
 
       return { success: true, processedAt: new Date().toISOString(), result };
