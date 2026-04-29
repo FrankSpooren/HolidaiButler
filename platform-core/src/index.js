@@ -62,6 +62,11 @@ import pagesRoutes from './routes/pages.js';
 import a2aRoutes from './routes/a2a.js';
 import { registerFase16Skills } from './a2a/skills.js';
 import { registerFase17ASkills } from './a2a/fase17a_skills.js';
+import { registerFase17BSkills } from './a2a/fase17b_skills.js';
+import { registerFase17CSkills } from './a2a/fase17c_skills.js';
+import { registerFase17DSkills } from './a2a/fase17d_skills.js';
+import { registerFase17ESkills } from './a2a/fase17e_skills.js';
+import { registerFase17FSkills } from './a2a/fase17f_skills.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
@@ -200,6 +205,11 @@ app.use('/api/v1/pages', pagesRoutes);
 app.use(a2aRoutes); // A2A v1.2 discovery (/.well-known/agents + /a2a/agents/:id/card)
 registerFase16Skills(); // A2A skill handlers for inter-agent communication
 registerFase17ASkills(); // Fase 17.A: Owner Communicatie flows (E1-E8)
+registerFase17BSkills(); // Fase 17.B: Operationele Intelligentie flows (B1-B14)
+registerFase17CSkills(); // Fase 17.C: Cost & Compliance flows (C1-C10)
+registerFase17DSkills(); // Fase 17.D: Content Kwaliteitsketen (A1-A16)
+registerFase17ESkills(); // Fase 17.E: Leer- & Optimalisatielus (D1-D12)
+registerFase17FSkills(); // Fase 17.F: Gap-fix flows (11)
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
