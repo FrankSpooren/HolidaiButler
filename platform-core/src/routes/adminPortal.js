@@ -170,6 +170,7 @@ import {
   adminApiRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
 import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
 import commerceService from '../services/commerce/commerceService.js';
@@ -2266,6 +2267,54 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
     let partial = false;
     const recentActivity = [];
 
+    // BRON 1a: Materialized agent_status collection (enterprise — O(39) reads)
+    try {
+      const agentStatuses = await getAllAgentStatuses();
+      if (agentStatuses.size > 0) {
+        for (const agent of agents) {
+          const statusDoc = agentStatuses.get(agent.id);
+          if (statusDoc?.lastRun) {
+            agent.lastRun = {
+              timestamp: statusDoc.lastRun.timestamp,
+              duration: statusDoc.lastRun.duration || null,
+              status: statusDoc.lastRun.status === 'completed' ? 'success' : statusDoc.lastRun.status || 'warning',
+              error: null
+            };
+            const meta = AGENT_METADATA.find(m => m.id === agent.id);
+            agent.status = calculateAgentStatus(agent.lastRun, meta?.schedule, meta);
+
+            // Per-destination status
+            if (agent.type === 'A' && agent.destinations && statusDoc.lastRunByDestination) {
+              const destIds = { 1: 'calpe', 2: 'texel' };
+              for (const [numId, destKey] of Object.entries(destIds)) {
+                const destStatus = statusDoc.lastRunByDestination?.[numId];
+                if (destStatus) {
+                  agent.destinations[destKey] = {
+                    lastRun: destStatus.timestamp,
+                    status: (destStatus.status === 'completed' || destStatus.status === 'success') ? 'success' : 'partial'
+                  };
+                }
+              }
+            }
+
+            // Recent runs from materialized view
+            if (statusDoc.recentRuns) {
+              agent.recentRuns = statusDoc.recentRuns.map(r => ({
+                timestamp: r.timestamp,
+                action: r.action,
+                status: (r.status === 'completed' || r.status === 'success') ? 'success' : r.status || 'warning',
+                destination: r.destination ? (r.destination === 1 ? 'calpe' : 'texel') : null
+              }));
+            }
+          }
+        }
+        // If agent_status provided data, mark as non-partial for this source
+        logger.info(`[AdminPortal] Agent status loaded from materialized view (${agentStatuses.size} agents)`);
+      }
+    } catch (statusErr) {
+      logger.warn('[AdminPortal] Materialized agent_status read failed:', statusErr.message);
+    }
+
     // BRON 1b: MongoDB agent_configurations (merge custom config over static metadata)
     try {
       if (mongoose.connection.readyState === 1) {
@@ -2293,7 +2342,13 @@ router.get('/agents/status', adminAuth('reviewer'), destinationScope, async (req
       // Non-critical: continue with static metadata
     }
 
-    // BRON 2: MongoDB audit_logs — OPTIMIZED (single $facet, was 120+ queries)
+    // BRON 2: MongoDB audit_logs — FALLBACK (only if agent_status didn't cover most agents)
+    const agentsWithLastRun = agents.filter(a => a.lastRun !== null).length;
+    const needsAuditLogFallback = agentsWithLastRun < agents.filter(a => a.active).length * 0.5;
+    if (needsAuditLogFallback) {
+      logger.info(`[AdminPortal] agent_status covered ${agentsWithLastRun}/${agents.length} agents, falling back to audit_logs`);
+    }
+    if (needsAuditLogFallback) // BRON 2: audit_logs fallback — OPTIMIZED ($facet with indexes)
     try {
       if (mongoose.connection.readyState === 1) {
         const db = mongoose.connection.db;
