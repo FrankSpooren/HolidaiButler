@@ -14,6 +14,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+// OpenTelemetry tracing - initialize after env vars, before other imports
+import './observability/tracing.js';
+
 // Sentry Error Monitoring - Initialize early to catch all errors
 import * as Sentry from '@sentry/node';
 if (process.env.SENTRY_DSN) {
@@ -56,6 +59,8 @@ import paymentRoutes from './routes/payment.js';
 import ticketingRoutes from './routes/ticketing.js';
 import reservationRoutes from './routes/reservations.js';
 import pagesRoutes from './routes/pages.js';
+import a2aRoutes from './routes/a2a.js';
+import { registerFase16Skills } from './a2a/skills.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
@@ -190,7 +195,9 @@ app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 app.use('/api/v1/tickets', ticketingRoutes); // Ticketing Module (Fase III-B)
 app.use('/api/v1/reservations', reservationRoutes); // Reservation Module (Fase III-C)
-app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
+app.use('/api/v1/pages', pagesRoutes);
+app.use(a2aRoutes); // A2A v1.2 discovery (/.well-known/agents + /a2a/agents/:id/card)
+registerFase16Skills(); // A2A skill handlers for inter-agent communication
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
