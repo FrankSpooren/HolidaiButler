@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.72.0
-> **Laatst bijgewerkt**: 28 april 2026
+> **Versie**: 4.73.0
+> **Laatst bijgewerkt**: 29 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -112,7 +112,7 @@ HolidaiButler/
 │       │   ├── intermediary/    # Intermediary State Machine (intermediaryService.js)
 │       │   ├── financial/       # Financial Process (financialService.js)
 │       │   ├── orchestrator/    # BullMQ scheduler, workers, costController, auditTrail, ownerInterface
-│       │   └── agents/          # 25 agents (base/, healthMonitor/, dataSync/, holibotSync/, intermediaryMonitor/, financialMonitor/, inventorySync/, contentRedacteur/, seoMeester/, publisher/, etc.)
+│       │   └── agents/          # 39 agents (base/, healthMonitor/, dataSync/, holibotSync/, intermediaryMonitor/, financialMonitor/, inventorySync/, contentRedacteur/, seoMeester/, publisher/, etc.)
 │       ├── middleware/ (auth.js met RBAC, rate limiting, IP whitelist)
 │       └── config/destinations/  # calpe.config.js, texel.config.js, alicante.config.js (+ commerce feature flags)
 ├── hb-websites/                 # Next.js 15 publieke websites (Fase V)
@@ -405,22 +405,26 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
-| Admin endpoints | 303 (backend), ~250 met frontend UI (82%) |
-| adminPortal.js | v3.48.0 |
-| Agents | 26 (+ tierPromotionAgent) |
-| BullMQ jobs | 94 |
-| Block types | 35 (30 uniek + 5 aliassen) |
-| Block editors | 28 |
-| Public API endpoints | 2 (GET /blogs, GET /blogs/:slug) |
-| Media Library endpoints | 31 |
-| CLAUDE.md | v4.67.0 |
-| Master Strategie | v8.21 |
+| Agents | 39 (38 actief + 1 gedeactiveerd: De Architect) |
+| BullMQ jobs | 94 (te migreren naar Temporal in Fase 17 + B8) |
+| Inter-agent flows (gespecificeerd) | 71 (60 Blueprint + 11 gap-fix) |
+| Inter-agent flows (geimplementeerd) | 0 (start Fase 17) |
+| Admin endpoints | 303 |
+| adminPortal.js | v3.50.0 |
+| MongoDB collections (agent-gerelateerd) | 15 |
+| CLAUDE.md | v4.73.0 |
+| Master Strategie | v8.22 |
+| Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI (Fase 14+) |
+| Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
+
 
 ---
 
 ## 🤖 Agent Systeem
 
-### 26 Agents (15 agents + 3 monitoring modules + 3 commerce monitoring + 4 content agents + 1 tier promotion) + 3 Enterprise Services (Issues, Baselines, Correlation)
+### 39 Agents Ecosysteem (29-04-2026)
+
+**38 actief + 1 gedeactiveerd (De Architect, wacht op 3+ destinations)**
 | # | Agent | Naam | Categorie | Type | Schedule |
 |---|-------|------|-----------|------|----------|
 | 1 | Orchestrator | De Maestro | Core | A (dest) | Continuous |
@@ -864,6 +868,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.73.0** | **2026-04-29** | **Fase 13: SSOT Synchronisatie**. Alle drift tussen CLAUDE.md, Master Strategie en Blueprint verwijderd. Huidige Tellingen + Agent tabel officieel 39 agents (38 actief + 1 gedeactiveerd). 94 BullMQ jobs. 71 inter-agent flows gespecificeerd. Startup Guide voltooid: Storage Box (u585583), Grafana Tempo (zelf-hosted), A2A internal token. Disk cleanup 81%->59%. adminPortal.js v3.50.0. |
 | **4.72.0** | **2026-04-28** | **Agent Ecosystem Repair Command v2.0 — 7 Fasen COMPLEET**. Fase 1: Dashboard eerlijkheid (0 unknown, calculateAgentStatus herschreven, 120d audit window). Fase 2: actor.agentId migratie (AuditLog schema, JOB_AGENT_MAP 84 entries, agentId-first queries). Fase 3: Enterprise code audit (52 bare catch→0, 26 fetch+AbortSignal.timeout(30000), 6 logError argument fixes). Fase 4: Corrector ESLint activatie + Inspecteur project audit job. Fase 5: Thermostaat + Leermeester gereactiveerd (1 deactivated: Architect). **Fase 6: 12 NIEUWE AGENTS**: De Vertaler (DeepL backtranslate), De Beeldenmaker (Pixtral-12B), De Personaliseerder (recommendation engine + OpenWeatherMap + brand_profile), De Performance Wachter (7 endpoints + trending), De Anomaliedetective (baseline + anomalies MongoDB), De Auditeur (EU AI Act compliance score), De Optimaliseerder (platform analyse + publish time), De Reisleider (journey funnel + Simple Analytics), De Verfrisser (content freshness), De Boekhouder (12 providers EUR470 budget), De Onthaler (8 tenant checks + ChromaDB per-dest), De Helpdeskmeester (categorisatie + support_tickets + SLA). **12 ecosystem tekortkomingen gefixt**: Boekhouder $service bug, daily briefing 39-agent health, Vertaler destination-aware talen, Personaliseerder brand_profile, OpenWeatherMap, Simple Analytics, budgetConfig EUR470, baselineService 5 nieuwe metrics, pixtral kolommen, Onthaler ChromaDB per-dest, holibot-sync toISOString crash, workers.js agentId alle 94 jobs, MailerLite 7 custom fields. **Fase 7: Frontend**: agents/status 92s→1.5s ($facet aggregate + compound indexes), accordion categoriegroepen, overview blocks full-bgcolor, zoekbalk, status+business output dual chips, relative timestamps, diagnose dialog. 39 agents, 94 BullMQ jobs, 15 MongoDB collections, 60 inter-agent flows gespecificeerd. adminPortal.js v3.50.0. |
 | **4.67.0** | **2026-04-27** | **Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS**. **Content Studio**: image reorder via pijltjes-patroon (POI Management bewezen aanpak) met `loadImages()` self-loading + backend `resolved_images` sort op `media_ids` volgorde. MUI Icons tree-shaking bundel 9.5MB→2.8MB. **BUTE Taal-Pipeline**: contentGenerator.js destination-aware (`body_<sourceLang>` i.p.v. altijd `body_en`), backfill 20 items `body_en→NULL`, backend PATCH enforcement single-language destinations, frontend LANGS uit `item.destination_config` (backend-driven, niet UI dropdown). **Publiqio.com**: Apache CORS dubbele headers verwijderd, ProxyTimeout 120s, `VITE_API_URL=` leeg voor same-origin proxy. |
 | **4.66.0** | **2026-04-27** | **Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close**. **Page Builder VII-B/C/D code deploy**: 22 blokken enterprise-geüpgraded (ARIA, container queries, schema.org, srcset) in 1 productie-commit (94 bestanden, +7.430/-2.813 LOC). SchemaInjector `schema.ts` (6 generators). Image Resize Proxy `image.ts` (srcset 400-1200w webp). ProgramCard Texel kwaliteit (5 fixes). Tenant-aware schema.org URLs (texelmaps.nl/holidaibutler.com). **Content Studio fixes**: Image reorder pijltjes-patroon, ContentImageSection zelfstandige image loading via loadImages(), MUI Icons tree-shaking barrel→path imports (bundel 9.5MB→2.8MB), VITE_API_URL leeg voor same-origin proxy. **BUTE taal-pipeline**: contentGenerator.js destination-aware generatie (body_<sourceLang> i.p.v. altijd body_en), backfill 4 BUTE items body_en→body_nl, frontend LANGS filter op destination.supportedLanguages, vertaal-knoppen filteren op defaultLanguage. **Admin UI Gap-Close (12 nieuwe componenten)**: ChatbotAdminPanels (271 LOC), Commerce tabs (GuestsTab/ReservationsTab/TicketsTab/VouchersTab), POI dashboards (POIClassificationDashboard/POIDiscoveryDashboard/POIFreshnessPanel/POIImageReviewQueue), PlatformHealthDashboard (278 LOC), MediaContextSearch (188 LOC), ContentReportTab (181 LOC). **Backend**: tierPromotionAgent.js (249 LOC, nieuwe agent #26), circuitBreaker.js refactored + circuitBreakerInit.js (startup isolatie), adminPortal.js resolved_images sort op media_ids volgorde, metaClient.js uitgebreid (+222 LOC), monitoring.js + poiClassification.js + poiImages.js wijzigingen, Apache publiqio.com CORS dubbele headers fix + ProxyTimeout 120s. 94 BullMQ jobs. |

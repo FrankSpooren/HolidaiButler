@@ -7835,3 +7835,42 @@ Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
 - 6 nieuwe media kolommen: weather_conditions, seasons, time_of_day, persona_fit, content_purposes, event_relevance
 - 5 nieuwe services: mediaPerformanceService, contextReadinessService, mediaAttributionService, contentGapDetector worker, POI images endpoint
 - CLAUDE.md v4.57.0, MS v8.15
+
+## Fase 13: SSOT Synchronisatie + Startup Guide (29 april 2026)
+
+### Wat ging goed
+- Drift gedetecteerd voordat code-fasen startten (chirurgische diagnose via PF0.6)
+- Backup gemaakt voor alle 3 documenten (Rollback-First in /root/fase13_baseline_20260429/)
+- Storage Box key deployment gefixed via SCP-patroon (SSH speciale tekens)
+- Disk cleanup van 81% naar 59% (7.3G vrijgemaakt) met veiligheidsgaranties
+- Alle 3 Startup Guide elementen in 1 sessie voltooid
+
+### Root cause drift
+- Fase 6 voltooiing (12 nieuwe agents via Repair Command v2.0) heeft changelog bijgewerkt maar NIET "Huidige Tellingen" of Agent tabel header
+- Master Strategie footer auto-update liep niet synchroon met header (25 vs 39 agents, 79 vs 94 jobs)
+- Repo structuur comment in CLAUDE.md zei nog "25 agents"
+
+### Welke diagnostiek werkte het best
+- `grep -nE "(25|26|27|39) agent"` over alle documenten
+- `JOB_ACTOR_MAP` in workers.js als bron van waarheid voor agent count
+- Cross-validatie code directories vs documentatie
+
+### Lessons Learned
+1. Documentatie-consistency check als verplichte fase-afsluiting (nu ingebouwd via PRE-FLIGHT 0)
+2. SSH speciale tekens: altijd lokaal schrijven -> SCP -> uitvoeren (bevestiging bestaand memory)
+3. Hetzner Storage Box: SSH support + External reachability moeten EXPLICIET aangevinkt worden
+4. Disk monitoring is kritiek: 81% was al boven warning threshold
+
+### Startup Guide resultaten
+- Element 1: Storage Box u585583 (SSH key, 5 dirs, weekly+monthly timers)
+- Element 2: Grafana Tempo (Docker, healthy, 27MiB RAM, OTel config klaar)
+- Element 3: A2A token (chmod 600, ESM helper, yearly rotation timer)
+- Disk cleanup: 81% -> 59% (backups naar Storage Box, node_modules verwijderd, caches opgeruimd)
+
+### Versie-sync delta
+- CLAUDE.md v4.72.0 -> v4.73.0
+- Master Strategie: footer v8.21 -> v8.22 (gesynced)
+- adminPortal.js: ongewijzigd (v3.50.0)
+- BullMQ jobs: ongewijzigd (94)
+- Agents: 39 (officieel bevestigd in alle documenten)
+- Inter-agent flows: 71 (gespecificeerd)
