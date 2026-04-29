@@ -7949,3 +7949,69 @@ Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
 - Systemd: nats.service, otel-collector.service, temporal-backup.timer/.service, temporal-storagebox-backup.timer/.service
 
 CLAUDE.md v4.74.0, MS v8.23
+
+
+## Sessie 2026-04-29 — Fase 17: 71 Inter-Agent Flows + Dashboard Fix + Registry Fix (vervolg)
+
+### Dashboard Enterprise Fix (Laag 1 + Laag 2)
+
+**Root cause**: MongoDB Atlas $facet aggregation query exceeded 32MB sort memory limit (154K+ audit_logs).
+Alle agents toonden "Waarschuwing" + "Stand-by" behalve De Thermostaat (die uit Redis leest).
+
+**Laag 1 — Compound Indexes**: `idx_agent_status_byId` op audit_logs. Query 466ms (was timeout).
+**Laag 2 — Materialized agent_status**: Nieuwe MongoDB collection (1 doc per agent, O(39)).
+- `agentStatusService.js`: updateAgentStatus(), getAllAgentStatuses(), backfillFromAuditLogs()
+- workers.js: auto-update bij elke BullMQ job completion
+- adminPortal.js: BRON 1a (agent_status) + fallback BRON 2 (audit_logs)
+- Resultaat: 37 warning → 31 healthy, partial:false
+
+### Registry Fix: 12 agents in agentRegistry.js
+25 → 37 entries. Alle 12 Repair v2.0 agents (vertaler, beeldenmaker, personaliseerder, performanceWachter,
+anomaliedetective, auditeur, optimaliseerder, reisleider, verfrisser, boekhouder, onthaler, helpdeskmeester)
+nu geimporteerd, gewrapped met destinationAwareness, en in AGENT_REGISTRY.
+A2A discovery: 37 signed AgentCards.
+
+### i18n Fix
+agents.total → "Totaal" (NL/EN/DE/ES/FR). Admin build + deploy.
+
+### Fase 17.A — Owner Communicatie (E1-E8, 8 flows)
+Skills: bode/aggregateBriefing, dashboard/pushUpdate, dashboard/getEvents
+Hooks: agentA2AHooks.js (afterHealthCheck, afterSecurityScan, afterBudgetCheck, etc.)
+Endpoint: GET /a2a/dashboard/events
+
+### Fase 17.B — Operationele Intelligentie (B1-B14, 14 flows)
+Skills: koerier/triggerSync, dokter/runHealthCheck, kassier/checkBudget, kassier/reconcile,
+geheugen/syncNewTenant, optimaliseerder/suggestOptimization, poortwachter/auditAccess,
+personaliseerder/updateProfiles, redacteur/suggestContent
+Temporal Workflow: selfHealingSaga (anomalie → health check → sync → verify → alert/escalate)
+
+### Fase 17.C — Cost & Compliance (C1-C10, 10 flows)
+Skills: poortwachter/enforceCompliance, auditeur/logComplianceEvent,
+beeldenmaker/pauseProcessing+resumeProcessing, vertaler/pauseProcessing+resumeProcessing,
+leermeester/recordComplianceLesson
+
+### Fase 17.D — Content Kwaliteitsketen (A1-A16, 16 flows)
+Skills: seoMeester/validateSEO, beeldenmaker/generateImages, vertaler/translateContent,
+redacteur/reviseDraft+flagStaleContent+flagQualityIssue+imageReady+translationReady,
+uitgever/schedulePublish, performanceWachter/trackPublication
+Temporal Workflow: publishContentSaga (generate → SEO → translate+images → schedule → track, compensaties)
+
+### Fase 17.E — Leer- & Optimalisatielus (D1-D12, 12 flows)
+Skills: maestro/applyLesson, thermostaat/adjustConfig, leermeester/reportConfigEffect+
+reportPerformancePattern+reportAnomalyPattern+reportOptimizationResult+reportQualityTrend,
+personaliseerder/updateSeasonalProfiles, redacteur/suggestSeasonalContent, weermeester/requestForecast
+
+### Fase 17.F — Gap-fix (GF1-GF11, 11 flows)
+Skills: uitgever/notifyTierChange, trendspotter/reportUserTrend,
+leermeester/reportSupportPattern, boekhouder/registerTenant
+
+### Totalen
+- 46 A2A skills geregistreerd
+- 71/71 inter-agent flows bewezen
+- 2 Temporal workflows (selfHealingSaga, publishContentSaga)
+- 6 skill registration files (fase17a-f_skills.js)
+- 2 Temporal activity files (operationalActivities.js, contentActivities.js)
+- 2 Temporal workflow files (selfHealingSaga.js, publishContentSaga.js)
+- agentA2AHooks.js, agentStatusService.js
+
+CLAUDE.md v4.75.0, MS v8.24
