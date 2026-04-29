@@ -7874,3 +7874,78 @@ Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
 - BullMQ jobs: ongewijzigd (94)
 - Agents: 39 (officieel bevestigd in alle documenten)
 - Inter-agent flows: 71 (gespecificeerd)
+
+
+## Sessie 2026-04-29 — Fase 15 Foundation Stack + Fase 16 A2A First-Light
+
+### Fase 15 — Foundation Stack (5 sub-fasen)
+
+**15.A NATS JetStream v2.11.0**
+- Binary install + systemd service (127.0.0.1:4222)
+- 3 streams: AGENT_EVENTS (7d/1GB), AGENT_TRACES (24h/512MB), COMPLIANCE_AUDIT (730d/2GB)
+- Multi-tenant config (HB_PLATFORM account, password auth)
+- Smoke test: pub/sub + stream opslag bevestigd
+
+**15.B Temporal Server + Postgres + Worker**
+- PostgreSQL 16 geïnstalleerd + getuned (shared_buffers 512MB, WAL archiving)
+- Temporal Server v1.27.1 via Docker Compose (temporal + temporal-ui)
+- Namespaces: hb-production (30d retention), hb-development (7d)
+- Temporal Node.js SDK v1.16.1 (@temporalio/client, worker, workflow, activity)
+- PM2 worker `hb-temporal-worker` op queue `hb-agents` (RUNNING)
+- Daily Postgres backup (04:00 systemd timer) + weekly off-site Storage Box
+- DR Runbook: docs/runbooks/temporal-disaster-recovery.md
+- De Dokter health checks: temporalHealth.js (server + postgres + worker)
+
+**15.C OpenTelemetry Stack**
+- OTel Collector contrib v0.116.0 (systemd, receivers :4327/:4328)
+- Node.js OTel SDK (auto-instrumentation, export via gRPC)
+- Pipeline: App → OTel Collector → Grafana Tempo (:4317) → disk
+- Traces bevestigd in Tempo (hb-platform-core service)
+- tracing.js als eerste import na dotenv in index.js
+
+**15.D A2A v1.2 AgentCards**
+- RSA-4096 signing key (/etc/holidaibutler/a2a/)
+- agentCardTemplate.js: generator + signer + verifier
+- 25 signed AgentCards (schemaVersion 1.2)
+- Discovery: GET /.well-known/agents + GET /a2a/agents/:id/card
+- Signature verification: crypto.verify() = true
+
+**15.E MCP Servers (6 externe APIs)**
+- baseMcpServer.js factory (Express-based, A2A token auth)
+- 6 servers: Mistral:7001, Apify:7002, DeepL:7003, Pixtral:7004, ChromaDB:7005, Sistrix:7006
+- 10 tools totaal, alle discovery endpoints werkend
+- PM2: 6 hb-mcp-* processen, ~398MB RAM totaal
+
+### Fase 16 — Eerste 3 A2A Cross-Agent Flows
+
+**A2A Infrastructure**
+- a2aClient.js: generieke client met OTel span tracing
+- a2aSkillRegistry.js: skill registratie + invocation
+- POST /a2a/invoke endpoint + GET /a2a/skills
+- 3 skills geregistreerd bij app startup
+
+**3 Flows Bewezen**
+1. dokter → bode/sendAlert (critical → threema + email)
+2. koerier → bode/sendAlert (warning → email)
+3. kassier → uitgever/pausePublishing (budget control + resume)
+
+### Resource Impact
+- NATS: ~16MB, Temporal Docker: ~90MB, Worker: ~141MB, Postgres: ~50MB
+- OTel Collector: ~187MB, Tempo: ~21MB, MCP servers: ~398MB
+- Totaal: ~903MB extra, 12GB RAM beschikbaar
+
+### Bestanden
+- src/temporal/connection.js, worker.js, workflows/index.js, activities/index.js (4 nieuw)
+- src/observability/tracing.js (1 nieuw)
+- src/a2a/agentCardTemplate.js, a2aClient.js, a2aSkillRegistry.js, skills.js (4 nieuw)
+- src/mcp/servers/baseMcpServer.js + 6 server files (7 nieuw)
+- src/routes/a2a.js (1 nieuw)
+- docs/runbooks/temporal-disaster-recovery.md (1 nieuw)
+- src/services/agents/healthMonitor/checks/temporalHealth.js (1 nieuw)
+- src/services/agents/healthMonitor/reporter.js (gewijzigd)
+- src/index.js (gewijzigd: tracing + a2a imports)
+- /etc/nats/nats.conf, /etc/otel/config.yaml (server config)
+- /opt/temporal/docker-compose.yml, /opt/tempo/docker-compose.yml (Docker config)
+- Systemd: nats.service, otel-collector.service, temporal-backup.timer/.service, temporal-storagebox-backup.timer/.service
+
+CLAUDE.md v4.74.0, MS v8.23

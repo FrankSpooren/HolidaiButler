@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.73.0
+> **Versie**: 4.74.0
 > **Laatst bijgewerkt**: 29 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -728,6 +728,19 @@ analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 | `/root/backups/` | Database backups |
 | `/root/fase*` | Fase output bestanden |
 
+
+### Foundation Stack (Fase 15)
+| Component | Details |
+|-----------|---------|
+| NATS JetStream | v2.11.0, systemd, 127.0.0.1:4222, 3 streams |
+| Temporal Server | v1.27.1, Docker, 127.0.0.1:7233, namespaces hb-production/hb-development |
+| Temporal Worker | PM2 hb-temporal-worker, queue hb-agents |
+| Temporal Postgres | PostgreSQL 16, daily backup 04:00, weekly off-site Storage Box |
+| OTel Collector | v0.116.0 contrib, systemd, receivers :4327/:4328, export → Tempo :4317 |
+| Grafana Tempo | v2.6.1, Docker, :3200 (API), :4317/:4318 (OTLP), :9095 (gRPC) |
+| A2A Discovery | /.well-known/agents (25 signed cards), /a2a/agents/:id/card |
+| MCP Servers | 6 servers PM2: Mistral:7001, Apify:7002, DeepL:7003, Pixtral:7004, ChromaDB:7005, Sistrix:7006 |
+
 ### Quick Health Check Commands
 ```bash
 pm2 status                    # PM2 processes
@@ -868,6 +881,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.74.0** | **2026-04-29** | **Fase 15 Foundation Stack + Fase 16 Eerste 3 A2A Flows COMPLEET**. **Fase 15.A**: NATS JetStream v2.11.0 (3 streams: AGENT_EVENTS 7d/1GB, AGENT_TRACES 24h/512MB, COMPLIANCE_AUDIT 730d/2GB, systemd). **Fase 15.B**: Temporal Server v1.27.1 (Docker Compose, PostgreSQL 16, namespaces hb-production/hb-development, PM2 worker hb-agents queue, daily backup + weekly off-site Storage Box, DR runbook, De Dokter health checks). **Fase 15.C**: OpenTelemetry (OTel Collector v0.116.0 contrib, Node.js SDK auto-instrumentation, traces via Grafana Tempo bevestigd). **Fase 15.D**: A2A v1.2 AgentCards (25 signed cards, RSA-4096 cryptographic identity, /.well-known/agents discovery, per-agent /a2a/agents/:id/card). **Fase 15.E**: 6 MCP Servers (Mistral:7001, Apify:7002, DeepL:7003, Pixtral:7004, ChromaDB:7005, Sistrix:7006, 10 tools totaal). **Fase 16**: 3 A2A cross-agent flows live (dokter→bode/sendAlert, koerier→bode/sendAlert, kassier→uitgever/pausePublishing). A2A skill registry + invoke endpoint + client library met OTel tracing. Nieuwe bestanden: src/temporal/ (4), src/observability/ (1), src/a2a/ (4), src/mcp/servers/ (7), src/routes/a2a.js, docs/runbooks/temporal-disaster-recovery.md. Systemd services: nats, otel-collector, temporal-backup timer, temporal-storagebox-backup timer. PM2: hb-temporal-worker + 6 hb-mcp-* servers. 303 endpoints. adminPortal.js v3.50.0. 94 BullMQ jobs. |
 | **4.73.0** | **2026-04-29** | **Fase 13: SSOT Synchronisatie**. Alle drift tussen CLAUDE.md, Master Strategie en Blueprint verwijderd. Huidige Tellingen + Agent tabel officieel 39 agents (38 actief + 1 gedeactiveerd). 94 BullMQ jobs. 71 inter-agent flows gespecificeerd. Startup Guide voltooid: Storage Box (u585583), Grafana Tempo (zelf-hosted), A2A internal token. Disk cleanup 81%->59%. adminPortal.js v3.50.0. |
 | **4.72.0** | **2026-04-28** | **Agent Ecosystem Repair Command v2.0 — 7 Fasen COMPLEET**. Fase 1: Dashboard eerlijkheid (0 unknown, calculateAgentStatus herschreven, 120d audit window). Fase 2: actor.agentId migratie (AuditLog schema, JOB_AGENT_MAP 84 entries, agentId-first queries). Fase 3: Enterprise code audit (52 bare catch→0, 26 fetch+AbortSignal.timeout(30000), 6 logError argument fixes). Fase 4: Corrector ESLint activatie + Inspecteur project audit job. Fase 5: Thermostaat + Leermeester gereactiveerd (1 deactivated: Architect). **Fase 6: 12 NIEUWE AGENTS**: De Vertaler (DeepL backtranslate), De Beeldenmaker (Pixtral-12B), De Personaliseerder (recommendation engine + OpenWeatherMap + brand_profile), De Performance Wachter (7 endpoints + trending), De Anomaliedetective (baseline + anomalies MongoDB), De Auditeur (EU AI Act compliance score), De Optimaliseerder (platform analyse + publish time), De Reisleider (journey funnel + Simple Analytics), De Verfrisser (content freshness), De Boekhouder (12 providers EUR470 budget), De Onthaler (8 tenant checks + ChromaDB per-dest), De Helpdeskmeester (categorisatie + support_tickets + SLA). **12 ecosystem tekortkomingen gefixt**: Boekhouder $service bug, daily briefing 39-agent health, Vertaler destination-aware talen, Personaliseerder brand_profile, OpenWeatherMap, Simple Analytics, budgetConfig EUR470, baselineService 5 nieuwe metrics, pixtral kolommen, Onthaler ChromaDB per-dest, holibot-sync toISOString crash, workers.js agentId alle 94 jobs, MailerLite 7 custom fields. **Fase 7: Frontend**: agents/status 92s→1.5s ($facet aggregate + compound indexes), accordion categoriegroepen, overview blocks full-bgcolor, zoekbalk, status+business output dual chips, relative timestamps, diagnose dialog. 39 agents, 94 BullMQ jobs, 15 MongoDB collections, 60 inter-agent flows gespecificeerd. adminPortal.js v3.50.0. |
 | **4.67.0** | **2026-04-27** | **Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS**. **Content Studio**: image reorder via pijltjes-patroon (POI Management bewezen aanpak) met `loadImages()` self-loading + backend `resolved_images` sort op `media_ids` volgorde. MUI Icons tree-shaking bundel 9.5MB→2.8MB. **BUTE Taal-Pipeline**: contentGenerator.js destination-aware (`body_<sourceLang>` i.p.v. altijd `body_en`), backfill 20 items `body_en→NULL`, backend PATCH enforcement single-language destinations, frontend LANGS uit `item.destination_config` (backend-driven, niet UI dropdown). **Publiqio.com**: Apache CORS dubbele headers verwijderd, ProxyTimeout 120s, `VITE_API_URL=` leeg voor same-origin proxy. |

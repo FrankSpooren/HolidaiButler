@@ -10,6 +10,7 @@ import databaseHealth from './checks/databaseHealth.js';
 import apiHealth from './checks/apiHealth.js';
 import frontendHealth from './checks/frontendHealth.js';
 import queueHealth from './checks/queueHealth.js';
+import { checkTemporalHealth, checkTemporalPostgresHealth, checkTemporalWorkerHealth } from './checks/temporalHealth.js';
 
 class HealthReporter {
   constructor() {
@@ -144,15 +145,16 @@ class HealthReporter {
   async runFullHealthCheck() {
     const startTime = Date.now();
 
-    const [server, database, api, frontend, queue] = await Promise.all([
+    const [server, database, api, frontend, queue, temporal] = await Promise.all([
       this.runServerChecks(),
       this.runDatabaseChecks(),
       this.runAPIChecks(),
       this.runFrontendChecks(),
-      this.runQueueChecks()
+      this.runQueueChecks(),
+      this.runTemporalChecks()
     ]);
 
-    const categories = [server, database, api, frontend, queue];
+    const categories = [server, database, api, frontend, queue, temporal];
     const overallStatus = this.calculateOverallStatus(categories);
     const executionTime = Date.now() - startTime;
 
@@ -184,8 +186,32 @@ class HealthReporter {
         database,
         api,
         frontend,
-        queue
+        queue,
+        temporal
       }
+    };
+  }
+
+  /**
+   * Runs Temporal infrastructure health checks
+   */
+  async runTemporalChecks() {
+    const [temporalServer, temporalPostgres, temporalWorker] = await Promise.all([
+      checkTemporalHealth().catch(e => ({ healthy: false, error: e.message })),
+      checkTemporalPostgresHealth().catch(e => ({ healthy: false, error: e.message })),
+      checkTemporalWorkerHealth().catch(e => ({ healthy: false, error: e.message }))
+    ]);
+
+    const checks = [
+      { name: 'Temporal Server', status: temporalServer.healthy ? 'healthy' : 'critical', details: temporalServer },
+      { name: 'Temporal Postgres', status: temporalPostgres.healthy ? 'healthy' : 'critical', details: temporalPostgres },
+      { name: 'Temporal Worker', status: temporalWorker.healthy ? 'healthy' : 'warning', details: temporalWorker }
+    ];
+
+    return {
+      name: 'Temporal',
+      status: checks.some(c => c.status === 'critical') ? 'critical' : 'healthy',
+      checks
     };
   }
 
