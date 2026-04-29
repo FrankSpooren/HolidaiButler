@@ -116,43 +116,31 @@ class ServerHealthCheck {
    */
   async checkDiskSpace() {
     try {
-      // Works on Linux/Mac, Windows needs different approach
-      let usagePercent;
+      const dfOutput = execSync('df -B1 /').toString();
+      const lines = dfOutput.trim().split('\n');
+      const parts = lines[1].split(/\s+/);
 
-      if (process.platform === 'win32') {
-        // Windows: Use wmic
-        try {
-          const output = execSync('wmic logicaldisk get size,freespace,caption', { encoding: 'utf8' });
-          const lines = output.trim().split('\n').slice(1);
-          // Parse first drive
-          const parts = lines[0].trim().split(/\s+/);
-          if (parts.length >= 3) {
-            const free = parseInt(parts[1]);
-            const total = parseInt(parts[2]);
-            usagePercent = Math.round(((total - free) / total) * 100);
-          } else {
-            usagePercent = 0;
-          }
-        } catch (err) {
-          usagePercent = 0;
-        }
-      } else {
-        // Linux/Mac: Use df
-        const output = execSync("df -h / | tail -1 | awk '{print $5}'").toString().trim();
-        usagePercent = parseInt(output);
-      }
+      const total = parseInt(parts[1]);
+      const used = parseInt(parts[2]);
+      const available = parseInt(parts[3]);
+      const usagePct = Math.round((used / total) * 1000) / 10;
 
       let status = 'healthy';
-      if (usagePercent > 90) {
-        status = 'critical';
-      } else if (usagePercent > 80) {
-        status = 'warning';
-      }
+      let severity = 'healthy';
+      if (usagePct > 90) { status = 'critical'; severity = 'critical'; }
+      else if (usagePct > 85) { status = 'critical'; severity = 'critical'; }
+      else if (usagePct > 80) { status = 'warning'; severity = 'warning'; }
+      else if (usagePct > 70) { status = 'warning'; severity = 'warning'; }
+      else if (usagePct > 60) { status = 'healthy'; severity = 'info'; }
 
       return {
         check: 'disk_space',
         status,
-        usagePercent,
+        severity,
+        usagePercent: usagePct,
+        total_gb: Math.round(total / 1e9 * 10) / 10,
+        used_gb: Math.round(used / 1e9 * 10) / 10,
+        available_gb: Math.round(available / 1e9 * 10) / 10,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
