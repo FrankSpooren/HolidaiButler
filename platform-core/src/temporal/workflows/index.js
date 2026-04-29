@@ -1,2 +1,3 @@
-// Temporal workflows - populated in Fase 17
-// Each workflow will be exported from this index
+// Temporal workflows index
+export { selfHealingSaga } from './selfHealingSaga.js';
+export { publishContentSaga } from './publishContentSaga.js';
