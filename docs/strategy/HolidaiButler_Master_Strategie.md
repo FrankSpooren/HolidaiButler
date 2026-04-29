@@ -1780,4 +1780,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 27 april 2026 — Content Studio Enterprise + BUTE Taal-Pipeline + Publiqio CORS. 303 endpoints, adminPortal.js v3.47.0. 79 scheduled jobs. 25 agents. CLAUDE.md v4.67.0. MS v8.21.*
+*Laatst bijgewerkt: 29 april 2026 — Fase 13 SSOT Synchronisatie + Startup Guide (Storage Box, Grafana Tempo, A2A token). 303 endpoints, adminPortal.js v3.50.0. 94 BullMQ jobs. 39 agents (38 actief + 1 gedeactiveerd). 71 inter-agent flows gespecificeerd. CLAUDE.md v4.73.0. MS v8.22.*
