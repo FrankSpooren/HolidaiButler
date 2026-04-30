@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "ML3 - maestro -> dokter/dependencyAwareCheck"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow ML3"
+
+channels:
+  dokter-dependencyAwareCheck:
+    address: a2a.dokter.dependencyAwareCheck
+    messages:
+      dependencyAwareCheckRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeDependencyAwareCheck:
+    action: send
+    channel:
+      $ref: "#/channels/dokter-dependencyAwareCheck"
+    messages:
+      - $ref: "#/channels/dokter-dependencyAwareCheck/messages/dependencyAwareCheckRequest"

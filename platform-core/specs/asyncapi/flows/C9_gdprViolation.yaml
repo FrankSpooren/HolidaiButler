@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C9 - auditeur -> poortwachter/gdprViolation"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C9"
+
+channels:
+  poortwachter-gdprViolation:
+    address: a2a.poortwachter.gdprViolation
+    messages:
+      gdprViolationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeGdprViolation:
+    action: send
+    channel:
+      $ref: "#/channels/poortwachter-gdprViolation"
+    messages:
+      - $ref: "#/channels/poortwachter-gdprViolation/messages/gdprViolationRequest"

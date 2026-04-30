@@ -1,5 +1,5 @@
 /**
- * Agent Registry - Central registration of all 37 agents with BaseAgent pattern
+ * Agent Registry - Central registration of all 38 agents with BaseAgent pattern
  *
  * This module imports all agents, adds runForDestination()/execute() where needed,
  * and wraps them with destination-awareness via wrapWithDestinationAwareness().
@@ -57,6 +57,9 @@ import verfrisser from '../verfrisser/index.js';
 import boekhouder from '../boekhouder/index.js';
 import onthaler from '../onthaler/index.js';
 import helpdeskmeester from '../helpdeskmeester/index.js';
+
+// Fase IV-B: Tier Promotion Agent
+import tierPromotionAgent from '../dataSync/tierPromotionAgent.js';
 
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
@@ -470,6 +473,19 @@ wrapWithDestinationAwareness(optimaliseerder, {
 // REGISTRY EXPORT
 // ============================================================
 
+// #38 De Promotor (Tier Promotion) - Weekly tier adjustments per destination
+if (tierPromotionAgent && !tierPromotionAgent.runForDestination) {
+  tierPromotionAgent.runForDestination = async function(destinationId) {
+    return { destinationId, status: 'tier_check', message: `Tier promotion check for destination ${destinationId}` };
+  };
+}
+wrapWithDestinationAwareness(tierPromotionAgent || {}, {
+  name: 'De Promotor',
+  category: 'Operations',
+  version: '1.0.0',
+  destinationAware: true
+});
+
 const AGENT_REGISTRY = {
   // Category A: Destination-Aware
   maestro: maestroAgent,           // #1
@@ -519,6 +535,9 @@ const AGENT_REGISTRY = {
   boekhouder: boekhouder,               // #35
   onthaler: onthaler,                   // #36
   helpdeskmeester: helpdeskmeester,      // #37
+
+  // Tier Promotion Agent
+  promotor: tierPromotionAgent,            // #38
 };
 
 /**

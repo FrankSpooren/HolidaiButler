@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D2 - maestro -> thermostaat/adjustConfig"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D2"
+
+channels:
+  thermostaat-adjustConfig:
+    address: a2a.thermostaat.adjustConfig
+    messages:
+      adjustConfigRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeAdjustConfig:
+    action: send
+    channel:
+      $ref: "#/channels/thermostaat-adjustConfig"
+    messages:
+      - $ref: "#/channels/thermostaat-adjustConfig/messages/adjustConfigRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "PF3 - performanceWachter -> verfrisser/triggerCheck"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow PF3"
+
+channels:
+  verfrisser-triggerCheck:
+    address: a2a.verfrisser.triggerCheck
+    messages:
+      triggerCheckRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeTriggerCheck:
+    action: send
+    channel:
+      $ref: "#/channels/verfrisser-triggerCheck"
+    messages:
+      - $ref: "#/channels/verfrisser-triggerCheck/messages/triggerCheckRequest"

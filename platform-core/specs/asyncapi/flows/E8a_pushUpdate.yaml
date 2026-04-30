@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E8a - ALL -> dashboard/pushUpdate"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E8a"
+
+channels:
+  dashboard-pushUpdate:
+    address: a2a.dashboard.pushUpdate
+    messages:
+      pushUpdateRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokePushUpdate:
+    action: send
+    channel:
+      $ref: "#/channels/dashboard-pushUpdate"
+    messages:
+      - $ref: "#/channels/dashboard-pushUpdate/messages/pushUpdateRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "HK2 - helpdeskmeester -> personaliseerder/adjustForFrustration"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow HK2"
+
+channels:
+  personaliseerder-adjustForFrustration:
+    address: a2a.personaliseerder.adjustForFrustration
+    messages:
+      adjustForFrustrationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeAdjustForFrustration:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-adjustForFrustration"
+    messages:
+      - $ref: "#/channels/personaliseerder-adjustForFrustration/messages/adjustForFrustrationRequest"

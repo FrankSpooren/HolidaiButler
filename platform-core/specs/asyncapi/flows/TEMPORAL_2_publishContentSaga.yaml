@@ -1,0 +1,22 @@
+asyncapi: 3.0.0
+info:
+  title: "TEMPORAL_2 - redacteur -> publishContentSaga"
+  version: 1.0.0
+  description: "6-step content publication with compensations"
+
+channels:
+  temporal-publishContentSaga:
+    address: temporal.workflows.publishContentSaga
+    messages:
+      publishContentSagaStart:
+        payload:
+          type: object
+          description: Temporal workflow input
+
+operations:
+  startPublishContentSaga:
+    action: send
+    channel:
+      $ref: "#/channels/temporal-publishContentSaga"
+    messages:
+      - $ref: "#/channels/temporal-publishContentSaga/messages/publishContentSagaStart"

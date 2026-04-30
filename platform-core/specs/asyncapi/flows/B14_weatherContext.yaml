@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B14 - weermeester -> personaliseerder/weatherContext"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B14"
+
+channels:
+  personaliseerder-weatherContext:
+    address: a2a.personaliseerder.weatherContext
+    messages:
+      weatherContextRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeWeatherContext:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-weatherContext"
+    messages:
+      - $ref: "#/channels/personaliseerder-weatherContext/messages/weatherContextRequest"

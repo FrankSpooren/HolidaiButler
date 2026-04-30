@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C8 - kassier -> boekhouder/budgetReconciliation"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C8"
+
+channels:
+  boekhouder-budgetReconciliation:
+    address: a2a.boekhouder.budgetReconciliation
+    messages:
+      budgetReconciliationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeBudgetReconciliation:
+    action: send
+    channel:
+      $ref: "#/channels/boekhouder-budgetReconciliation"
+    messages:
+      - $ref: "#/channels/boekhouder-budgetReconciliation/messages/budgetReconciliationRequest"

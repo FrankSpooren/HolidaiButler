@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF7 - geheugen -> trendspotter/queryMiss"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF7"
+
+channels:
+  trendspotter-queryMiss:
+    address: a2a.trendspotter.queryMiss
+    messages:
+      queryMissRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeQueryMiss:
+    action: send
+    channel:
+      $ref: "#/channels/trendspotter-queryMiss"
+    messages:
+      - $ref: "#/channels/trendspotter-queryMiss/messages/queryMissRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "TA2 - trendspotter -> redacteur/prioritizeContent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow TA2"
+
+channels:
+  redacteur-prioritizeContent:
+    address: a2a.redacteur.prioritizeContent
+    messages:
+      prioritizeContentRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokePrioritizeContent:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-prioritizeContent"
+    messages:
+      - $ref: "#/channels/redacteur-prioritizeContent/messages/prioritizeContentRequest"

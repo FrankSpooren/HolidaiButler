@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF10 - bewaker -> auditeur/securityFinding"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF10"
+
+channels:
+  auditeur-securityFinding:
+    address: a2a.auditeur.securityFinding
+    messages:
+      securityFindingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSecurityFinding:
+    action: send
+    channel:
+      $ref: "#/channels/auditeur-securityFinding"
+    messages:
+      - $ref: "#/channels/auditeur-securityFinding/messages/securityFindingRequest"

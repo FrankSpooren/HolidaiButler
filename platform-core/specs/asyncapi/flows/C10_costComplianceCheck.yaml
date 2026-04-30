@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C10 - boekhouder -> auditeur/costComplianceCheck"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C10"
+
+channels:
+  auditeur-costComplianceCheck:
+    address: a2a.auditeur.costComplianceCheck
+    messages:
+      costComplianceCheckRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCostComplianceCheck:
+    action: send
+    channel:
+      $ref: "#/channels/auditeur-costComplianceCheck"
+    messages:
+      - $ref: "#/channels/auditeur-costComplianceCheck/messages/costComplianceCheckRequest"

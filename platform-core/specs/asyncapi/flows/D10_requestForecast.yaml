@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D10 - personaliseerder -> weermeester/requestForecast"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D10"
+
+channels:
+  weermeester-requestForecast:
+    address: a2a.weermeester.requestForecast
+    messages:
+      requestForecastRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRequestForecast:
+    action: send
+    channel:
+      $ref: "#/channels/weermeester-requestForecast"
+    messages:
+      - $ref: "#/channels/weermeester-requestForecast/messages/requestForecastRequest"

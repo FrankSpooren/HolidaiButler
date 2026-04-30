@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E6 - auditeur -> bode/sendComplianceAlert"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E6"
+
+channels:
+  bode-sendComplianceAlert:
+    address: a2a.bode.sendComplianceAlert
+    messages:
+      sendComplianceAlertRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSendComplianceAlert:
+    action: send
+    channel:
+      $ref: "#/channels/bode-sendComplianceAlert"
+    messages:
+      - $ref: "#/channels/bode-sendComplianceAlert/messages/sendComplianceAlertRequest"

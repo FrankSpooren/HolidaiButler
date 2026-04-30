@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "RJ2 - reisleider -> optimaliseerder/dropoffOptimization"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow RJ2"
+
+channels:
+  optimaliseerder-dropoffOptimization:
+    address: a2a.optimaliseerder.dropoffOptimization
+    messages:
+      dropoffOptimizationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeDropoffOptimization:
+    action: send
+    channel:
+      $ref: "#/channels/optimaliseerder-dropoffOptimization"
+    messages:
+      - $ref: "#/channels/optimaliseerder-dropoffOptimization/messages/dropoffOptimizationRequest"

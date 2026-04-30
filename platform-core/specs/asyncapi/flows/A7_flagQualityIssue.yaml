@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A7 - inspecteur -> redacteur/flagQualityIssue"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A7"
+
+channels:
+  redacteur-flagQualityIssue:
+    address: a2a.redacteur.flagQualityIssue
+    messages:
+      flagQualityIssueRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeFlagQualityIssue:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-flagQualityIssue"
+    messages:
+      - $ref: "#/channels/redacteur-flagQualityIssue/messages/flagQualityIssueRequest"

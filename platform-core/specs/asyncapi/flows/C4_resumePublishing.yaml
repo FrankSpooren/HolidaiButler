@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C4 - kassier -> uitgever/resumePublishing"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C4"
+
+channels:
+  uitgever-resumePublishing:
+    address: a2a.uitgever.resumePublishing
+    messages:
+      resumePublishingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeResumePublishing:
+    action: send
+    channel:
+      $ref: "#/channels/uitgever-resumePublishing"
+    messages:
+      - $ref: "#/channels/uitgever-resumePublishing/messages/resumePublishingRequest"

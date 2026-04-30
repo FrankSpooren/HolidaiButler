@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C6 - kassier -> beeldenmaker/resumeProcessing"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C6"
+
+channels:
+  beeldenmaker-resumeProcessing:
+    address: a2a.beeldenmaker.resumeProcessing
+    messages:
+      resumeProcessingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeResumeProcessing:
+    action: send
+    channel:
+      $ref: "#/channels/beeldenmaker-resumeProcessing"
+    messages:
+      - $ref: "#/channels/beeldenmaker-resumeProcessing/messages/resumeProcessingRequest"

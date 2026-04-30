@@ -1,0 +1,22 @@
+asyncapi: 3.0.0
+info:
+  title: "TEMPORAL_1 - dokter -> selfHealingSaga"
+  version: 1.0.0
+  description: "Self-healing saga for sick agent recovery"
+
+channels:
+  temporal-selfHealingSaga:
+    address: temporal.workflows.selfHealingSaga
+    messages:
+      selfHealingSagaStart:
+        payload:
+          type: object
+          description: Temporal workflow input
+
+operations:
+  startSelfHealingSaga:
+    action: send
+    channel:
+      $ref: "#/channels/temporal-selfHealingSaga"
+    messages:
+      - $ref: "#/channels/temporal-selfHealingSaga/messages/selfHealingSagaStart"

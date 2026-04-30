@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "DR2 - dokter -> bewaker/healthSecurityCheck"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow DR2"
+
+channels:
+  bewaker-healthSecurityCheck:
+    address: a2a.bewaker.healthSecurityCheck
+    messages:
+      healthSecurityCheckRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeHealthSecurityCheck:
+    action: send
+    channel:
+      $ref: "#/channels/bewaker-healthSecurityCheck"
+    messages:
+      - $ref: "#/channels/bewaker-healthSecurityCheck/messages/healthSecurityCheckRequest"

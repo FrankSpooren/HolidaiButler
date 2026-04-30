@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E5 - boekhouder -> bode/sendBudgetAlert"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E5"
+
+channels:
+  bode-sendBudgetAlert:
+    address: a2a.bode.sendBudgetAlert
+    messages:
+      sendBudgetAlertRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSendBudgetAlert:
+    action: send
+    channel:
+      $ref: "#/channels/bode-sendBudgetAlert"
+    messages:
+      - $ref: "#/channels/bode-sendBudgetAlert/messages/sendBudgetAlertRequest"

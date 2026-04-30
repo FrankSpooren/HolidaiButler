@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C2 - ALL -> auditeur/logComplianceEvent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C2"
+
+channels:
+  auditeur-logComplianceEvent:
+    address: a2a.auditeur.logComplianceEvent
+    messages:
+      logComplianceEventRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeLogComplianceEvent:
+    action: send
+    channel:
+      $ref: "#/channels/auditeur-logComplianceEvent"
+    messages:
+      - $ref: "#/channels/auditeur-logComplianceEvent/messages/logComplianceEventRequest"

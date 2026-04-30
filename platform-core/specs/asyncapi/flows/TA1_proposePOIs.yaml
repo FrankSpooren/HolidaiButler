@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "TA1 - trendspotter -> koerier/proposePOIs"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow TA1"
+
+channels:
+  koerier-proposePOIs:
+    address: a2a.koerier.proposePOIs
+    messages:
+      proposePOIsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeProposePOIs:
+    action: send
+    channel:
+      $ref: "#/channels/koerier-proposePOIs"
+    messages:
+      - $ref: "#/channels/koerier-proposePOIs/messages/proposePOIsRequest"

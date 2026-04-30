@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF9 - onthaler -> boekhouder/initBudget"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF9"
+
+channels:
+  boekhouder-initBudget:
+    address: a2a.boekhouder.initBudget
+    messages:
+      initBudgetRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitBudget:
+    action: send
+    channel:
+      $ref: "#/channels/boekhouder-initBudget"
+    messages:
+      - $ref: "#/channels/boekhouder-initBudget/messages/initBudgetRequest"
