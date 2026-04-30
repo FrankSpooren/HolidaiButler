@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'SAGA1: poiDiscoverySaga'
+  version: '1.0.0'
+  description: 'POI Discovery Saga: scrape -> embed -> enrich -> classify -> notify'
+channels:
+  SAGA1:
+    address: 'temporal/workflows/poiDiscoverySaga'
+    messages:
+      start:
+        summary: 'Start poiDiscoverySaga Temporal workflow'
+operations:
+  SAGA1:
+    action: send
+    channel:
+      $ref: '#/channels/SAGA1'

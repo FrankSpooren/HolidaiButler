@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'SAGA4: crisisResponseSaga'
+  version: '1.0.0'
+  description: 'Crisis Response Saga: detect -> assess -> coordinate -> notify -> execute -> resolve'
+channels:
+  SAGA4:
+    address: 'temporal/workflows/crisisResponseSaga'
+    messages:
+      start:
+        summary: 'Start crisisResponseSaga Temporal workflow'
+operations:
+  SAGA4:
+    action: send
+    channel:
+      $ref: '#/channels/SAGA4'

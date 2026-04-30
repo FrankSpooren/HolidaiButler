@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'SAGA3: destinationOnboardingSaga'
+  version: '1.0.0'
+  description: 'Destination Onboarding Saga: 7-step wrapper around OB1-OB7 flows'
+channels:
+  SAGA3:
+    address: 'temporal/workflows/destinationOnboardingSaga'
+    messages:
+      start:
+        summary: 'Start destinationOnboardingSaga Temporal workflow'
+operations:
+  SAGA3:
+    action: send
+    channel:
+      $ref: '#/channels/SAGA3'
