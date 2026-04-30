@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'RES5: ALL -> maestro/registerHeartbeat'
+  version: '1.0.0'
+  description: 'RES5: ALL agents -> maestro heartbeat registration'
+channels:
+  RES5:
+    address: 'a2a/maestro/registerHeartbeat'
+    messages:
+      invoke:
+        summary: 'ALL invokes maestro/registerHeartbeat'
+operations:
+  RES5:
+    action: send
+    channel:
+      $ref: '#/channels/RES5'

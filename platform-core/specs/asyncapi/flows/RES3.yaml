@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'RES3: dokter -> auditeur/logHealthComplianceEvent'
+  version: '1.0.0'
+  description: 'RES3: dokter -> auditeur health degradation compliance logging'
+channels:
+  RES3:
+    address: 'a2a/auditeur/logHealthComplianceEvent'
+    messages:
+      invoke:
+        summary: 'dokter invokes auditeur/logHealthComplianceEvent'
+operations:
+  RES3:
+    action: send
+    channel:
+      $ref: '#/channels/RES3'

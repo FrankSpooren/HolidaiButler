@@ -131,6 +131,12 @@ import './services/agents/personaliseerder/skills/adjustForFrustration.js';
 import './services/agents/verfrisser/skills/staleInfoTicket.js';
 import './services/agents/ownerInterfaceAgent/skills/orchestrationSummary.js';
 import './services/agents/healthMonitor/skills/dependencyAwareCheck.js';
+// Fase 19.B — Resilience & Failure-Handling Skills (RES1-RES5)
+import './services/agents/maestro/skills/coordinateAnomalyRecovery.js';
+import './services/agents/maestro/skills/circuitBreakerActivate.js';
+import './services/agents/auditeur/skills/logHealthComplianceEvent.js';
+import './services/agents/maestro/skills/securityHalt.js';
+import './services/agents/maestro/skills/registerHeartbeat.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
