@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 30 april 2026
-**Versie**: 8.25
+**Versie**: 8.26
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk

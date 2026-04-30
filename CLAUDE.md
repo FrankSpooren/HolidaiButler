@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.76.1
+> **Versie**: 4.77.0
 > **Laatst bijgewerkt**: 30 april 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -407,14 +407,14 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 |--------|--------|
 | Agents | 39 (38 actief + 1 gedeactiveerd: De Architect) |
 | BullMQ jobs | 94 (te migreren naar Temporal in Fase 17 + B8) |
-| Inter-agent flows (gespecificeerd) | 106 (60 Blueprint + 11 gap-fix + 35 ecosystem Fase 18) |
-| Inter-agent flows (geimplementeerd) | 106 (103 dedicated skills, 3 Temporal workflows) |
+| Inter-agent flows (gespecificeerd) | 131 (60 Blueprint + 11 gap-fix + 35 ecosystem + 20 resilience/closure/cross-domain + 5 sagas) |
+| Inter-agent flows (geimplementeerd) | 131 (124 dedicated skills + 37 CD1 wrappers, 7 Temporal workflows) |
 | Admin endpoints | 303 |
 | adminPortal.js | v3.50.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.76.1 |
-| Master Strategie | v8.25 |
-| Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (106 specs) |
+| CLAUDE.md | v4.77.0 |
+| Master Strategie | v8.26 |
+| Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
 
 
@@ -881,6 +881,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.77.0** | **2026-04-30** | **Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows**. **19.A Agent Health**: 31->37 healthy (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break). **19.B Resilience**: 5 flows (RES1-RES5: coordinateAnomalyRecovery, circuitBreakerActivate, logHealthComplianceEvent, securityHalt, registerHeartbeat). **19.C Closure**: 5 flows (ACK1-ACK5: discoveryComplete, imageProcessingFailed, seoValidationResult, profileUpdated, abTestStarted). **19.D Cross-Domain**: 10 flows (CD1-CD10: applyDistributedLesson broadcast 37 wrappers, registerWorkflowOutcome, codeComplianceCheck, securityComplianceLink, budgetThresholdReached, revenueImpact, conversationEscalation, vectorAccessLog, staleContentReported, wcagComplianceFinding). **19.E Sagas**: 5 Temporal sagas (poiDiscovery, seasonalContent, destinationOnboarding, crisisResponse, weeklyLearningCycle). **19.F Verification**: 131 AsyncAPI specs, 124 static + 37 runtime skills, 7 Temporal workflows, 38 agent_status docs, 0 P1. |
 | **4.76.1** | **2026-04-30** | **Fase 19.A: Agent Health Restoration -- 31->37 healthy**. JOB_AGENT_MAP fixes: tier-promotor->promotor, content-quality-audit->contentQuality. tier-promotion switch-case return->result+break (bypassed updateAgentStatus). 4 case blocks mysqlSequelize/QueryTypes dynamic imports (media-performance-aggregator, media-revenue-attribution, content-readiness-analyzer, content-gap-detector). 38 agent_status docs (was 32). 0 warnings, 0 errors, 0 P1. 1 bestand gewijzigd. |
 | **4.76.0** | **2026-04-30** | **Fase 18 COMPLEET: 106 Inter-Agent Flows — Full Ecosystem Coverage**. **18.A Implementatie-gaps (71 flows)**: 28 nieuwe dedicated skills in per-agent `skills/` directories (E3-E7 bode alerts, B5-B6 maestro recovery, B12-B14 kassier/personaliseerder, C8-C10 budget/gdpr/audit, A11-A16 content pipeline, D11-D12 learning, GF5-GF11 gap-fix). Alle 71 flows nu 1-op-1 skill coverage. **18.B Nieuwe flows (35)**: 29 nieuwe skills in 9 categorieën: B.A Onboarding (OB1-OB7 tenant setup), B.B Recovery (DR2/DR4), B.C Trend-actie (TA1-TA4), B.D Performance (PF1-PF4), B.E Security (BS1/BS3/BS4), B.F Supply-chain (MS2-MS3), B.G Journey (RJ1-RJ3), B.H Knowledge (HK1-HK3), B.I Lifecycle (ML2-ML3). **18.C A2A AgentCard**: De Promotor (#38) toegevoegd aan agentRegistry.js (37→38 cards). **18.D Agent Health**: 31 healthy, 7 warning (schedule-based), 0 errors, 1 deactivated. **18.E AsyncAPI**: 106 AsyncAPI 3.0 specs in `specs/asyncapi/flows/`. **Architectuur**: Per-agent skill directories (Zod input validation + OTel tracing), centraal a2aSkillRegistry.js. 57 nieuwe skill bestanden + 106 spec bestanden. Skills 46→103. |
 | **4.75.0** | **2026-04-29** | **Fase 17 COMPLEET: 71 Inter-Agent Flows over A2A + Temporal**. **17.A Owner Communicatie (E1-E8)**: bode/aggregateBriefing, dashboard/pushUpdate+getEvents, agentA2AHooks.js. **17.B Operationele Intelligentie (B1-B14)**: koerier/triggerSync, dokter/runHealthCheck, kassier/checkBudget+reconcile, geheugen/syncNewTenant, optimaliseerder/suggestOptimization, poortwachter/auditAccess, personaliseerder/updateProfiles, redacteur/suggestContent. Temporal selfHealingSaga workflow. **17.C Cost & Compliance (C1-C10)**: poortwachter/enforceCompliance, auditeur/logComplianceEvent, beeldenmaker+vertaler pause/resume, leermeester/recordComplianceLesson. **17.D Content Kwaliteitsketen (A1-A16)**: seoMeester/validateSEO, beeldenmaker/generateImages, vertaler/translateContent, redacteur/reviseDraft+flagStaleContent+flagQualityIssue+imageReady+translationReady, uitgever/schedulePublish, performanceWachter/trackPublication. Temporal publishContentSaga workflow (6-step met compensaties). **17.E Leer- & Optimalisatielus (D1-D12)**: maestro/applyLesson, thermostaat/adjustConfig, leermeester/reportConfigEffect+reportPerformancePattern+reportAnomalyPattern+reportOptimizationResult+reportQualityTrend, personaliseerder/updateSeasonalProfiles, redacteur/suggestSeasonalContent, weermeester/requestForecast. **17.F Gap-fix (GF1-GF11)**: uitgever/notifyTierChange, trendspotter/reportUserTrend, leermeester/reportSupportPattern, boekhouder/registerTenant. **Dashboard fix**: MongoDB $facet sort memory limit opgelost via compound indexes (Laag 1) + materialized agent_status collection (Laag 2, O(39) i.p.v. O(154K)). 37→31 healthy. **Registry fix**: 12 ontbrekende agents toegevoegd aan agentRegistry.js (25→37). A2A discovery 37 signed cards. **i18n**: agents.total → Totaal (5 talen). 46 A2A skills, 2 Temporal workflows, 71 flows bewezen. |
@@ -922,7 +923,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.20 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.26 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
