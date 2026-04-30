@@ -8130,3 +8130,52 @@ CLAUDE.md v4.75.0, MS v8.24
 - AsyncAPI specs: 106 -> 131
 - Temporal workflows: 2 -> 7
 - Healthy: 31 -> 37
+
+## Sessie 2026-05-01 — Fase 20.A + 20.B-1: Agent Health + Flow Enterprise Upgrade
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.77.0 -> v4.77.2, MS v8.26 (ongewijzigd)
+- Healthy agents: 37 -> 38 (bode fixed)
+- A2A skills: 124 static + 37 runtime -> 159 (46 enterprise upgrades)
+- Sagas: 7 (ongewijzigd)
+- Open P1: 0
+- Skills: cc-ops-discipline
+
+### 20.A: 38e Agent Root Cause + Fix
+- **Root cause**: `bode` (De Bode) daily-briefing crashte met `ReferenceError: ecosystemInsights is not defined`
+- **Bug locatie**: `dailyBriefing.js:627` — `sendDailyBriefing()` verwees naar lokale variabele uit `generateDailyBriefing()` scope
+- **Fix**: Vervangen door `briefing.summary.newAgentInsights` (string, beschikbaar via return value)
+- **Bestanden**: 1 gewijzigd (`src/services/orchestrator/ownerInterface/dailyBriefing.js`, +2/-1)
+- **Bewijs**: 38/38 completed, 0 initiated, 0 stale
+
+### 20.B-1: Flow Enterprise Upgrade (4 stappen)
+1. **OTel port fix**: `tracing.js` exporter 4327 -> 4317 (Tempo gRPC). Custom `flow.id` spans verschijnen nu in Tempo (bewezen voor A2, B1).
+2. **flow-registry.json**: Script `build-flow-registry.cjs` gebouwd. 131 specs, 123 implemented, 8 spec-only (SAGA/TEMPORAL stubs).
+3. **audit-flow-runtime-coverage.cjs**: Audit script dat Tempo + MongoDB audit_logs queryt per flow. Rapport in `reports/runtime-coverage-audit.json`.
+4. **46 enterprise skill upgrades**: Fase 16-17 inline skills (5-15 regels, geen Zod/OTel) -> enterprise-level bestanden (Zod InputSchema + OTel span met `flow.id` + error handling). Barrel `src/a2a/enterpriseSkills.js` geladen via dynamic import NA inline registraties (override patroon).
+
+### Kritieke bevinding: 54 van 131 flows waren spec-only
+- Fase 17 skills bestonden als inline registraties in `src/a2a/fase17*.js` maar ZONDER:
+  - Zod input validatie
+  - OTel span met `flow.id` attribute
+  - Proper error handling
+- Na upgrade: 123/131 enterprise-level, 8 SAGA/TEMPORAL stubs (activities doen niets)
+- SAGA/TEMPORAL activity implementatie gepland als 20.B-2 (3-4 sessies)
+
+### Bestanden
+- 1 gewijzigd: `src/services/orchestrator/ownerInterface/dailyBriefing.js` (20.A bode fix)
+- 1 gewijzigd: `src/observability/tracing.js` (OTel port 4327->4317)
+- 1 gewijzigd: `src/index.js` (dynamic import enterpriseSkills.js)
+- 1 nieuw: `src/a2a/enterpriseSkills.js` (barrel, 46 imports)
+- 46 nieuw: `src/services/agents/*/skills/*_*.js` (enterprise skill files)
+- 2 nieuw: `scripts/build-flow-registry.cjs`, `scripts/audit-flow-runtime-coverage.cjs`
+- 1 nieuw: `scripts/flow-registry.json` (generated)
+- 1 nieuw: `reports/runtime-coverage-audit.json` (generated)
+
+### Versie-sync delta
+- CLAUDE.md v4.77.0 -> v4.77.2
+- Healthy: 37 -> 38
+- Implemented flows with OTel: 77 -> 123
+- Spec-only (stubs): 54 -> 8
+- Enterprise skill files: +46
+- A2A registered skills: 124 -> 159

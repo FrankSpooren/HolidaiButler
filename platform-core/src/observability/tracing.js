@@ -14,7 +14,7 @@ const sdk = new NodeSDK({
     'deployment.environment': process.env.NODE_ENV || 'development'
   }),
   traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4327'
+    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4317'
   }),
   instrumentations: [
     getNodeAutoInstrumentations({
