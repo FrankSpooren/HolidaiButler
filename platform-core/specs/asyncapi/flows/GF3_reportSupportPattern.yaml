@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF3 - helpdeskmeester -> leermeester/reportSupportPattern"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF3"
+
+channels:
+  leermeester-reportSupportPattern:
+    address: a2a.leermeester.reportSupportPattern
+    messages:
+      reportSupportPatternRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportSupportPattern:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-reportSupportPattern"
+    messages:
+      - $ref: "#/channels/leermeester-reportSupportPattern/messages/reportSupportPatternRequest"

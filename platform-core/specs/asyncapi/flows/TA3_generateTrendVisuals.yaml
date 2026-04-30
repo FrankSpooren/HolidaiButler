@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "TA3 - trendspotter -> beeldenmaker/generateTrendVisuals"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow TA3"
+
+channels:
+  beeldenmaker-generateTrendVisuals:
+    address: a2a.beeldenmaker.generateTrendVisuals
+    messages:
+      generateTrendVisualsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeGenerateTrendVisuals:
+    action: send
+    channel:
+      $ref: "#/channels/beeldenmaker-generateTrendVisuals"
+    messages:
+      - $ref: "#/channels/beeldenmaker-generateTrendVisuals/messages/generateTrendVisualsRequest"

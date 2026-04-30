@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A4 - redacteur -> vertaler/translateContent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A4"
+
+channels:
+  vertaler-translateContent:
+    address: a2a.vertaler.translateContent
+    messages:
+      translateContentRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeTranslateContent:
+    action: send
+    channel:
+      $ref: "#/channels/vertaler-translateContent"
+    messages:
+      - $ref: "#/channels/vertaler-translateContent/messages/translateContentRequest"

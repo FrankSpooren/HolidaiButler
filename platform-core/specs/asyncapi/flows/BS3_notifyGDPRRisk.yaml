@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "BS3 - bewaker -> poortwachter/notifyGDPRRisk"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow BS3"
+
+channels:
+  poortwachter-notifyGDPRRisk:
+    address: a2a.poortwachter.notifyGDPRRisk
+    messages:
+      notifyGDPRRiskRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeNotifyGDPRRisk:
+    action: send
+    channel:
+      $ref: "#/channels/poortwachter-notifyGDPRRisk"
+    messages:
+      - $ref: "#/channels/poortwachter-notifyGDPRRisk/messages/notifyGDPRRiskRequest"

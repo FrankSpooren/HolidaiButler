@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D11 - optimaliseerder -> leermeester/reportExperimentResult"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D11"
+
+channels:
+  leermeester-reportExperimentResult:
+    address: a2a.leermeester.reportExperimentResult
+    messages:
+      reportExperimentResultRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportExperimentResult:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-reportExperimentResult"
+    messages:
+      - $ref: "#/channels/leermeester-reportExperimentResult/messages/reportExperimentResultRequest"

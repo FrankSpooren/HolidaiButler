@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF8 - onthaler -> auditeur/initCompliance"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF8"
+
+channels:
+  auditeur-initCompliance:
+    address: a2a.auditeur.initCompliance
+    messages:
+      initComplianceRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitCompliance:
+    action: send
+    channel:
+      $ref: "#/channels/auditeur-initCompliance"
+    messages:
+      - $ref: "#/channels/auditeur-initCompliance/messages/initComplianceRequest"

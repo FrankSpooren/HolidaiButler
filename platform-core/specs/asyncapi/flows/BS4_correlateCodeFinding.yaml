@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "BS4 - bewaker -> inspecteur/correlateCodeFinding"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow BS4"
+
+channels:
+  inspecteur-correlateCodeFinding:
+    address: a2a.inspecteur.correlateCodeFinding
+    messages:
+      correlateCodeFindingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCorrelateCodeFinding:
+    action: send
+    channel:
+      $ref: "#/channels/inspecteur-correlateCodeFinding"
+    messages:
+      - $ref: "#/channels/inspecteur-correlateCodeFinding/messages/correlateCodeFindingRequest"

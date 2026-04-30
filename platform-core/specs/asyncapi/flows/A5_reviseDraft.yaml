@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A5 - seoMeester -> redacteur/reviseDraft"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A5"
+
+channels:
+  redacteur-reviseDraft:
+    address: a2a.redacteur.reviseDraft
+    messages:
+      reviseDraftRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReviseDraft:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-reviseDraft"
+    messages:
+      - $ref: "#/channels/redacteur-reviseDraft/messages/reviseDraftRequest"

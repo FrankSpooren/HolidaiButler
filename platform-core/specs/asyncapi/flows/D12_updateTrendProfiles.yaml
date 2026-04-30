@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D12 - trendspotter -> personaliseerder/updateTrendProfiles"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D12"
+
+channels:
+  personaliseerder-updateTrendProfiles:
+    address: a2a.personaliseerder.updateTrendProfiles
+    messages:
+      updateTrendProfilesRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeUpdateTrendProfiles:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-updateTrendProfiles"
+    messages:
+      - $ref: "#/channels/personaliseerder-updateTrendProfiles/messages/updateTrendProfilesRequest"

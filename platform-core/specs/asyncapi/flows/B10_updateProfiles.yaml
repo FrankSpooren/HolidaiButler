@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B10 - weermeester -> personaliseerder/updateProfiles"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B10"
+
+channels:
+  personaliseerder-updateProfiles:
+    address: a2a.personaliseerder.updateProfiles
+    messages:
+      updateProfilesRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeUpdateProfiles:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-updateProfiles"
+    messages:
+      - $ref: "#/channels/personaliseerder-updateProfiles/messages/updateProfilesRequest"

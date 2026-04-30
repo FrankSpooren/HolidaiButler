@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB2 - onthaler -> stylist/initBrandAssets"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB2"
+
+channels:
+  stylist-initBrandAssets:
+    address: a2a.stylist.initBrandAssets
+    messages:
+      initBrandAssetsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitBrandAssets:
+    action: send
+    channel:
+      $ref: "#/channels/stylist-initBrandAssets"
+    messages:
+      - $ref: "#/channels/stylist-initBrandAssets/messages/initBrandAssetsRequest"

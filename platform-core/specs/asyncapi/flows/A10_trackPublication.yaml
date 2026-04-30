@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A10 - uitgever -> performanceWachter/trackPublication"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A10"
+
+channels:
+  performanceWachter-trackPublication:
+    address: a2a.performanceWachter.trackPublication
+    messages:
+      trackPublicationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeTrackPublication:
+    action: send
+    channel:
+      $ref: "#/channels/performanceWachter-trackPublication"
+    messages:
+      - $ref: "#/channels/performanceWachter-trackPublication/messages/trackPublicationRequest"

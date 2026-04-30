@@ -8015,3 +8015,50 @@ leermeester/reportSupportPattern, boekhouder/registerTenant
 - agentA2AHooks.js, agentStatusService.js
 
 CLAUDE.md v4.75.0, MS v8.24
+
+
+## Sessie 2026-04-30 — Fase 18: Inter-Agent Flow Completion (106 flows)
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.75.0 → v4.76.0, MS v8.24 → v8.25
+- Cross-doc drift: cosmetisch (v4.58.0 changelog "25 agents" — historisch)
+- Open P1: 0
+- A2A cards: 37 → 38
+- Skills: 46 → 103
+- Healthy: 31, Warning: 7, Error: 0, Deactivated: 1
+- Skills: cc-ops-discipline, cc-quality-standards
+
+### Resultaat
+- **18.A**: 28 nieuwe dedicated skills voor 71 bestaande flows (E3-E7, B5-B6/B12-B14, C8-C10, A11-A16, D11-D12, GF5-GF11)
+- **18.B**: 29 nieuwe skills voor 35 nieuwe ecosystem flows (OB1-OB7, DR2/DR4, TA1-TA4, PF1-PF4, BS1/BS3/BS4, MS2-MS3, RJ1-RJ3, HK1-HK3, ML2-ML3)
+- **18.C**: De Promotor (#38) toegevoegd aan agentRegistry.js (37→38 A2A cards)
+- **18.D**: 31 healthy, 7 warning (schedule-based), 0 errors — geen sick agents
+- **18.E**: 106 AsyncAPI 3.0 specs gegenereerd in specs/asyncapi/flows/
+- Architectuur: per-agent skills/ directories met Zod + OTel tracing
+
+### Bestanden
+- 57 nieuwe skill bestanden in src/services/agents/*/skills/
+- 106 AsyncAPI specs in specs/asyncapi/flows/
+- 1 gewijzigd: src/index.js (40+ skill imports)
+- 1 gewijzigd: src/services/agents/base/agentRegistry.js (De Promotor)
+- 1 gewijzigd: CLAUDE.md (v4.75.0 → v4.76.0)
+
+### Wat ging goed
+- Python generator script voor batch skill creatie (29 skills in 1 run)
+- Consistent patroon: Zod + OTel + registerSkill per skill
+- Alle 106 flows individueel getest via A2A invoke
+
+### Wat ging fout (root cause)
+- Initiële SCP batch faalde voor sommige directories (mkdir ontbrak voor optimaliseerder/skills)
+- MongoDB agent_status heeft geen "status" veld — wordt berekend door calculateAgentStatus()
+- "6 sick agents" uit Fase 18 command was verkeerde aanname — werkelijke status: 0 errors
+
+### Versie-sync delta
+| Metric | Was | Nu |
+|--------|-----|-----|
+| CLAUDE.md | v4.75.0 | v4.76.0 |
+| A2A Skills | 46 | 103 |
+| Inter-agent flows | 71 | 106 |
+| A2A cards | 37 | 38 |
+| AsyncAPI specs | 0 | 106 |
+| Master Strategie | v8.24 | v8.25 |

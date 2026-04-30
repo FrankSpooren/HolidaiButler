@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF2 - reisleider -> trendspotter/reportUserTrend"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF2"
+
+channels:
+  trendspotter-reportUserTrend:
+    address: a2a.trendspotter.reportUserTrend
+    messages:
+      reportUserTrendRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportUserTrend:
+    action: send
+    channel:
+      $ref: "#/channels/trendspotter-reportUserTrend"
+    messages:
+      - $ref: "#/channels/trendspotter-reportUserTrend/messages/reportUserTrendRequest"

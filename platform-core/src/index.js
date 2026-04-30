@@ -67,6 +67,70 @@ import { registerFase17CSkills } from './a2a/fase17c_skills.js';
 import { registerFase17DSkills } from './a2a/fase17d_skills.js';
 import { registerFase17ESkills } from './a2a/fase17e_skills.js';
 import { registerFase17FSkills } from './a2a/fase17f_skills.js';
+// Fase 18.A — Per-agent dedicated skills (E-categorie)
+import './services/agents/ownerInterfaceAgent/skills/sendSecurityAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendFinancialAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendBudgetAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendComplianceAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendSLAAlert.js';
+// Fase 18.A — Per-agent dedicated skills (B-categorie)
+import './services/agents/orchestrator/skills/coordinateRecovery.js';
+import './services/agents/orchestrator/skills/restartCommand.js';
+import './services/agents/financialMonitor/skills/notifyTransaction.js';
+import './services/agents/financialMonitor/skills/inventoryImpact.js';
+import './services/agents/personaliseerder/skills/weatherContext.js';
+// Fase 18.A — Per-agent dedicated skills (C-categorie)
+import './services/agents/boekhouder/skills/budgetReconciliation.js';
+import './services/agents/gdpr/skills/gdprViolation.js';
+import './services/agents/auditeur/skills/costComplianceCheck.js';
+// Fase 18.A — Per-agent dedicated skills (D-categorie)
+import './services/agents/contentRedacteur/skills/contentRefreshNeeded.js';
+import './services/agents/seoMeester/skills/updateKeywords.js';
+import './services/agents/contentRedacteur/skills/personalizeContent.js';
+import './services/agents/contentRedacteur/skills/codeQualityFlag.js';
+import './services/agents/beeldenmaker/skills/brandConsistencyCheck.js';
+import './services/agents/publisher/skills/deprioritizeContent.js';
+// Fase 18.A — Per-agent dedicated skills (E-leer categorie)
+import './services/agents/strategyLayer/skills/reportExperimentResult.js';
+import './services/agents/personaliseerder/skills/updateTrendProfiles.js';
+// Fase 18.A — Per-agent dedicated skills (F-gap categorie)
+import './services/agents/optimaliseerder/skills/journeyPattern.js';
+import './services/agents/trendspotter/skills/recommendationMiss.js';
+import './services/agents/trendspotter/skills/queryMiss.js';
+import './services/agents/auditeur/skills/initCompliance.js';
+import './services/agents/boekhouder/skills/initBudget.js';
+import './services/agents/auditeur/skills/securityFinding.js';
+import './services/agents/orchestrator/skills/lifecycleEvent.js';
+// Fase 18.B — 29 nieuwe ecosystem flows (B.A-B.I)
+import './services/agents/dataSync/skills/discoverPOIs.js';
+import './services/agents/devLayer/skills/initBrandAssets.js';
+import './services/agents/seoMeester/skills/initSEO.js';
+import './services/agents/devLayer/skills/runSecurityBaseline.js';
+import './services/agents/gdpr/skills/initGDPRDefaults.js';
+import './services/agents/personaliseerder/skills/initBrandProfile.js';
+import './services/agents/devLayer/skills/healthSecurityCheck.js';
+import './services/agents/boekhouder/skills/checkCostSpike.js';
+import './services/agents/dataSync/skills/proposePOIs.js';
+import './services/agents/contentRedacteur/skills/prioritizeContent.js';
+import './services/agents/beeldenmaker/skills/generateTrendVisuals.js';
+import './services/agents/seoMeester/skills/captureKeywords.js';
+import './services/agents/optimaliseerder/skills/suggestABTest.js';
+import './services/agents/contentRedacteur/skills/scheduleUpdate.js';
+import './services/agents/verfrisser/skills/triggerCheck.js';
+import './services/agents/trendspotter/skills/signalDecline.js';
+import './services/agents/auditeur/skills/logSecurityFinding.js';
+import './services/agents/gdpr/skills/notifyGDPRRisk.js';
+import './services/agents/devLayer/skills/correlateCodeFinding.js';
+import './services/agents/ownerInterfaceAgent/skills/sendStockAlert.js';
+import './services/agents/personaliseerder/skills/excludeOutOfStock.js';
+import './services/agents/personaliseerder/skills/journeyContext.js';
+import './services/agents/optimaliseerder/skills/dropoffOptimization.js';
+import './services/agents/helpdeskmeester/skills/frustrationPattern.js';
+import './services/agents/contentRedacteur/skills/contentGapDetected.js';
+import './services/agents/personaliseerder/skills/adjustForFrustration.js';
+import './services/agents/verfrisser/skills/staleInfoTicket.js';
+import './services/agents/ownerInterfaceAgent/skills/orchestrationSummary.js';
+import './services/agents/healthMonitor/skills/dependencyAwareCheck.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';

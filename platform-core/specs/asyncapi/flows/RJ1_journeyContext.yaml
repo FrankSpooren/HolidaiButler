@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "RJ1 - reisleider -> personaliseerder/journeyContext"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow RJ1"
+
+channels:
+  personaliseerder-journeyContext:
+    address: a2a.personaliseerder.journeyContext
+    messages:
+      journeyContextRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeJourneyContext:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-journeyContext"
+    messages:
+      - $ref: "#/channels/personaliseerder-journeyContext/messages/journeyContextRequest"

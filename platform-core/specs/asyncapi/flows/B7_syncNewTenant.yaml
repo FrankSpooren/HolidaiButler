@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B7 - onthaler -> geheugen/syncNewTenant"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B7"
+
+channels:
+  geheugen-syncNewTenant:
+    address: a2a.geheugen.syncNewTenant
+    messages:
+      syncNewTenantRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSyncNewTenant:
+    action: send
+    channel:
+      $ref: "#/channels/geheugen-syncNewTenant"
+    messages:
+      - $ref: "#/channels/geheugen-syncNewTenant/messages/syncNewTenantRequest"

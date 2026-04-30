@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D4 - trendspotter -> personaliseerder/updateSeasonalProfiles"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D4"
+
+channels:
+  personaliseerder-updateSeasonalProfiles:
+    address: a2a.personaliseerder.updateSeasonalProfiles
+    messages:
+      updateSeasonalProfilesRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeUpdateSeasonalProfiles:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-updateSeasonalProfiles"
+    messages:
+      - $ref: "#/channels/personaliseerder-updateSeasonalProfiles/messages/updateSeasonalProfilesRequest"

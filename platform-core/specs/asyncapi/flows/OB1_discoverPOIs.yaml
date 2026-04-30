@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB1 - onthaler -> koerier/discoverPOIs"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB1"
+
+channels:
+  koerier-discoverPOIs:
+    address: a2a.koerier.discoverPOIs
+    messages:
+      discoverPOIsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeDiscoverPOIs:
+    action: send
+    channel:
+      $ref: "#/channels/koerier-discoverPOIs"
+    messages:
+      - $ref: "#/channels/koerier-discoverPOIs/messages/discoverPOIsRequest"
