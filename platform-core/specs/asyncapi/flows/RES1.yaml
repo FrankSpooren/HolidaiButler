@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'RES1: anomaliedetective -> maestro/coordinateAnomalyRecovery'
+  version: '1.0.0'
+  description: 'RES1: anomaliedetective -> maestro recovery coordination'
+channels:
+  RES1:
+    address: 'a2a/maestro/coordinateAnomalyRecovery'
+    messages:
+      invoke:
+        summary: 'anomaliedetective invokes maestro/coordinateAnomalyRecovery'
+operations:
+  RES1:
+    action: send
+    channel:
+      $ref: '#/channels/RES1'

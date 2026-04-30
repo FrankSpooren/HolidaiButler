@@ -156,8 +156,8 @@ export function startWorkers() {
         'strategy-prediction': 'strategy-layer',
 
         // De Promotor (Tier Promotion)
-        'poi-tier-recalc': 'tier-promotion',
-        'tier-promotion': 'tier-promotion',
+        'poi-tier-recalc': 'promotor',
+        'tier-promotion': 'promotor',
 
         // De Trendspotter
         'content-feedback-loop': 'trendspotter',
@@ -187,7 +187,7 @@ export function startWorkers() {
         // Operations
         'health-check': 'dokter', 'health-report-daily': 'dokter', 'health-report-weekly': 'dokter',
         'smoke-test': 'smokeTest', 'backup-recency-check': 'backupHealth',
-        'content-quality-audit': 'koerier', 'content-freshness-check': 'koerier',
+        'content-quality-audit': 'contentQuality', 'content-freshness-check': 'koerier',
         'content-recycle-suggestions': 'koerier',
         'poi-sync-tier1': 'koerier', 'poi-sync-tier2': 'koerier',
         'poi-sync-tier3': 'koerier', 'poi-sync-tier4': 'koerier',
@@ -207,7 +207,7 @@ export function startWorkers() {
         'cost-optimization-report': 'boekhouder',
         'journey-analysis': 'reisleider',
         'poi-discovery-annual': 'verkenner', 'poi-discovery-quarterly': 'verkenner',
-        'tier-promotion': 'tier-promotor', 'poi-tier-recalc': 'tier-promotor',
+        'tier-promotion': 'promotor', 'poi-tier-recalc': 'promotor',
         'chromadb-state-snapshot': 'geheugen', 'holibot-poi-sync': 'geheugen',
         'holibot-qa-sync': 'geheugen', 'holibot-full-reindex': 'geheugen',
         'holibot-cleanup': 'geheugen', 'content-holibot-insights': 'geheugen',
@@ -379,7 +379,8 @@ export function startWorkers() {
               demoted: promoResult.demoted?.length || 0,
               errors: promoResult.errors?.length || 0,
             }));
-            return promoResult;
+            result = promoResult;
+            break;
           } catch (error) {
             console.error("[Orchestrator] Tier promotion failed:", error.message);
             throw error;
@@ -1728,6 +1729,8 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         case 'media-performance-aggregator': {
           const { aggregatePerformance } = await import('../media/mediaPerformanceService.js');
+          const { mysqlSequelize } = await import('../../config/database.js');
+          const { QueryTypes } = await import('sequelize');
           const mpDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
           let mpTotal = 0;
           for (const dest of mpDests) { const r = await aggregatePerformance(dest.id, 90); mpTotal += r.count; }
@@ -1738,6 +1741,8 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         case 'media-revenue-attribution': {
           const { attributeRevenue } = await import('../media/mediaAttributionService.js');
+          const { mysqlSequelize } = await import('../../config/database.js');
+          const { QueryTypes } = await import('sequelize');
           const revDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
           const now = new Date();
           const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
@@ -1754,6 +1759,8 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         case 'content-readiness-analyzer': {
           const { getReadinessReport, storeReport } = await import('../media/contentReadinessService.js');
+          const { mysqlSequelize } = await import('../../config/database.js');
+          const { QueryTypes } = await import('sequelize');
           const rdDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
           for (const dest of rdDests) {
             const report = await getReadinessReport(dest.id, 7);
@@ -1765,6 +1772,8 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
         }
 
         case 'content-gap-detector': {
+          const { mysqlSequelize } = await import('../../config/database.js');
+          const { QueryTypes } = await import('sequelize');
           const gapDests = await mysqlSequelize.query('SELECT id FROM destinations WHERE status = "active"', { type: QueryTypes.SELECT });
           let gapTotal = 0;
           for (const dest of gapDests) {

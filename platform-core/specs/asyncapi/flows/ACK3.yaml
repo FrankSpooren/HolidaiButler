@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'ACK3: seoMeester -> contentRedacteur/seoValidationResult'
+  version: '1.0.0'
+  description: 'ACK3: seoMeester -> redacteur SEO validation closed loop'
+channels:
+  ACK3:
+    address: 'a2a/contentRedacteur/seoValidationResult'
+    messages:
+      invoke:
+        summary: 'seoMeester invokes contentRedacteur/seoValidationResult'
+operations:
+  ACK3:
+    action: send
+    channel:
+      $ref: '#/channels/ACK3'

@@ -12,6 +12,9 @@ import {
   deleteDraft, cancelSchedule
 } from './contentActivities.js';
 
+
+import * as sagaActivities from './sagaActivities.js';
+
 export default {
   // Operational (17.B)
   runHealthCheck, triggerDataSync, verifyRecovery,
@@ -21,5 +24,7 @@ export default {
   // Content (17.D)
   generateDraft, validateSEO, translateContent,
   generateImages, schedulePublish, trackPublication,
-  deleteDraft, cancelSchedule
+  deleteDraft, cancelSchedule,
+  // Saga activities (19.E)
+  ...sagaActivities
 };

@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'ACK5: optimaliseerder -> performanceWachter/abTestStarted'
+  version: '1.0.0'
+  description: 'ACK5: optimaliseerder -> performanceWachter A/B test started acknowledgement'
+channels:
+  ACK5:
+    address: 'a2a/performanceWachter/abTestStarted'
+    messages:
+      invoke:
+        summary: 'optimaliseerder invokes performanceWachter/abTestStarted'
+operations:
+  ACK5:
+    action: send
+    channel:
+      $ref: '#/channels/ACK5'
