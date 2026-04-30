@@ -137,6 +137,12 @@ import './services/agents/maestro/skills/circuitBreakerActivate.js';
 import './services/agents/auditeur/skills/logHealthComplianceEvent.js';
 import './services/agents/maestro/skills/securityHalt.js';
 import './services/agents/maestro/skills/registerHeartbeat.js';
+// Fase 19.C — Bidirectional Closure Skills (ACK1-ACK5)
+import './services/agents/trendspotter/skills/discoveryComplete.js';
+import './services/agents/contentRedacteur/skills/imageProcessingFailed.js';
+import './services/agents/contentRedacteur/skills/seoValidationResult.js';
+import './services/agents/reisleider/skills/profileUpdated.js';
+import './services/agents/performanceWachter/skills/abTestStarted.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';

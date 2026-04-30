@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'ACK1: verkenner -> trendspotter/discoveryComplete'
+  version: '1.0.0'
+  description: 'ACK1: verkenner -> trendspotter discovery acknowledgement'
+channels:
+  ACK1:
+    address: 'a2a/trendspotter/discoveryComplete'
+    messages:
+      invoke:
+        summary: 'verkenner invokes trendspotter/discoveryComplete'
+operations:
+  ACK1:
+    action: send
+    channel:
+      $ref: '#/channels/ACK1'

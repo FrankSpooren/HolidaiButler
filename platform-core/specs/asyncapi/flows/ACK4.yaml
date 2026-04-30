@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'ACK4: personaliseerder -> reisleider/profileUpdated'
+  version: '1.0.0'
+  description: 'ACK4: personaliseerder -> reisleider profile update acknowledgement'
+channels:
+  ACK4:
+    address: 'a2a/reisleider/profileUpdated'
+    messages:
+      invoke:
+        summary: 'personaliseerder invokes reisleider/profileUpdated'
+operations:
+  ACK4:
+    action: send
+    channel:
+      $ref: '#/channels/ACK4'
