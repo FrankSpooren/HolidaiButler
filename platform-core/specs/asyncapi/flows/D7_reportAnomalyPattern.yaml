@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D7 - anomaliedetective -> leermeester/reportAnomalyPattern"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D7"
+
+channels:
+  leermeester-reportAnomalyPattern:
+    address: a2a.leermeester.reportAnomalyPattern
+    messages:
+      reportAnomalyPatternRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportAnomalyPattern:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-reportAnomalyPattern"
+    messages:
+      - $ref: "#/channels/leermeester-reportAnomalyPattern/messages/reportAnomalyPatternRequest"

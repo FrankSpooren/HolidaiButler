@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "HK1 - helpdeskmeester -> redacteur/contentGapDetected"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow HK1"
+
+channels:
+  redacteur-contentGapDetected:
+    address: a2a.redacteur.contentGapDetected
+    messages:
+      contentGapDetectedRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeContentGapDetected:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-contentGapDetected"
+    messages:
+      - $ref: "#/channels/redacteur-contentGapDetected/messages/contentGapDetectedRequest"

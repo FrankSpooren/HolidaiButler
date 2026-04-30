@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "MS3 - magazijnier -> personaliseerder/excludeOutOfStock"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow MS3"
+
+channels:
+  personaliseerder-excludeOutOfStock:
+    address: a2a.personaliseerder.excludeOutOfStock
+    messages:
+      excludeOutOfStockRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeExcludeOutOfStock:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-excludeOutOfStock"
+    messages:
+      - $ref: "#/channels/personaliseerder-excludeOutOfStock/messages/excludeOutOfStockRequest"

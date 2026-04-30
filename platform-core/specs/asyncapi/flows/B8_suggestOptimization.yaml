@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B8 - leermeester -> optimaliseerder/suggestOptimization"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B8"
+
+channels:
+  optimaliseerder-suggestOptimization:
+    address: a2a.optimaliseerder.suggestOptimization
+    messages:
+      suggestOptimizationRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSuggestOptimization:
+    action: send
+    channel:
+      $ref: "#/channels/optimaliseerder-suggestOptimization"
+    messages:
+      - $ref: "#/channels/optimaliseerder-suggestOptimization/messages/suggestOptimizationRequest"

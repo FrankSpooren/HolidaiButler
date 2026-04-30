@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF11 - maestro -> maestro/lifecycleEvent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF11"
+
+channels:
+  maestro-lifecycleEvent:
+    address: a2a.maestro.lifecycleEvent
+    messages:
+      lifecycleEventRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeLifecycleEvent:
+    action: send
+    channel:
+      $ref: "#/channels/maestro-lifecycleEvent"
+    messages:
+      - $ref: "#/channels/maestro-lifecycleEvent/messages/lifecycleEventRequest"

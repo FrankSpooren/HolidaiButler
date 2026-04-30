@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D6 - performanceWachter -> leermeester/reportPerformancePattern"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D6"
+
+channels:
+  leermeester-reportPerformancePattern:
+    address: a2a.leermeester.reportPerformancePattern
+    messages:
+      reportPerformancePatternRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportPerformancePattern:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-reportPerformancePattern"
+    messages:
+      - $ref: "#/channels/leermeester-reportPerformancePattern/messages/reportPerformancePatternRequest"

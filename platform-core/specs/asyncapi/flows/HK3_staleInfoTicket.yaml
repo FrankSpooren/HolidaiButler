@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "HK3 - helpdeskmeester -> verfrisser/staleInfoTicket"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow HK3"
+
+channels:
+  verfrisser-staleInfoTicket:
+    address: a2a.verfrisser.staleInfoTicket
+    messages:
+      staleInfoTicketRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeStaleInfoTicket:
+    action: send
+    channel:
+      $ref: "#/channels/verfrisser-staleInfoTicket"
+    messages:
+      - $ref: "#/channels/verfrisser-staleInfoTicket/messages/staleInfoTicketRequest"

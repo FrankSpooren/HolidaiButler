@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A14 - inspecteur -> redacteur/codeQualityFlag"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A14"
+
+channels:
+  redacteur-codeQualityFlag:
+    address: a2a.redacteur.codeQualityFlag
+    messages:
+      codeQualityFlagRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCodeQualityFlag:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-codeQualityFlag"
+    messages:
+      - $ref: "#/channels/redacteur-codeQualityFlag/messages/codeQualityFlagRequest"

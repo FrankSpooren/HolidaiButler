@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E7 - helpdeskmeester -> bode/sendSLAAlert"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E7"
+
+channels:
+  bode-sendSLAAlert:
+    address: a2a.bode.sendSLAAlert
+    messages:
+      sendSLAAlertRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSendSLAAlert:
+    action: send
+    channel:
+      $ref: "#/channels/bode-sendSLAAlert"
+    messages:
+      - $ref: "#/channels/bode-sendSLAAlert/messages/sendSLAAlertRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB7 - onthaler -> personaliseerder/initBrandProfile"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB7"
+
+channels:
+  personaliseerder-initBrandProfile:
+    address: a2a.personaliseerder.initBrandProfile
+    messages:
+      initBrandProfileRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitBrandProfile:
+    action: send
+    channel:
+      $ref: "#/channels/personaliseerder-initBrandProfile"
+    messages:
+      - $ref: "#/channels/personaliseerder-initBrandProfile/messages/initBrandProfileRequest"

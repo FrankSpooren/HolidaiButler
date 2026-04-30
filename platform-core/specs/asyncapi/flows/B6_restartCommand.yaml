@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B6 - dokter -> maestro/restartCommand"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B6"
+
+channels:
+  maestro-restartCommand:
+    address: a2a.maestro.restartCommand
+    messages:
+      restartCommandRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRestartCommand:
+    action: send
+    channel:
+      $ref: "#/channels/maestro-restartCommand"
+    messages:
+      - $ref: "#/channels/maestro-restartCommand/messages/restartCommandRequest"

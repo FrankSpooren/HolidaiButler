@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "PF4 - performanceWachter -> trendspotter/signalDecline"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow PF4"
+
+channels:
+  trendspotter-signalDecline:
+    address: a2a.trendspotter.signalDecline
+    messages:
+      signalDeclineRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSignalDecline:
+    action: send
+    channel:
+      $ref: "#/channels/trendspotter-signalDecline"
+    messages:
+      - $ref: "#/channels/trendspotter-signalDecline/messages/signalDeclineRequest"

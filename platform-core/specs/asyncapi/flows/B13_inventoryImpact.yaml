@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B13 - magazijnier -> kassier/inventoryImpact"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B13"
+
+channels:
+  kassier-inventoryImpact:
+    address: a2a.kassier.inventoryImpact
+    messages:
+      inventoryImpactRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInventoryImpact:
+    action: send
+    channel:
+      $ref: "#/channels/kassier-inventoryImpact"
+    messages:
+      - $ref: "#/channels/kassier-inventoryImpact/messages/inventoryImpactRequest"

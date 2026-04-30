@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B12 - makelaar -> kassier/notifyTransaction"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B12"
+
+channels:
+  kassier-notifyTransaction:
+    address: a2a.kassier.notifyTransaction
+    messages:
+      notifyTransactionRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeNotifyTransaction:
+    action: send
+    channel:
+      $ref: "#/channels/kassier-notifyTransaction"
+    messages:
+      - $ref: "#/channels/kassier-notifyTransaction/messages/notifyTransactionRequest"

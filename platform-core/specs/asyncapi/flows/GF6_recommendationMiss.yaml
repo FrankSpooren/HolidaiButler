@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF6 - personaliseerder -> trendspotter/recommendationMiss"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF6"
+
+channels:
+  trendspotter-recommendationMiss:
+    address: a2a.trendspotter.recommendationMiss
+    messages:
+      recommendationMissRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRecommendationMiss:
+    action: send
+    channel:
+      $ref: "#/channels/trendspotter-recommendationMiss"
+    messages:
+      - $ref: "#/channels/trendspotter-recommendationMiss/messages/recommendationMissRequest"

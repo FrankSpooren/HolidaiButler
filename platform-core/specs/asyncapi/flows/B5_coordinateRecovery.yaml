@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B5 - dokter -> maestro/coordinateRecovery"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B5"
+
+channels:
+  maestro-coordinateRecovery:
+    address: a2a.maestro.coordinateRecovery
+    messages:
+      coordinateRecoveryRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCoordinateRecovery:
+    action: send
+    channel:
+      $ref: "#/channels/maestro-coordinateRecovery"
+    messages:
+      - $ref: "#/channels/maestro-coordinateRecovery/messages/coordinateRecoveryRequest"

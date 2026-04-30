@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B2 - maestro -> dokter/runHealthCheck"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B2"
+
+channels:
+  dokter-runHealthCheck:
+    address: a2a.dokter.runHealthCheck
+    messages:
+      runHealthCheckRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRunHealthCheck:
+    action: send
+    channel:
+      $ref: "#/channels/dokter-runHealthCheck"
+    messages:
+      - $ref: "#/channels/dokter-runHealthCheck/messages/runHealthCheckRequest"

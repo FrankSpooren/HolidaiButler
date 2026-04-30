@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB6 - onthaler -> poortwachter/initGDPRDefaults"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB6"
+
+channels:
+  poortwachter-initGDPRDefaults:
+    address: a2a.poortwachter.initGDPRDefaults
+    messages:
+      initGDPRDefaultsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitGDPRDefaults:
+    action: send
+    channel:
+      $ref: "#/channels/poortwachter-initGDPRDefaults"
+    messages:
+      - $ref: "#/channels/poortwachter-initGDPRDefaults/messages/initGDPRDefaultsRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF5 - reisleider -> optimaliseerder/journeyPattern"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF5"
+
+channels:
+  optimaliseerder-journeyPattern:
+    address: a2a.optimaliseerder.journeyPattern
+    messages:
+      journeyPatternRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeJourneyPattern:
+    action: send
+    channel:
+      $ref: "#/channels/optimaliseerder-journeyPattern"
+    messages:
+      - $ref: "#/channels/optimaliseerder-journeyPattern/messages/journeyPatternRequest"

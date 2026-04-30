@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "PF1 - performanceWachter -> optimaliseerder/suggestABTest"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow PF1"
+
+channels:
+  optimaliseerder-suggestABTest:
+    address: a2a.optimaliseerder.suggestABTest
+    messages:
+      suggestABTestRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSuggestABTest:
+    action: send
+    channel:
+      $ref: "#/channels/optimaliseerder-suggestABTest"
+    messages:
+      - $ref: "#/channels/optimaliseerder-suggestABTest/messages/suggestABTestRequest"

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A3 - redacteur -> beeldenmaker/generateImages"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A3"
+
+channels:
+  beeldenmaker-generateImages:
+    address: a2a.beeldenmaker.generateImages
+    messages:
+      generateImagesRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeGenerateImages:
+    action: send
+    channel:
+      $ref: "#/channels/beeldenmaker-generateImages"
+    messages:
+      - $ref: "#/channels/beeldenmaker-generateImages/messages/generateImagesRequest"

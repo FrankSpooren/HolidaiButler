@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "TA4 - trendspotter -> seoMeester/captureKeywords"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow TA4"
+
+channels:
+  seoMeester-captureKeywords:
+    address: a2a.seoMeester.captureKeywords
+    messages:
+      captureKeywordsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCaptureKeywords:
+    action: send
+    channel:
+      $ref: "#/channels/seoMeester-captureKeywords"
+    messages:
+      - $ref: "#/channels/seoMeester-captureKeywords/messages/captureKeywordsRequest"

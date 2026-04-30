@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D5 - trendspotter -> redacteur/suggestSeasonalContent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D5"
+
+channels:
+  redacteur-suggestSeasonalContent:
+    address: a2a.redacteur.suggestSeasonalContent
+    messages:
+      suggestSeasonalContentRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSuggestSeasonalContent:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-suggestSeasonalContent"
+    messages:
+      - $ref: "#/channels/redacteur-suggestSeasonalContent/messages/suggestSeasonalContentRequest"
