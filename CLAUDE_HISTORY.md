@@ -8062,3 +8062,34 @@ CLAUDE.md v4.75.0, MS v8.24
 | A2A cards | 37 | 38 |
 | AsyncAPI specs | 0 | 106 |
 | Master Strategie | v8.24 | v8.25 |
+
+## Sessie 2026-04-30 — Fase 19.A: Agent Health Restoration
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.76.0 -> v4.76.1, MS v8.25 (ongewijzigd)
+- Cross-doc drift: PASS (1 cosmetische historische ref)
+- Open P1: 0
+- A2A cards: 38
+- Skills: 104 registerSkill calls
+- Healthy: 31 -> 37, Warning: 1 -> 0, Error: 0, Deactivated: 1
+- Skills: cc-ops-discipline
+
+### Resultaat
+- 6 agents ontbraken in agent_status (stylist, inspecteur, contentQuality, seoMeester, promotor, architect)
+- Root causes: JOB_AGENT_MAP mismatches (tier-promotor, koerier), return-bypass in switch-case, mysqlSequelize undefined
+- 8 fixes in workers.js, 38 agent_status docs, 37 healthy + 1 deactivated
+
+### Bestanden
+- 1 gewijzigd: platform-core/src/services/orchestrator/workers.js (+14/-5)
+
+### Wat ging goed
+- Chirurgische diagnose: systematisch JOB_AGENT_MAP vs agentRegistry vs agent_status vergeleken
+- Python script voor betrouwbare multi-fix
+
+### Wat ging fout (root cause)
+- Eerste Python fix script was te agressief (13 imports i.p.v. 4) - git revert + v2 script
+
+### Versie-sync delta
+- CLAUDE.md v4.76.0 -> v4.76.1
+- Healthy: 31 -> 37
+- agent_status docs: 32 -> 38
