@@ -401,12 +401,13 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Page Builder Enterprise | Fase VII-A t/m VII-D (22 blokken ARIA/container queries/schema.org/srcset) | ✅ COMPLEET | apr 2026 |
 | Content Studio + BUTE Pipeline | v4.66.0 (image reorder, MUI tree-shaking 9.5→2.8MB, destination-aware taal-pipeline) | ✅ COMPLEET | apr 2026 |
 | Admin UI Gap-Close | 12 nieuwe componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth, ContentReport) | ✅ COMPLEET | apr 2026 |
+| Foundation + A2A + Flows | Fase 13 SSOT, 15 Foundation Stack, 16 First-Light, 17 71-Flows, 18 106-Flows, 19 Resilience/Closure/Cross-Domain | ✅ COMPLEET | apr 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
 |--------|--------|
 | Agents | 39 (38 actief + 1 gedeactiveerd: De Architect) |
-| BullMQ jobs | 94 (te migreren naar Temporal in Fase 17 + B8) |
+| BullMQ jobs | 94 (BullMQ scheduling + 7 Temporal workflows voor sagas) |
 | Inter-agent flows (gespecificeerd) | 131 (60 Blueprint + 11 gap-fix + 35 ecosystem + 20 resilience/closure/cross-domain + 5 sagas) |
 | Inter-agent flows (geimplementeerd) | 131 (124 dedicated skills + 37 CD1 wrappers, 7 Temporal workflows) |
 | Admin endpoints | 303 |
@@ -459,9 +460,9 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 ### BaseAgent Pattern
 - `BaseAgent.js`: Foundation class met `run('all')` / `run(destinationId)` / `aggregateResults()`
 - `destinationRunner.js`: Mixin helper voor bestaande agent singletons
-- `agentRegistry.js`: Centrale registratie 25 entries
+- `agentRegistry.js`: Centrale registratie 38 entries (incl. De Promotor)
 
-### Scheduled Jobs: 81 totaal
+### Scheduled Jobs: 94 totaal
 - BullMQ queue: `scheduled-tasks`
 - Workers: `src/services/orchestrator/workers.js` (incl. JOB_ACTOR_MAP voor correct agent attribution)
 
@@ -745,7 +746,7 @@ analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 ```bash
 pm2 status                    # PM2 processes
 redis-cli ping                # Redis
-# BullMQ jobs (verwacht: 74)
+# BullMQ jobs (verwacht: 94)
 cd /var/www/api.holidaibutler.com/platform-core
 node -e "const { Queue } = require('bullmq'); const Redis = require('ioredis'); async function c() { const conn = new Redis(); const q = new Queue('scheduled-tasks', { connection: conn }); const jobs = await q.getRepeatableJobs(); console.log('Jobs:', jobs.length); await q.close(); await conn.quit(); } c();"
 ```
