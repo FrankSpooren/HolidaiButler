@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'RES4: bewaker -> maestro/securityHalt'
+  version: '1.0.0'
+  description: 'RES4: bewaker -> maestro security halt on critical CVE detection'
+channels:
+  RES4:
+    address: 'a2a/maestro/securityHalt'
+    messages:
+      invoke:
+        summary: 'bewaker invokes maestro/securityHalt'
+operations:
+  RES4:
+    action: send
+    channel:
+      $ref: '#/channels/RES4'

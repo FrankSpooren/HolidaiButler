@@ -131,6 +131,29 @@ import './services/agents/personaliseerder/skills/adjustForFrustration.js';
 import './services/agents/verfrisser/skills/staleInfoTicket.js';
 import './services/agents/ownerInterfaceAgent/skills/orchestrationSummary.js';
 import './services/agents/healthMonitor/skills/dependencyAwareCheck.js';
+// Fase 19.B — Resilience & Failure-Handling Skills (RES1-RES5)
+import './services/agents/maestro/skills/coordinateAnomalyRecovery.js';
+import './services/agents/maestro/skills/circuitBreakerActivate.js';
+import './services/agents/auditeur/skills/logHealthComplianceEvent.js';
+import './services/agents/maestro/skills/securityHalt.js';
+import './services/agents/maestro/skills/registerHeartbeat.js';
+// Fase 19.C — Bidirectional Closure Skills (ACK1-ACK5)
+import './services/agents/trendspotter/skills/discoveryComplete.js';
+import './services/agents/contentRedacteur/skills/imageProcessingFailed.js';
+import './services/agents/contentRedacteur/skills/seoValidationResult.js';
+import './services/agents/reisleider/skills/profileUpdated.js';
+import './services/agents/performanceWachter/skills/abTestStarted.js';
+// Fase 19.D — Cross-Domain & Meta-Flows (CD1-CD10)
+import './a2a/cd1Wrappers.js';
+import './services/agents/leermeester/skills/registerWorkflowOutcome.js';
+import './services/agents/inspecteur/skills/codeComplianceCheck.js';
+import './services/agents/bewaker/skills/securityComplianceLink.js';
+import './services/agents/maestro/skills/budgetThresholdReached.js';
+import './services/agents/boekhouder/skills/revenueImpact.js';
+import './services/agents/helpdeskmeester/skills/conversationEscalation.js';
+import './services/agents/auditeur/skills/vectorAccessLog.js';
+import './services/agents/auditeur/skills/staleContentReported.js';
+import './services/agents/auditeur/skills/wcagComplianceFinding.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
