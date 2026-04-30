@@ -143,6 +143,17 @@ import './services/agents/contentRedacteur/skills/imageProcessingFailed.js';
 import './services/agents/contentRedacteur/skills/seoValidationResult.js';
 import './services/agents/reisleider/skills/profileUpdated.js';
 import './services/agents/performanceWachter/skills/abTestStarted.js';
+// Fase 19.D — Cross-Domain & Meta-Flows (CD1-CD10)
+import './a2a/cd1Wrappers.js';
+import './services/agents/leermeester/skills/registerWorkflowOutcome.js';
+import './services/agents/inspecteur/skills/codeComplianceCheck.js';
+import './services/agents/bewaker/skills/securityComplianceLink.js';
+import './services/agents/maestro/skills/budgetThresholdReached.js';
+import './services/agents/boekhouder/skills/revenueImpact.js';
+import './services/agents/helpdeskmeester/skills/conversationEscalation.js';
+import './services/agents/auditeur/skills/vectorAccessLog.js';
+import './services/agents/auditeur/skills/staleContentReported.js';
+import './services/agents/auditeur/skills/wcagComplianceFinding.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';

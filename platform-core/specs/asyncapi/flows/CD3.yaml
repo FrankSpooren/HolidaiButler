@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD3: auditeur -> inspecteur/codeComplianceCheck'
+  version: '1.0.0'
+  description: 'CD3: auditeur -> inspecteur code compliance verification'
+channels:
+  CD3:
+    address: 'a2a/inspecteur/codeComplianceCheck'
+    messages:
+      invoke:
+        summary: 'auditeur invokes inspecteur/codeComplianceCheck'
+operations:
+  CD3:
+    action: send
+    channel:
+      $ref: '#/channels/CD3'

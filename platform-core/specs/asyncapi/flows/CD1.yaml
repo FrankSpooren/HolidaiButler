@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD1: leermeester -> ALL/applyDistributedLesson (broadcast)'
+  version: '1.0.0'
+  description: 'CD1: leermeester broadcasts lessons to all 37 active agents'
+channels:
+  CD1:
+    address: 'a2a/*/applyDistributedLesson'
+    messages:
+      invoke:
+        summary: 'leermeester broadcasts lesson to all agents'
+operations:
+  CD1:
+    action: send
+    channel:
+      $ref: '#/channels/CD1'
