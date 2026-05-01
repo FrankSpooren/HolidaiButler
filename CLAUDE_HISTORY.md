@@ -8130,3 +8130,98 @@ CLAUDE.md v4.75.0, MS v8.24
 - AsyncAPI specs: 106 -> 131
 - Temporal workflows: 2 -> 7
 - Healthy: 31 -> 37
+
+## Sessie 2026-05-01 — Fase 20.A + 20.B-1: Agent Health + Flow Enterprise Upgrade
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.77.0 -> v4.77.2, MS v8.26 (ongewijzigd)
+- Healthy agents: 37 -> 38 (bode fixed)
+- A2A skills: 124 static + 37 runtime -> 159 (46 enterprise upgrades)
+- Sagas: 7 (ongewijzigd)
+- Open P1: 0
+- Skills: cc-ops-discipline
+
+### 20.A: 38e Agent Root Cause + Fix
+- **Root cause**: `bode` (De Bode) daily-briefing crashte met `ReferenceError: ecosystemInsights is not defined`
+- **Bug locatie**: `dailyBriefing.js:627` — `sendDailyBriefing()` verwees naar lokale variabele uit `generateDailyBriefing()` scope
+- **Fix**: Vervangen door `briefing.summary.newAgentInsights` (string, beschikbaar via return value)
+- **Bestanden**: 1 gewijzigd (`src/services/orchestrator/ownerInterface/dailyBriefing.js`, +2/-1)
+- **Bewijs**: 38/38 completed, 0 initiated, 0 stale
+
+### 20.B-1: Flow Enterprise Upgrade (4 stappen)
+1. **OTel port fix**: `tracing.js` exporter 4327 -> 4317 (Tempo gRPC). Custom `flow.id` spans verschijnen nu in Tempo (bewezen voor A2, B1).
+2. **flow-registry.json**: Script `build-flow-registry.cjs` gebouwd. 131 specs, 123 implemented, 8 spec-only (SAGA/TEMPORAL stubs).
+3. **audit-flow-runtime-coverage.cjs**: Audit script dat Tempo + MongoDB audit_logs queryt per flow. Rapport in `reports/runtime-coverage-audit.json`.
+4. **46 enterprise skill upgrades**: Fase 16-17 inline skills (5-15 regels, geen Zod/OTel) -> enterprise-level bestanden (Zod InputSchema + OTel span met `flow.id` + error handling). Barrel `src/a2a/enterpriseSkills.js` geladen via dynamic import NA inline registraties (override patroon).
+
+### Kritieke bevinding: 54 van 131 flows waren spec-only
+- Fase 17 skills bestonden als inline registraties in `src/a2a/fase17*.js` maar ZONDER:
+  - Zod input validatie
+  - OTel span met `flow.id` attribute
+  - Proper error handling
+- Na upgrade: 123/131 enterprise-level, 8 SAGA/TEMPORAL stubs (activities doen niets)
+- SAGA/TEMPORAL activity implementatie gepland als 20.B-2 (3-4 sessies)
+
+### Bestanden
+- 1 gewijzigd: `src/services/orchestrator/ownerInterface/dailyBriefing.js` (20.A bode fix)
+- 1 gewijzigd: `src/observability/tracing.js` (OTel port 4327->4317)
+- 1 gewijzigd: `src/index.js` (dynamic import enterpriseSkills.js)
+- 1 nieuw: `src/a2a/enterpriseSkills.js` (barrel, 46 imports)
+- 46 nieuw: `src/services/agents/*/skills/*_*.js` (enterprise skill files)
+- 2 nieuw: `scripts/build-flow-registry.cjs`, `scripts/audit-flow-runtime-coverage.cjs`
+- 1 nieuw: `scripts/flow-registry.json` (generated)
+- 1 nieuw: `reports/runtime-coverage-audit.json` (generated)
+
+### Versie-sync delta
+- CLAUDE.md v4.77.0 -> v4.77.2
+- Healthy: 37 -> 38
+- Implemented flows with OTel: 77 -> 123
+- Spec-only (stubs): 54 -> 8
+- Enterprise skill files: +46
+- A2A registered skills: 124 -> 159
+
+
+## Fase 20.B-2: Saga Activity Implementatie + OSM-First Discovery (01-05-2026)
+
+### Saga Activities (Sessie 1-3)
+- **40 stub activities** in sagaActivities.js vervangen door echte invokeSkill() aanroepen + OTel spans
+- **Sessie 1**: weeklyLearningCycleSaga (4) + crisisResponseSaga (6+1) + OTel TEMPORAL_1/2 spans
+- **Sessie 2**: seasonalContentSaga (4+2) + destinationOnboardingSaga (7+6)
+- **Sessie 3**: poiDiscoverySaga (5+3) + TEMPORAL_3 tenantOnboardingSaga
+- **Temporal worker.js**: dotenv/config + mongoose.connect() + OTel tracing.js import (was ontbrekend)
+- **flow-registry**: 131/131 implemented, 0 spec-only, 131 OTel spans
+- **Bewezen**: alle 7+1 sagas COMPLETED in hb-production namespace met echte data
+
+### Bestanden gewijzigd (Saga)
+- `src/temporal/activities/sagaActivities.js` — 41 activities, 24 invokeSkill, alle OTel
+- `src/temporal/activities/operationalActivities.js` — 9 functies, TEMPORAL_1 OTel
+- `src/temporal/activities/contentActivities.js` — 8 functies, TEMPORAL_2 OTel
+- `src/temporal/worker.js` — dotenv + MongoDB + OTel tracing init
+- `src/temporal/workflows/tenantOnboardingSaga.js` — NIEUW (TEMPORAL_3)
+- `src/temporal/workflows/index.js` — tenantOnboardingSaga export
+
+### Admin Portal Bugfix
+- `PageTemplateDialog.jsx` + `BlockEditorCard.jsx`: 5 ontbrekende MUI icon imports (React error #130)
+
+### OSM-First POI Discovery Pipeline
+- **Probleem**: Apify discovery haalde 80-90% bestaande POIs op (kosten verspilling)
+- **Oplossing**: OpenStreetMap Overpass API (gratis) als eerste filter
+- **Resultaat**: 90%+ kostenreductie ($0.29 vs $3.00 per run)
+- **Bewezen**: Calpe 66 prospects, Texel 62 prospects van 789 OSM POIs
+
+### Bestanden (OSM Discovery)
+- `src/services/osmDiscoveryService.js` — NIEUW: OSM Overpass + fuzzy matching + categorie-filter
+- `src/routes/poiDiscovery.js` — 6 nieuwe endpoints (osm-scan, prospects CRUD, scrape)
+- `src/routes/adminPortal.js` — pendingProspects in dashboard/actions + Verkenner metadata update
+- `src/services/orchestrator/workers.js` — Verkenner job handler → OSM-first
+- `src/services/agents/dataSync/syncScheduler.js` — poi-discovery-osm-scan cron job
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — prospects review UI
+- `admin-module/src/pages/DashboardPage.jsx` — pendingProspects actie-vereist melding
+- MySQL: `discovery_prospects` tabel (18 kolommen, 4 indexes)
+
+### Technische details
+- OSM Overpass mirror: overpass.kumi.systems (overpass-api.de blokkeert Hetzner IPs)
+- Fuzzy matching: Levenshtein + token overlap, threshold 0.65 naam, 0.35 proximity+naam
+- Proximity: haversine <80m, maar alleen als naam-similarity >= 0.35 (voorkomt false positives)
+- Categorie mapping: 70+ OSM types naar 9 HolidaiButler categorieën
+- De Verkenner: maandelijkse OSM scan (cron 0 3 1 * *), kwartaallijkse Apify als vangnet

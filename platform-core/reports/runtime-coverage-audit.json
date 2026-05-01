@@ -1,0 +1,887 @@
+{
+  "generated": "2026-04-30T22:06:46.758Z",
+  "sinceDays": 1,
+  "sinceDate": "2026-04-29T22:06:44.520Z",
+  "summary": {
+    "total_flows": 131,
+    "implemented": 123,
+    "spec_only": 8,
+    "tempo_hits": 2,
+    "audit_hits": 0,
+    "runtime_verified": 2,
+    "unverified": 121
+  },
+  "unverified": [
+    "A10",
+    "A11",
+    "A12",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "A7",
+    "A8a",
+    "A8b",
+    "A9",
+    "ACK1",
+    "ACK2",
+    "ACK3",
+    "ACK4",
+    "ACK5",
+    "B10",
+    "B11",
+    "B12",
+    "B13",
+    "B14",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "BS1",
+    "BS3",
+    "BS4",
+    "C1",
+    "C10",
+    "C2",
+    "C3",
+    "C4",
+    "C5",
+    "C5b",
+    "C6",
+    "C6b",
+    "C7",
+    "C8",
+    "C9",
+    "CD1",
+    "CD10",
+    "CD2",
+    "CD3",
+    "CD4",
+    "CD5",
+    "CD6",
+    "CD7",
+    "CD8",
+    "CD9",
+    "D1",
+    "D10",
+    "D11",
+    "D12",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8",
+    "D9",
+    "DR2",
+    "DR4",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8a",
+    "E8b",
+    "GF1",
+    "GF10",
+    "GF11",
+    "GF2",
+    "GF3",
+    "GF4",
+    "GF5",
+    "GF6",
+    "GF7",
+    "GF8",
+    "GF9",
+    "HK1",
+    "HK2",
+    "HK3",
+    "ML2",
+    "ML3",
+    "MS2",
+    "MS3",
+    "OB1",
+    "OB2",
+    "OB3",
+    "OB4",
+    "OB6",
+    "OB7",
+    "PF1",
+    "PF2",
+    "PF3",
+    "PF4",
+    "RES1",
+    "RES2",
+    "RES3",
+    "RES4",
+    "RES5",
+    "RJ1",
+    "RJ2",
+    "RJ3",
+    "TA1",
+    "TA2",
+    "TA3",
+    "TA4"
+  ],
+  "spec_only": [
+    "SAGA1",
+    "SAGA2",
+    "SAGA3",
+    "SAGA4",
+    "SAGA5",
+    "TEMPORAL_1",
+    "TEMPORAL_2",
+    "TEMPORAL_3"
+  ],
+  "details": [
+    {
+      "id": "A10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A11",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A12",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A13",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A14",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A15",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A16",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A2",
+      "tempo": true,
+      "audit": false,
+      "verified": true
+    },
+    {
+      "id": "A3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A8a",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A8b",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "A9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ACK1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ACK2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ACK3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ACK4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ACK5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B1",
+      "tempo": true,
+      "audit": false,
+      "verified": true
+    },
+    {
+      "id": "B10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B11",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B12",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B13",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B14",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B8",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "B9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "BS1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "BS3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "BS4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C5b",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C6b",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C8",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "C9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD8",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "CD9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D11",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D12",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D8",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "D9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "DR2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "DR4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E8a",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "E8b",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF10",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF11",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF8",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "GF9",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "HK1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "HK2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "HK3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ML2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "ML3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "MS2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "MS3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB6",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "OB7",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "PF1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "PF2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "PF3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "PF4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RES1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RES2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RES3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RES4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RES5",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RJ1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RJ2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "RJ3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "TA1",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "TA2",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "TA3",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    },
+    {
+      "id": "TA4",
+      "tempo": false,
+      "audit": false,
+      "verified": false
+    }
+  ]
+}
