@@ -8179,3 +8179,49 @@ CLAUDE.md v4.75.0, MS v8.24
 - Spec-only (stubs): 54 -> 8
 - Enterprise skill files: +46
 - A2A registered skills: 124 -> 159
+
+
+## Fase 20.B-2: Saga Activity Implementatie + OSM-First Discovery (01-05-2026)
+
+### Saga Activities (Sessie 1-3)
+- **40 stub activities** in sagaActivities.js vervangen door echte invokeSkill() aanroepen + OTel spans
+- **Sessie 1**: weeklyLearningCycleSaga (4) + crisisResponseSaga (6+1) + OTel TEMPORAL_1/2 spans
+- **Sessie 2**: seasonalContentSaga (4+2) + destinationOnboardingSaga (7+6)
+- **Sessie 3**: poiDiscoverySaga (5+3) + TEMPORAL_3 tenantOnboardingSaga
+- **Temporal worker.js**: dotenv/config + mongoose.connect() + OTel tracing.js import (was ontbrekend)
+- **flow-registry**: 131/131 implemented, 0 spec-only, 131 OTel spans
+- **Bewezen**: alle 7+1 sagas COMPLETED in hb-production namespace met echte data
+
+### Bestanden gewijzigd (Saga)
+- `src/temporal/activities/sagaActivities.js` — 41 activities, 24 invokeSkill, alle OTel
+- `src/temporal/activities/operationalActivities.js` — 9 functies, TEMPORAL_1 OTel
+- `src/temporal/activities/contentActivities.js` — 8 functies, TEMPORAL_2 OTel
+- `src/temporal/worker.js` — dotenv + MongoDB + OTel tracing init
+- `src/temporal/workflows/tenantOnboardingSaga.js` — NIEUW (TEMPORAL_3)
+- `src/temporal/workflows/index.js` — tenantOnboardingSaga export
+
+### Admin Portal Bugfix
+- `PageTemplateDialog.jsx` + `BlockEditorCard.jsx`: 5 ontbrekende MUI icon imports (React error #130)
+
+### OSM-First POI Discovery Pipeline
+- **Probleem**: Apify discovery haalde 80-90% bestaande POIs op (kosten verspilling)
+- **Oplossing**: OpenStreetMap Overpass API (gratis) als eerste filter
+- **Resultaat**: 90%+ kostenreductie ($0.29 vs $3.00 per run)
+- **Bewezen**: Calpe 66 prospects, Texel 62 prospects van 789 OSM POIs
+
+### Bestanden (OSM Discovery)
+- `src/services/osmDiscoveryService.js` — NIEUW: OSM Overpass + fuzzy matching + categorie-filter
+- `src/routes/poiDiscovery.js` — 6 nieuwe endpoints (osm-scan, prospects CRUD, scrape)
+- `src/routes/adminPortal.js` — pendingProspects in dashboard/actions + Verkenner metadata update
+- `src/services/orchestrator/workers.js` — Verkenner job handler → OSM-first
+- `src/services/agents/dataSync/syncScheduler.js` — poi-discovery-osm-scan cron job
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — prospects review UI
+- `admin-module/src/pages/DashboardPage.jsx` — pendingProspects actie-vereist melding
+- MySQL: `discovery_prospects` tabel (18 kolommen, 4 indexes)
+
+### Technische details
+- OSM Overpass mirror: overpass.kumi.systems (overpass-api.de blokkeert Hetzner IPs)
+- Fuzzy matching: Levenshtein + token overlap, threshold 0.65 naam, 0.35 proximity+naam
+- Proximity: haversine <80m, maar alleen als naam-similarity >= 0.35 (voorkomt false positives)
+- Categorie mapping: 70+ OSM types naar 9 HolidaiButler categorieën
+- De Verkenner: maandelijkse OSM scan (cron 0 3 1 * *), kwartaallijkse Apify als vangnet
