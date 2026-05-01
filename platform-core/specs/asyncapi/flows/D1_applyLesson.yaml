@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D1 - leermeester -> maestro/applyLesson"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D1"
+
+channels:
+  maestro-applyLesson:
+    address: a2a.maestro.applyLesson
+    messages:
+      applyLessonRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeApplyLesson:
+    action: send
+    channel:
+      $ref: "#/channels/maestro-applyLesson"
+    messages:
+      - $ref: "#/channels/maestro-applyLesson/messages/applyLessonRequest"

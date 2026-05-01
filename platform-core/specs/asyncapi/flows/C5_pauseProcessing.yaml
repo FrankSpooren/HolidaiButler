@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C5 - kassier -> beeldenmaker/pauseProcessing"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C5"
+
+channels:
+  beeldenmaker-pauseProcessing:
+    address: a2a.beeldenmaker.pauseProcessing
+    messages:
+      pauseProcessingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokePauseProcessing:
+    action: send
+    channel:
+      $ref: "#/channels/beeldenmaker-pauseProcessing"
+    messages:
+      - $ref: "#/channels/beeldenmaker-pauseProcessing/messages/pauseProcessingRequest"

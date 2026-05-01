@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD5: boekhouder -> maestro/budgetThresholdReached'
+  version: '1.0.0'
+  description: 'CD5: boekhouder -> maestro budget threshold orchestration'
+channels:
+  CD5:
+    address: 'a2a/maestro/budgetThresholdReached'
+    messages:
+      invoke:
+        summary: 'boekhouder invokes maestro/budgetThresholdReached'
+operations:
+  CD5:
+    action: send
+    channel:
+      $ref: '#/channels/CD5'

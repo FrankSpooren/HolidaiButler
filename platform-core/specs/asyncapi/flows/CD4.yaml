@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD4: auditeur -> bewaker/securityComplianceLink'
+  version: '1.0.0'
+  description: 'CD4: auditeur -> bewaker EU AI Act + security compliance link'
+channels:
+  CD4:
+    address: 'a2a/bewaker/securityComplianceLink'
+    messages:
+      invoke:
+        summary: 'auditeur invokes bewaker/securityComplianceLink'
+operations:
+  CD4:
+    action: send
+    channel:
+      $ref: '#/channels/CD4'

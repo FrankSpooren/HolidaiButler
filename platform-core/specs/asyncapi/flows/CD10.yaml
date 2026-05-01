@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD10: stylist -> auditeur/wcagComplianceFinding'
+  version: '1.0.0'
+  description: 'CD10: stylist -> auditeur WCAG compliance finding (legal)'
+channels:
+  CD10:
+    address: 'a2a/auditeur/wcagComplianceFinding'
+    messages:
+      invoke:
+        summary: 'stylist invokes auditeur/wcagComplianceFinding'
+operations:
+  CD10:
+    action: send
+    channel:
+      $ref: '#/channels/CD10'

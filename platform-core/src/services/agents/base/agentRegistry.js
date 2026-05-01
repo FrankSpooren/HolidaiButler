@@ -1,12 +1,12 @@
 /**
- * Agent Registry - Central registration of all 18 agents with BaseAgent pattern
+ * Agent Registry - Central registration of all 38 agents with BaseAgent pattern
  *
  * This module imports all agents, adds runForDestination()/execute() where needed,
  * and wraps them with destination-awareness via wrapWithDestinationAwareness().
  *
  * Categories:
- *   A (destination-aware): 11 agents that run per-destination
- *   B (shared): 4 agents that run once for all destinations
+ *   A (destination-aware): 19 agents that run per-destination
+ *   B (shared): 8 agents that run once for all destinations
  *
  * @module agents/base/agentRegistry
  * @version 1.0.0
@@ -43,6 +43,23 @@ import seoMeesterAgent from '../seoMeester/index.js';
 
 // Content Module: De Uitgever (Publisher)
 import publisherAgent from '../publisher/index.js';
+
+// Fase Repair v2.0: 12 New Enterprise Agents
+import vertaler from '../vertaler/index.js';
+import beeldenmaker from '../beeldenmaker/index.js';
+import personaliseerder from '../personaliseerder/index.js';
+import performanceWachter from '../performanceWachter/index.js';
+import anomaliedetective from '../anomaliedetective/index.js';
+import auditeur from '../auditeur/index.js';
+import optimaliseerder from '../optimaliseerder/index.js';
+import reisleider from '../reisleider/index.js';
+import verfrisser from '../verfrisser/index.js';
+import boekhouder from '../boekhouder/index.js';
+import onthaler from '../onthaler/index.js';
+import helpdeskmeester from '../helpdeskmeester/index.js';
+
+// Fase IV-B: Tier Promotion Agent
+import tierPromotionAgent from '../dataSync/tierPromotionAgent.js';
 
 // ============================================================
 // CATEGORY A: DESTINATION-AWARE (11 agents)
@@ -409,8 +426,65 @@ wrapWithDestinationAwareness(publisherAgent, {
 });
 
 // ============================================================
+// Fase Repair v2.0: 12 NEW AGENTS
+// ============================================================
+
+// Type A: Destination-Aware
+wrapWithDestinationAwareness(vertaler, {
+  name: 'De Vertaler', category: 'Content', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(beeldenmaker, {
+  name: 'De Beeldenmaker', category: 'Content', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(personaliseerder, {
+  name: 'De Personaliseerder', category: 'Intelligence', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(auditeur, {
+  name: 'De Auditeur', category: 'Operations', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(reisleider, {
+  name: 'De Reisleider', category: 'Operations', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(verfrisser, {
+  name: 'De Verfrisser', category: 'Content', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(onthaler, {
+  name: 'De Onthaler', category: 'Operations', version: '1.0.0', destinationAware: true
+});
+wrapWithDestinationAwareness(helpdeskmeester, {
+  name: 'De Helpdeskmeester', category: 'Operations', version: '1.0.0', destinationAware: true
+});
+
+// Type B: Shared
+wrapWithDestinationAwareness(boekhouder, {
+  name: 'De Boekhouder', category: 'Operations', version: '1.0.0', destinationAware: false
+});
+wrapWithDestinationAwareness(performanceWachter, {
+  name: 'De Performance Wachter', category: 'Operations', version: '1.0.0', destinationAware: false
+});
+wrapWithDestinationAwareness(anomaliedetective, {
+  name: 'De Anomaliedetective', category: 'Operations', version: '1.0.0', destinationAware: false
+});
+wrapWithDestinationAwareness(optimaliseerder, {
+  name: 'De Optimaliseerder', category: 'Intelligence', version: '1.0.0', destinationAware: false
+});
+
+// ============================================================
 // REGISTRY EXPORT
 // ============================================================
+
+// #38 De Promotor (Tier Promotion) - Weekly tier adjustments per destination
+if (tierPromotionAgent && !tierPromotionAgent.runForDestination) {
+  tierPromotionAgent.runForDestination = async function(destinationId) {
+    return { destinationId, status: 'tier_check', message: `Tier promotion check for destination ${destinationId}` };
+  };
+}
+wrapWithDestinationAwareness(tierPromotionAgent || {}, {
+  name: 'De Promotor',
+  category: 'Operations',
+  version: '1.0.0',
+  destinationAware: true
+});
 
 const AGENT_REGISTRY = {
   // Category A: Destination-Aware
@@ -447,6 +521,23 @@ const AGENT_REGISTRY = {
   redacteur: contentRedacteurAgent,    // #23
   seoMeester: seoMeesterAgent,        // #24
   uitgever: publisherAgent,            // #25
+
+  // Fase Repair v2.0: 12 New Agents (#26-#37)
+  vertaler: vertaler,                    // #26
+  beeldenmaker: beeldenmaker,            // #27
+  personaliseerder: personaliseerder,    // #28
+  performanceWachter: performanceWachter, // #29
+  anomaliedetective: anomaliedetective,  // #30
+  auditeur: auditeur,                    // #31
+  optimaliseerder: optimaliseerder,      // #32
+  reisleider: reisleider,               // #33
+  verfrisser: verfrisser,               // #34
+  boekhouder: boekhouder,               // #35
+  onthaler: onthaler,                   // #36
+  helpdeskmeester: helpdeskmeester,      // #37
+
+  // Tier Promotion Agent
+  promotor: tierPromotionAgent,            // #38
 };
 
 /**

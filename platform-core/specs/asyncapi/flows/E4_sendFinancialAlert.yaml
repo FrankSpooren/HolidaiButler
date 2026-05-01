@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E4 - kassier -> bode/sendFinancialAlert"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E4"
+
+channels:
+  bode-sendFinancialAlert:
+    address: a2a.bode.sendFinancialAlert
+    messages:
+      sendFinancialAlertRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSendFinancialAlert:
+    action: send
+    channel:
+      $ref: "#/channels/bode-sendFinancialAlert"
+    messages:
+      - $ref: "#/channels/bode-sendFinancialAlert/messages/sendFinancialAlertRequest"

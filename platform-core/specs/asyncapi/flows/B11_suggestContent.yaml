@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B11 - trendspotter -> redacteur/suggestContent"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B11"
+
+channels:
+  redacteur-suggestContent:
+    address: a2a.redacteur.suggestContent
+    messages:
+      suggestContentRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSuggestContent:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-suggestContent"
+    messages:
+      - $ref: "#/channels/redacteur-suggestContent/messages/suggestContentRequest"

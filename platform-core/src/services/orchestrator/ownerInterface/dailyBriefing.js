@@ -624,7 +624,8 @@ async function sendDailyBriefing() {
   // Severity prefix based on error/alert count
   let prefix;
   // Include new agent anomalies in severity
-  const hasNewAgentAlerts = ecosystemInsights.some(i => i.includes('DOWN') || i.includes('anomalie') || i.includes('Errors'));
+  const newInsights = briefing.summary.newAgentInsights || '';
+  const hasNewAgentAlerts = newInsights.includes('DOWN') || newInsights.includes('anomalie') || newInsights.includes('Errors');
   if (hasCriticalAgents || totalIssues >= 6 || hasNewAgentAlerts) {
     prefix = '[URGENT]';
   } else if (totalIssues >= 3) {

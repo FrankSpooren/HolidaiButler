@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "D3 - thermostaat -> leermeester/reportConfigEffect"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow D3"
+
+channels:
+  leermeester-reportConfigEffect:
+    address: a2a.leermeester.reportConfigEffect
+    messages:
+      reportConfigEffectRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReportConfigEffect:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-reportConfigEffect"
+    messages:
+      - $ref: "#/channels/leermeester-reportConfigEffect/messages/reportConfigEffectRequest"

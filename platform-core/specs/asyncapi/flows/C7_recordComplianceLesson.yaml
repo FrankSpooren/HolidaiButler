@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C7 - ALL -> leermeester/recordComplianceLesson"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C7"
+
+channels:
+  leermeester-recordComplianceLesson:
+    address: a2a.leermeester.recordComplianceLesson
+    messages:
+      recordComplianceLessonRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRecordComplianceLesson:
+    action: send
+    channel:
+      $ref: "#/channels/leermeester-recordComplianceLesson"
+    messages:
+      - $ref: "#/channels/leermeester-recordComplianceLesson/messages/recordComplianceLessonRequest"

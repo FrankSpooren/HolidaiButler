@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'ACK2: beeldenmaker -> contentRedacteur/imageProcessingFailed'
+  version: '1.0.0'
+  description: 'ACK2: beeldenmaker -> redacteur image processing failure compensation'
+channels:
+  ACK2:
+    address: 'a2a/contentRedacteur/imageProcessingFailed'
+    messages:
+      invoke:
+        summary: 'beeldenmaker invokes contentRedacteur/imageProcessingFailed'
+operations:
+  ACK2:
+    action: send
+    channel:
+      $ref: '#/channels/ACK2'

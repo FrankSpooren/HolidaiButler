@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD9: verfrisser -> auditeur/staleContentReported'
+  version: '1.0.0'
+  description: 'CD9: verfrisser -> auditeur stale content compliance reporting'
+channels:
+  CD9:
+    address: 'a2a/auditeur/staleContentReported'
+    messages:
+      invoke:
+        summary: 'verfrisser invokes auditeur/staleContentReported'
+operations:
+  CD9:
+    action: send
+    channel:
+      $ref: '#/channels/CD9'

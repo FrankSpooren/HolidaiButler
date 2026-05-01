@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB4 - onthaler -> bewaker/runSecurityBaseline"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB4"
+
+channels:
+  bewaker-runSecurityBaseline:
+    address: a2a.bewaker.runSecurityBaseline
+    messages:
+      runSecurityBaselineRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeRunSecurityBaseline:
+    action: send
+    channel:
+      $ref: "#/channels/bewaker-runSecurityBaseline"
+    messages:
+      - $ref: "#/channels/bewaker-runSecurityBaseline/messages/runSecurityBaselineRequest"

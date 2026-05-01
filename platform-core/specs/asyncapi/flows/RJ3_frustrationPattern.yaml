@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "RJ3 - reisleider -> helpdeskmeester/frustrationPattern"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow RJ3"
+
+channels:
+  helpdeskmeester-frustrationPattern:
+    address: a2a.helpdeskmeester.frustrationPattern
+    messages:
+      frustrationPatternRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeFrustrationPattern:
+    action: send
+    channel:
+      $ref: "#/channels/helpdeskmeester-frustrationPattern"
+    messages:
+      - $ref: "#/channels/helpdeskmeester-frustrationPattern/messages/frustrationPatternRequest"

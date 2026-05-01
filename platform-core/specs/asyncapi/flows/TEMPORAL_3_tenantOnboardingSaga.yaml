@@ -1,0 +1,22 @@
+asyncapi: 3.0.0
+info:
+  title: "TEMPORAL_3 - onthaler -> tenantOnboardingSaga"
+  version: 1.0.0
+  description: "7-step tenant onboarding orchestration"
+
+channels:
+  temporal-tenantOnboardingSaga:
+    address: temporal.workflows.tenantOnboardingSaga
+    messages:
+      tenantOnboardingSagaStart:
+        payload:
+          type: object
+          description: Temporal workflow input
+
+operations:
+  startTenantOnboardingSaga:
+    action: send
+    channel:
+      $ref: "#/channels/temporal-tenantOnboardingSaga"
+    messages:
+      - $ref: "#/channels/temporal-tenantOnboardingSaga/messages/tenantOnboardingSagaStart"

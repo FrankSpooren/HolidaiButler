@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A2 - redacteur -> seoMeester/validateSEO"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A2"
+
+channels:
+  seoMeester-validateSEO:
+    address: a2a.seoMeester.validateSEO
+    messages:
+      validateSEORequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeValidateSEO:
+    action: send
+    channel:
+      $ref: "#/channels/seoMeester-validateSEO"
+    messages:
+      - $ref: "#/channels/seoMeester-validateSEO/messages/validateSEORequest"

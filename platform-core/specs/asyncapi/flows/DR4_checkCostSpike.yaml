@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "DR4 - dokter -> boekhouder/checkCostSpike"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow DR4"
+
+channels:
+  boekhouder-checkCostSpike:
+    address: a2a.boekhouder.checkCostSpike
+    messages:
+      checkCostSpikeRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeCheckCostSpike:
+    action: send
+    channel:
+      $ref: "#/channels/boekhouder-checkCostSpike"
+    messages:
+      - $ref: "#/channels/boekhouder-checkCostSpike/messages/checkCostSpikeRequest"

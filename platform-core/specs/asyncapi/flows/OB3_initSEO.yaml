@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "OB3 - onthaler -> seoMeester/initSEO"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow OB3"
+
+channels:
+  seoMeester-initSEO:
+    address: a2a.seoMeester.initSEO
+    messages:
+      initSEORequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeInitSEO:
+    action: send
+    channel:
+      $ref: "#/channels/seoMeester-initSEO"
+    messages:
+      - $ref: "#/channels/seoMeester-initSEO/messages/initSEORequest"

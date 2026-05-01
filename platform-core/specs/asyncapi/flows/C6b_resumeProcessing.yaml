@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C6b - kassier -> vertaler/resumeProcessing"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C6b"
+
+channels:
+  vertaler-resumeProcessing:
+    address: a2a.vertaler.resumeProcessing
+    messages:
+      resumeProcessingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeResumeProcessing:
+    action: send
+    channel:
+      $ref: "#/channels/vertaler-resumeProcessing"
+    messages:
+      - $ref: "#/channels/vertaler-resumeProcessing/messages/resumeProcessingRequest"

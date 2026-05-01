@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A12 - trendspotter -> seoMeester/updateKeywords"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A12"
+
+channels:
+  seoMeester-updateKeywords:
+    address: a2a.seoMeester.updateKeywords
+    messages:
+      updateKeywordsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeUpdateKeywords:
+    action: send
+    channel:
+      $ref: "#/channels/seoMeester-updateKeywords"
+    messages:
+      - $ref: "#/channels/seoMeester-updateKeywords/messages/updateKeywordsRequest"

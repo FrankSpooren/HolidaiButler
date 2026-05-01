@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "GF1 - promotor -> uitgever/notifyTierChange"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow GF1"
+
+channels:
+  uitgever-notifyTierChange:
+    address: a2a.uitgever.notifyTierChange
+    messages:
+      notifyTierChangeRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeNotifyTierChange:
+    action: send
+    channel:
+      $ref: "#/channels/uitgever-notifyTierChange"
+    messages:
+      - $ref: "#/channels/uitgever-notifyTierChange/messages/notifyTierChangeRequest"

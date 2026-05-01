@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'SAGA2: seasonalContentSaga'
+  version: '1.0.0'
+  description: 'Seasonal Content Saga: detect season -> adjust profiles -> suggest content -> publish'
+channels:
+  SAGA2:
+    address: 'temporal/workflows/seasonalContentSaga'
+    messages:
+      start:
+        summary: 'Start seasonalContentSaga Temporal workflow'
+operations:
+  SAGA2:
+    action: send
+    channel:
+      $ref: '#/channels/SAGA2'

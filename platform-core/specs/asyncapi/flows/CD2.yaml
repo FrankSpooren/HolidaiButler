@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD2: maestro -> leermeester/registerWorkflowOutcome'
+  version: '1.0.0'
+  description: 'CD2: maestro -> leermeester saga workflow outcome for learning'
+channels:
+  CD2:
+    address: 'a2a/leermeester/registerWorkflowOutcome'
+    messages:
+      invoke:
+        summary: 'maestro invokes leermeester/registerWorkflowOutcome'
+operations:
+  CD2:
+    action: send
+    channel:
+      $ref: '#/channels/CD2'

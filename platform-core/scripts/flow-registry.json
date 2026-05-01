@@ -1,0 +1,1965 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-04-30T21:59:13.326Z",
+  "summary": {
+    "totalSpecs": 131,
+    "totalCodeFlows": 123,
+    "totalRegistry": 131,
+    "implemented": 123,
+    "specOnly": 8,
+    "codeOnly": 0,
+    "withOtelSpan": 123,
+    "withAuditLog": 103
+  },
+  "flows": [
+    {
+      "id": "A10",
+      "specFile": "A10_trackPublication.yaml",
+      "title": "A10 - uitgever -> performanceWachter/trackPublication",
+      "description": "HolidaiButler inter-agent flow A10",
+      "source": "uitgever",
+      "target": "performanceWachter",
+      "skill": "trackPublication",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/performanceWachter/skills/a10_trackPublication.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A11",
+      "specFile": "A11_contentRefreshNeeded.yaml",
+      "title": "A11 - verfrisser -> redacteur/contentRefreshNeeded",
+      "description": "HolidaiButler inter-agent flow A11",
+      "source": "verfrisser",
+      "target": "redacteur",
+      "skill": "contentRefreshNeeded",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/contentRefreshNeeded.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A12",
+      "specFile": "A12_updateKeywords.yaml",
+      "title": "A12 - trendspotter -> seoMeester/updateKeywords",
+      "description": "HolidaiButler inter-agent flow A12",
+      "source": "trendspotter",
+      "target": "seoMeester",
+      "skill": "updateKeywords",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/seoMeester/skills/updateKeywords.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A13",
+      "specFile": "A13_personalizeContent.yaml",
+      "title": "A13 - personaliseerder -> redacteur/personalizeContent",
+      "description": "HolidaiButler inter-agent flow A13",
+      "source": "personaliseerder",
+      "target": "redacteur",
+      "skill": "personalizeContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/personalizeContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A14",
+      "specFile": "A14_codeQualityFlag.yaml",
+      "title": "A14 - inspecteur -> redacteur/codeQualityFlag",
+      "description": "HolidaiButler inter-agent flow A14",
+      "source": "inspecteur",
+      "target": "redacteur",
+      "skill": "codeQualityFlag",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/codeQualityFlag.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A15",
+      "specFile": "A15_brandConsistencyCheck.yaml",
+      "title": "A15 - stylist -> beeldenmaker/brandConsistencyCheck",
+      "description": "HolidaiButler inter-agent flow A15",
+      "source": "stylist",
+      "target": "beeldenmaker",
+      "skill": "brandConsistencyCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/beeldenmaker/skills/brandConsistencyCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A16",
+      "specFile": "A16_deprioritizeContent.yaml",
+      "title": "A16 - performanceWachter -> uitgever/deprioritizeContent",
+      "description": "HolidaiButler inter-agent flow A16",
+      "source": "performanceWachter",
+      "target": "uitgever",
+      "skill": "deprioritizeContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/publisher/skills/deprioritizeContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A2",
+      "specFile": "A2_validateSEO.yaml",
+      "title": "A2 - redacteur -> seoMeester/validateSEO",
+      "description": "HolidaiButler inter-agent flow A2",
+      "source": "redacteur",
+      "target": "seoMeester",
+      "skill": "validateSEO",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/seoMeester/skills/a2_validateSEO.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A3",
+      "specFile": "A3_generateImages.yaml",
+      "title": "A3 - redacteur -> beeldenmaker/generateImages",
+      "description": "HolidaiButler inter-agent flow A3",
+      "source": "redacteur",
+      "target": "beeldenmaker",
+      "skill": "generateImages",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/beeldenmaker/skills/a3_generateImages.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A4",
+      "specFile": "A4_translateContent.yaml",
+      "title": "A4 - redacteur -> vertaler/translateContent",
+      "description": "HolidaiButler inter-agent flow A4",
+      "source": "redacteur",
+      "target": "vertaler",
+      "skill": "translateContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/vertaler/skills/a4_translateContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A5",
+      "specFile": "A5_reviseDraft.yaml",
+      "title": "A5 - seoMeester -> redacteur/reviseDraft",
+      "description": "HolidaiButler inter-agent flow A5",
+      "source": "seoMeester",
+      "target": "redacteur",
+      "skill": "reviseDraft",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/a5_reviseDraft.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A6",
+      "specFile": "A6_flagStaleContent.yaml",
+      "title": "A6 - performanceWachter -> redacteur/flagStaleContent",
+      "description": "HolidaiButler inter-agent flow A6",
+      "source": "performanceWachter",
+      "target": "redacteur",
+      "skill": "flagStaleContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/a6_flagStaleContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A7",
+      "specFile": "A7_flagQualityIssue.yaml",
+      "title": "A7 - inspecteur -> redacteur/flagQualityIssue",
+      "description": "HolidaiButler inter-agent flow A7",
+      "source": "inspecteur",
+      "target": "redacteur",
+      "skill": "flagQualityIssue",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/a7_flagQualityIssue.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A8a",
+      "specFile": "A8a_imageReady.yaml",
+      "title": "A8a - beeldenmaker -> redacteur/imageReady",
+      "description": "HolidaiButler inter-agent flow A8a",
+      "source": "beeldenmaker",
+      "target": "redacteur",
+      "skill": "imageReady",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/a8a_imageReady.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A8b",
+      "specFile": "A8b_translationReady.yaml",
+      "title": "A8b - vertaler -> redacteur/translationReady",
+      "description": "HolidaiButler inter-agent flow A8b",
+      "source": "vertaler",
+      "target": "redacteur",
+      "skill": "translationReady",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/a8b_translationReady.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "A9",
+      "specFile": "A9_schedulePublish.yaml",
+      "title": "A9 - redacteur -> uitgever/schedulePublish",
+      "description": "HolidaiButler inter-agent flow A9",
+      "source": "redacteur",
+      "target": "uitgever",
+      "skill": "schedulePublish",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/publisher/skills/a9_schedulePublish.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ACK1",
+      "specFile": "ACK1.yaml",
+      "title": "ACK1: verkenner -> trendspotter/discoveryComplete",
+      "description": "ACK1: verkenner -> trendspotter discovery acknowledgement",
+      "source": "verkenner",
+      "target": "trendspotter",
+      "skill": "discoveryComplete",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/trendspotter/skills/discoveryComplete.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ACK2",
+      "specFile": "ACK2.yaml",
+      "title": "ACK2: beeldenmaker -> contentRedacteur/imageProcessingFailed",
+      "description": "ACK2: beeldenmaker -> redacteur image processing failure compensation",
+      "source": "beeldenmaker",
+      "target": "contentRedacteur",
+      "skill": "imageProcessingFailed",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/imageProcessingFailed.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ACK3",
+      "specFile": "ACK3.yaml",
+      "title": "ACK3: seoMeester -> contentRedacteur/seoValidationResult",
+      "description": "ACK3: seoMeester -> redacteur SEO validation closed loop",
+      "source": "seoMeester",
+      "target": "contentRedacteur",
+      "skill": "seoValidationResult",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/seoValidationResult.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ACK4",
+      "specFile": "ACK4.yaml",
+      "title": "ACK4: personaliseerder -> reisleider/profileUpdated",
+      "description": "ACK4: personaliseerder -> reisleider profile update acknowledgement",
+      "source": "personaliseerder",
+      "target": "reisleider",
+      "skill": "profileUpdated",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/reisleider/skills/profileUpdated.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ACK5",
+      "specFile": "ACK5.yaml",
+      "title": "ACK5: optimaliseerder -> performanceWachter/abTestStarted",
+      "description": "ACK5: optimaliseerder -> performanceWachter A/B test started acknowledgement",
+      "source": "optimaliseerder",
+      "target": "performanceWachter",
+      "skill": "abTestStarted",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/performanceWachter/skills/abTestStarted.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B1",
+      "specFile": "B1_triggerSync.yaml",
+      "title": "B1 - maestro -> koerier/triggerSync",
+      "description": "HolidaiButler inter-agent flow B1",
+      "source": "maestro",
+      "target": "koerier",
+      "skill": "triggerSync",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/dataSync/skills/b1_triggerSync.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B10",
+      "specFile": "B10_updateProfiles.yaml",
+      "title": "B10 - weermeester -> personaliseerder/updateProfiles",
+      "description": "HolidaiButler inter-agent flow B10",
+      "source": "weermeester",
+      "target": "personaliseerder",
+      "skill": "updateProfiles",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/b10_updateProfiles.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B11",
+      "specFile": "B11_suggestContent.yaml",
+      "title": "B11 - trendspotter -> redacteur/suggestContent",
+      "description": "HolidaiButler inter-agent flow B11",
+      "source": "trendspotter",
+      "target": "redacteur",
+      "skill": "suggestContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/b11_suggestContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B12",
+      "specFile": "B12_notifyTransaction.yaml",
+      "title": "B12 - makelaar -> kassier/notifyTransaction",
+      "description": "HolidaiButler inter-agent flow B12",
+      "source": "makelaar",
+      "target": "kassier",
+      "skill": "notifyTransaction",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/financialMonitor/skills/notifyTransaction.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B13",
+      "specFile": "B13_inventoryImpact.yaml",
+      "title": "B13 - magazijnier -> kassier/inventoryImpact",
+      "description": "HolidaiButler inter-agent flow B13",
+      "source": "magazijnier",
+      "target": "kassier",
+      "skill": "inventoryImpact",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/financialMonitor/skills/inventoryImpact.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B14",
+      "specFile": "B14_weatherContext.yaml",
+      "title": "B14 - weermeester -> personaliseerder/weatherContext",
+      "description": "HolidaiButler inter-agent flow B14",
+      "source": "weermeester",
+      "target": "personaliseerder",
+      "skill": "weatherContext",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/weatherContext.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B2",
+      "specFile": "B2_runHealthCheck.yaml",
+      "title": "B2 - maestro -> dokter/runHealthCheck",
+      "description": "HolidaiButler inter-agent flow B2",
+      "source": "maestro",
+      "target": "dokter",
+      "skill": "runHealthCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/healthMonitor/skills/b2_runHealthCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B3",
+      "specFile": "B3_checkBudget.yaml",
+      "title": "B3 - maestro -> kassier/checkBudget",
+      "description": "HolidaiButler inter-agent flow B3",
+      "source": "maestro",
+      "target": "kassier",
+      "skill": "checkBudget",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/financialMonitor/skills/b3_checkBudget.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B4",
+      "specFile": "B4_reconcile.yaml",
+      "title": "B4 - maestro -> kassier/reconcile",
+      "description": "HolidaiButler inter-agent flow B4",
+      "source": "maestro",
+      "target": "kassier",
+      "skill": "reconcile",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/financialMonitor/skills/b4_reconcile.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B5",
+      "specFile": "B5_coordinateRecovery.yaml",
+      "title": "B5 - dokter -> maestro/coordinateRecovery",
+      "description": "HolidaiButler inter-agent flow B5",
+      "source": "dokter",
+      "target": "maestro",
+      "skill": "coordinateRecovery",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/orchestrator/skills/coordinateRecovery.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B6",
+      "specFile": "B6_restartCommand.yaml",
+      "title": "B6 - dokter -> maestro/restartCommand",
+      "description": "HolidaiButler inter-agent flow B6",
+      "source": "dokter",
+      "target": "maestro",
+      "skill": "restartCommand",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/orchestrator/skills/restartCommand.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B7",
+      "specFile": "B7_syncNewTenant.yaml",
+      "title": "B7 - onthaler -> geheugen/syncNewTenant",
+      "description": "HolidaiButler inter-agent flow B7",
+      "source": "onthaler",
+      "target": "geheugen",
+      "skill": "syncNewTenant",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/holibotSync/skills/b7_syncNewTenant.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B8",
+      "specFile": "B8_suggestOptimization.yaml",
+      "title": "B8 - leermeester -> optimaliseerder/suggestOptimization",
+      "description": "HolidaiButler inter-agent flow B8",
+      "source": "leermeester",
+      "target": "optimaliseerder",
+      "skill": "suggestOptimization",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/optimaliseerder/skills/b8_suggestOptimization.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "B9",
+      "specFile": "B9_auditAccess.yaml",
+      "title": "B9 - auditeur -> poortwachter/auditAccess",
+      "description": "HolidaiButler inter-agent flow B9",
+      "source": "auditeur",
+      "target": "poortwachter",
+      "skill": "auditAccess",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/gdpr/skills/b9_auditAccess.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "BS1",
+      "specFile": "BS1_logSecurityFinding.yaml",
+      "title": "BS1 - bewaker -> auditeur/logSecurityFinding",
+      "description": "HolidaiButler inter-agent flow BS1",
+      "source": "bewaker",
+      "target": "auditeur",
+      "skill": "logSecurityFinding",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/logSecurityFinding.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "BS3",
+      "specFile": "BS3_notifyGDPRRisk.yaml",
+      "title": "BS3 - bewaker -> poortwachter/notifyGDPRRisk",
+      "description": "HolidaiButler inter-agent flow BS3",
+      "source": "bewaker",
+      "target": "poortwachter",
+      "skill": "notifyGDPRRisk",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/gdpr/skills/notifyGDPRRisk.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "BS4",
+      "specFile": "BS4_correlateCodeFinding.yaml",
+      "title": "BS4 - bewaker -> inspecteur/correlateCodeFinding",
+      "description": "HolidaiButler inter-agent flow BS4",
+      "source": "bewaker",
+      "target": "inspecteur",
+      "skill": "correlateCodeFinding",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/devLayer/skills/correlateCodeFinding.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C1",
+      "specFile": "C1_enforceCompliance.yaml",
+      "title": "C1 - auditeur -> poortwachter/enforceCompliance",
+      "description": "HolidaiButler inter-agent flow C1",
+      "source": "auditeur",
+      "target": "poortwachter",
+      "skill": "enforceCompliance",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/gdpr/skills/c1_enforceCompliance.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C10",
+      "specFile": "C10_costComplianceCheck.yaml",
+      "title": "C10 - boekhouder -> auditeur/costComplianceCheck",
+      "description": "HolidaiButler inter-agent flow C10",
+      "source": "boekhouder",
+      "target": "auditeur",
+      "skill": "costComplianceCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/costComplianceCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C2",
+      "specFile": "C2_logComplianceEvent.yaml",
+      "title": "C2 - ALL -> auditeur/logComplianceEvent",
+      "description": "HolidaiButler inter-agent flow C2",
+      "source": "ALL",
+      "target": "auditeur",
+      "skill": "logComplianceEvent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/c2_logComplianceEvent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C3",
+      "specFile": "C3_pausePublishing.yaml",
+      "title": "C3 - kassier -> uitgever/pausePublishing",
+      "description": "HolidaiButler inter-agent flow C3",
+      "source": "kassier",
+      "target": "uitgever",
+      "skill": "pausePublishing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/publisher/skills/c3_pausePublishing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C4",
+      "specFile": "C4_resumePublishing.yaml",
+      "title": "C4 - kassier -> uitgever/resumePublishing",
+      "description": "HolidaiButler inter-agent flow C4",
+      "source": "kassier",
+      "target": "uitgever",
+      "skill": "resumePublishing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/publisher/skills/c4_resumePublishing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C5",
+      "specFile": "C5_pauseProcessing.yaml",
+      "title": "C5 - kassier -> beeldenmaker/pauseProcessing",
+      "description": "HolidaiButler inter-agent flow C5",
+      "source": "kassier",
+      "target": "beeldenmaker",
+      "skill": "pauseProcessing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/beeldenmaker/skills/c5_pauseProcessing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C5b",
+      "specFile": "C5b_pauseProcessing.yaml",
+      "title": "C5b - kassier -> vertaler/pauseProcessing",
+      "description": "HolidaiButler inter-agent flow C5b",
+      "source": "kassier",
+      "target": "vertaler",
+      "skill": "pauseProcessing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/vertaler/skills/c5b_pauseProcessing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C6",
+      "specFile": "C6_resumeProcessing.yaml",
+      "title": "C6 - kassier -> beeldenmaker/resumeProcessing",
+      "description": "HolidaiButler inter-agent flow C6",
+      "source": "kassier",
+      "target": "beeldenmaker",
+      "skill": "resumeProcessing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/beeldenmaker/skills/c6_resumeProcessing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C6b",
+      "specFile": "C6b_resumeProcessing.yaml",
+      "title": "C6b - kassier -> vertaler/resumeProcessing",
+      "description": "HolidaiButler inter-agent flow C6b",
+      "source": "kassier",
+      "target": "vertaler",
+      "skill": "resumeProcessing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/vertaler/skills/c6b_resumeProcessing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C7",
+      "specFile": "C7_recordComplianceLesson.yaml",
+      "title": "C7 - ALL -> leermeester/recordComplianceLesson",
+      "description": "HolidaiButler inter-agent flow C7",
+      "source": "ALL",
+      "target": "leermeester",
+      "skill": "recordComplianceLesson",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/c7_recordComplianceLesson.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C8",
+      "specFile": "C8_budgetReconciliation.yaml",
+      "title": "C8 - kassier -> boekhouder/budgetReconciliation",
+      "description": "HolidaiButler inter-agent flow C8",
+      "source": "kassier",
+      "target": "boekhouder",
+      "skill": "budgetReconciliation",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/boekhouder/skills/budgetReconciliation.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "C9",
+      "specFile": "C9_gdprViolation.yaml",
+      "title": "C9 - auditeur -> poortwachter/gdprViolation",
+      "description": "HolidaiButler inter-agent flow C9",
+      "source": "auditeur",
+      "target": "poortwachter",
+      "skill": "gdprViolation",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/gdpr/skills/gdprViolation.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD1",
+      "specFile": "CD1.yaml",
+      "title": "CD1: leermeester -> ALL/applyDistributedLesson (broadcast)",
+      "description": "CD1: leermeester broadcasts lessons to all 37 active agents",
+      "source": "leermeester",
+      "target": "ALL",
+      "skill": "applyDistributedLesson",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/a2a/applyDistributedLessonBase.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD10",
+      "specFile": "CD10.yaml",
+      "title": "CD10: stylist -> auditeur/wcagComplianceFinding",
+      "description": "CD10: stylist -> auditeur WCAG compliance finding (legal)",
+      "source": "stylist",
+      "target": "auditeur",
+      "skill": "wcagComplianceFinding",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/wcagComplianceFinding.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD2",
+      "specFile": "CD2.yaml",
+      "title": "CD2: maestro -> leermeester/registerWorkflowOutcome",
+      "description": "CD2: maestro -> leermeester saga workflow outcome for learning",
+      "source": "maestro",
+      "target": "leermeester",
+      "skill": "registerWorkflowOutcome",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/registerWorkflowOutcome.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD3",
+      "specFile": "CD3.yaml",
+      "title": "CD3: auditeur -> inspecteur/codeComplianceCheck",
+      "description": "CD3: auditeur -> inspecteur code compliance verification",
+      "source": "auditeur",
+      "target": "inspecteur",
+      "skill": "codeComplianceCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/inspecteur/skills/codeComplianceCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD4",
+      "specFile": "CD4.yaml",
+      "title": "CD4: auditeur -> bewaker/securityComplianceLink",
+      "description": "CD4: auditeur -> bewaker EU AI Act + security compliance link",
+      "source": "auditeur",
+      "target": "bewaker",
+      "skill": "securityComplianceLink",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/bewaker/skills/securityComplianceLink.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD5",
+      "specFile": "CD5.yaml",
+      "title": "CD5: boekhouder -> maestro/budgetThresholdReached",
+      "description": "CD5: boekhouder -> maestro budget threshold orchestration",
+      "source": "boekhouder",
+      "target": "maestro",
+      "skill": "budgetThresholdReached",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/budgetThresholdReached.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD6",
+      "specFile": "CD6.yaml",
+      "title": "CD6: kassier -> boekhouder/revenueImpact",
+      "description": "CD6: kassier -> boekhouder revenue impact correlation",
+      "source": "kassier",
+      "target": "boekhouder",
+      "skill": "revenueImpact",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/boekhouder/skills/revenueImpact.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD7",
+      "specFile": "CD7.yaml",
+      "title": "CD7: gastheer -> helpdeskmeester/conversationEscalation",
+      "description": "CD7: gastheer -> helpdeskmeester chat conversation escalation to ticket",
+      "source": "gastheer",
+      "target": "helpdeskmeester",
+      "skill": "conversationEscalation",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/helpdeskmeester/skills/conversationEscalation.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD8",
+      "specFile": "CD8.yaml",
+      "title": "CD8: geheugen -> auditeur/vectorAccessLog",
+      "description": "CD8: geheugen -> auditeur vector DB access logging (EU AI Act art.12)",
+      "source": "geheugen",
+      "target": "auditeur",
+      "skill": "vectorAccessLog",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/vectorAccessLog.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "CD9",
+      "specFile": "CD9.yaml",
+      "title": "CD9: verfrisser -> auditeur/staleContentReported",
+      "description": "CD9: verfrisser -> auditeur stale content compliance reporting",
+      "source": "verfrisser",
+      "target": "auditeur",
+      "skill": "staleContentReported",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/staleContentReported.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D1",
+      "specFile": "D1_applyLesson.yaml",
+      "title": "D1 - leermeester -> maestro/applyLesson",
+      "description": "HolidaiButler inter-agent flow D1",
+      "source": "leermeester",
+      "target": "maestro",
+      "skill": "applyLesson",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/d1_applyLesson.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D10",
+      "specFile": "D10_requestForecast.yaml",
+      "title": "D10 - personaliseerder -> weermeester/requestForecast",
+      "description": "HolidaiButler inter-agent flow D10",
+      "source": "personaliseerder",
+      "target": "weermeester",
+      "skill": "requestForecast",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/strategyLayer/skills/d10_requestForecast.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D11",
+      "specFile": "D11_reportExperimentResult.yaml",
+      "title": "D11 - optimaliseerder -> leermeester/reportExperimentResult",
+      "description": "HolidaiButler inter-agent flow D11",
+      "source": "optimaliseerder",
+      "target": "leermeester",
+      "skill": "reportExperimentResult",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/strategyLayer/skills/reportExperimentResult.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D12",
+      "specFile": "D12_updateTrendProfiles.yaml",
+      "title": "D12 - trendspotter -> personaliseerder/updateTrendProfiles",
+      "description": "HolidaiButler inter-agent flow D12",
+      "source": "trendspotter",
+      "target": "personaliseerder",
+      "skill": "updateTrendProfiles",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/updateTrendProfiles.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D2",
+      "specFile": "D2_adjustConfig.yaml",
+      "title": "D2 - maestro -> thermostaat/adjustConfig",
+      "description": "HolidaiButler inter-agent flow D2",
+      "source": "maestro",
+      "target": "thermostaat",
+      "skill": "adjustConfig",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/strategyLayer/skills/d2_adjustConfig.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D3",
+      "specFile": "D3_reportConfigEffect.yaml",
+      "title": "D3 - thermostaat -> leermeester/reportConfigEffect",
+      "description": "HolidaiButler inter-agent flow D3",
+      "source": "thermostaat",
+      "target": "leermeester",
+      "skill": "reportConfigEffect",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/d3_reportConfigEffect.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D4",
+      "specFile": "D4_updateSeasonalProfiles.yaml",
+      "title": "D4 - trendspotter -> personaliseerder/updateSeasonalProfiles",
+      "description": "HolidaiButler inter-agent flow D4",
+      "source": "trendspotter",
+      "target": "personaliseerder",
+      "skill": "updateSeasonalProfiles",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/d4_updateSeasonalProfiles.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D5",
+      "specFile": "D5_suggestSeasonalContent.yaml",
+      "title": "D5 - trendspotter -> redacteur/suggestSeasonalContent",
+      "description": "HolidaiButler inter-agent flow D5",
+      "source": "trendspotter",
+      "target": "redacteur",
+      "skill": "suggestSeasonalContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/d5_suggestSeasonalContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D6",
+      "specFile": "D6_reportPerformancePattern.yaml",
+      "title": "D6 - performanceWachter -> leermeester/reportPerformancePattern",
+      "description": "HolidaiButler inter-agent flow D6",
+      "source": "performanceWachter",
+      "target": "leermeester",
+      "skill": "reportPerformancePattern",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/d6_reportPerformancePattern.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D7",
+      "specFile": "D7_reportAnomalyPattern.yaml",
+      "title": "D7 - anomaliedetective -> leermeester/reportAnomalyPattern",
+      "description": "HolidaiButler inter-agent flow D7",
+      "source": "anomaliedetective",
+      "target": "leermeester",
+      "skill": "reportAnomalyPattern",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/d7_reportAnomalyPattern.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D8",
+      "specFile": "D8_reportOptimizationResult.yaml",
+      "title": "D8 - optimaliseerder -> leermeester/reportOptimizationResult",
+      "description": "HolidaiButler inter-agent flow D8",
+      "source": "optimaliseerder",
+      "target": "leermeester",
+      "skill": "reportOptimizationResult",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/d8_reportOptimizationResult.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "D9",
+      "specFile": "D9_reportQualityTrend.yaml",
+      "title": "D9 - inspecteur -> leermeester/reportQualityTrend",
+      "description": "HolidaiButler inter-agent flow D9",
+      "source": "inspecteur",
+      "target": "leermeester",
+      "skill": "reportQualityTrend",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/d9_reportQualityTrend.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "DR2",
+      "specFile": "DR2_healthSecurityCheck.yaml",
+      "title": "DR2 - dokter -> bewaker/healthSecurityCheck",
+      "description": "HolidaiButler inter-agent flow DR2",
+      "source": "dokter",
+      "target": "bewaker",
+      "skill": "healthSecurityCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/devLayer/skills/healthSecurityCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "DR4",
+      "specFile": "DR4_checkCostSpike.yaml",
+      "title": "DR4 - dokter -> boekhouder/checkCostSpike",
+      "description": "HolidaiButler inter-agent flow DR4",
+      "source": "dokter",
+      "target": "boekhouder",
+      "skill": "checkCostSpike",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/boekhouder/skills/checkCostSpike.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E1",
+      "specFile": "E1_aggregateBriefing.yaml",
+      "title": "E1 - ALL -> bode/aggregateBriefing",
+      "description": "HolidaiButler inter-agent flow E1",
+      "source": "ALL",
+      "target": "bode",
+      "skill": "aggregateBriefing",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/e1_aggregateBriefing.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E2",
+      "specFile": "E2_sendAlert.yaml",
+      "title": "E2 - anomaliedetective -> bode/sendAlert",
+      "description": "HolidaiButler inter-agent flow E2",
+      "source": "anomaliedetective",
+      "target": "bode",
+      "skill": "sendAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/e2_sendAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E3",
+      "specFile": "E3_sendSecurityAlert.yaml",
+      "title": "E3 - bewaker -> bode/sendSecurityAlert",
+      "description": "HolidaiButler inter-agent flow E3",
+      "source": "bewaker",
+      "target": "bode",
+      "skill": "sendSecurityAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendSecurityAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E4",
+      "specFile": "E4_sendFinancialAlert.yaml",
+      "title": "E4 - kassier -> bode/sendFinancialAlert",
+      "description": "HolidaiButler inter-agent flow E4",
+      "source": "kassier",
+      "target": "bode",
+      "skill": "sendFinancialAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendFinancialAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E5",
+      "specFile": "E5_sendBudgetAlert.yaml",
+      "title": "E5 - boekhouder -> bode/sendBudgetAlert",
+      "description": "HolidaiButler inter-agent flow E5",
+      "source": "boekhouder",
+      "target": "bode",
+      "skill": "sendBudgetAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendBudgetAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E6",
+      "specFile": "E6_sendComplianceAlert.yaml",
+      "title": "E6 - auditeur -> bode/sendComplianceAlert",
+      "description": "HolidaiButler inter-agent flow E6",
+      "source": "auditeur",
+      "target": "bode",
+      "skill": "sendComplianceAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendComplianceAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E7",
+      "specFile": "E7_sendSLAAlert.yaml",
+      "title": "E7 - helpdeskmeester -> bode/sendSLAAlert",
+      "description": "HolidaiButler inter-agent flow E7",
+      "source": "helpdeskmeester",
+      "target": "bode",
+      "skill": "sendSLAAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendSLAAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E8a",
+      "specFile": "E8a_pushUpdate.yaml",
+      "title": "E8a - ALL -> dashboard/pushUpdate",
+      "description": "HolidaiButler inter-agent flow E8a",
+      "source": "ALL",
+      "target": "dashboard",
+      "skill": "pushUpdate",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/e8a_pushUpdate.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "E8b",
+      "specFile": "E8b_getEvents.yaml",
+      "title": "E8b - ALL -> dashboard/getEvents",
+      "description": "HolidaiButler inter-agent flow E8b",
+      "source": "ALL",
+      "target": "dashboard",
+      "skill": "getEvents",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/e8b_getEvents.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF1",
+      "specFile": "GF1_notifyTierChange.yaml",
+      "title": "GF1 - promotor -> uitgever/notifyTierChange",
+      "description": "HolidaiButler inter-agent flow GF1",
+      "source": "promotor",
+      "target": "uitgever",
+      "skill": "notifyTierChange",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/publisher/skills/gf1_notifyTierChange.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF10",
+      "specFile": "GF10_securityFinding.yaml",
+      "title": "GF10 - bewaker -> auditeur/securityFinding",
+      "description": "HolidaiButler inter-agent flow GF10",
+      "source": "bewaker",
+      "target": "auditeur",
+      "skill": "securityFinding",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/securityFinding.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF11",
+      "specFile": "GF11_lifecycleEvent.yaml",
+      "title": "GF11 - maestro -> maestro/lifecycleEvent",
+      "description": "HolidaiButler inter-agent flow GF11",
+      "source": "maestro",
+      "target": "maestro",
+      "skill": "lifecycleEvent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/orchestrator/skills/lifecycleEvent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF2",
+      "specFile": "GF2_reportUserTrend.yaml",
+      "title": "GF2 - reisleider -> trendspotter/reportUserTrend",
+      "description": "HolidaiButler inter-agent flow GF2",
+      "source": "reisleider",
+      "target": "trendspotter",
+      "skill": "reportUserTrend",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/trendspotter/skills/gf2_reportUserTrend.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF3",
+      "specFile": "GF3_reportSupportPattern.yaml",
+      "title": "GF3 - helpdeskmeester -> leermeester/reportSupportPattern",
+      "description": "HolidaiButler inter-agent flow GF3",
+      "source": "helpdeskmeester",
+      "target": "leermeester",
+      "skill": "reportSupportPattern",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/leermeester/skills/gf3_reportSupportPattern.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF4",
+      "specFile": "GF4_registerTenant.yaml",
+      "title": "GF4 - onthaler -> boekhouder/registerTenant",
+      "description": "HolidaiButler inter-agent flow GF4",
+      "source": "onthaler",
+      "target": "boekhouder",
+      "skill": "registerTenant",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/boekhouder/skills/gf4_registerTenant.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF5",
+      "specFile": "GF5_journeyPattern.yaml",
+      "title": "GF5 - reisleider -> optimaliseerder/journeyPattern",
+      "description": "HolidaiButler inter-agent flow GF5",
+      "source": "reisleider",
+      "target": "optimaliseerder",
+      "skill": "journeyPattern",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/optimaliseerder/skills/journeyPattern.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF6",
+      "specFile": "GF6_recommendationMiss.yaml",
+      "title": "GF6 - personaliseerder -> trendspotter/recommendationMiss",
+      "description": "HolidaiButler inter-agent flow GF6",
+      "source": "personaliseerder",
+      "target": "trendspotter",
+      "skill": "recommendationMiss",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/trendspotter/skills/recommendationMiss.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF7",
+      "specFile": "GF7_queryMiss.yaml",
+      "title": "GF7 - geheugen -> trendspotter/queryMiss",
+      "description": "HolidaiButler inter-agent flow GF7",
+      "source": "geheugen",
+      "target": "trendspotter",
+      "skill": "queryMiss",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/trendspotter/skills/queryMiss.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF8",
+      "specFile": "GF8_initCompliance.yaml",
+      "title": "GF8 - onthaler -> auditeur/initCompliance",
+      "description": "HolidaiButler inter-agent flow GF8",
+      "source": "onthaler",
+      "target": "auditeur",
+      "skill": "initCompliance",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/initCompliance.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "GF9",
+      "specFile": "GF9_initBudget.yaml",
+      "title": "GF9 - onthaler -> boekhouder/initBudget",
+      "description": "HolidaiButler inter-agent flow GF9",
+      "source": "onthaler",
+      "target": "boekhouder",
+      "skill": "initBudget",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/boekhouder/skills/initBudget.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "HK1",
+      "specFile": "HK1_contentGapDetected.yaml",
+      "title": "HK1 - helpdeskmeester -> redacteur/contentGapDetected",
+      "description": "HolidaiButler inter-agent flow HK1",
+      "source": "helpdeskmeester",
+      "target": "redacteur",
+      "skill": "contentGapDetected",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/contentGapDetected.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "HK2",
+      "specFile": "HK2_adjustForFrustration.yaml",
+      "title": "HK2 - helpdeskmeester -> personaliseerder/adjustForFrustration",
+      "description": "HolidaiButler inter-agent flow HK2",
+      "source": "helpdeskmeester",
+      "target": "personaliseerder",
+      "skill": "adjustForFrustration",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/adjustForFrustration.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "HK3",
+      "specFile": "HK3_staleInfoTicket.yaml",
+      "title": "HK3 - helpdeskmeester -> verfrisser/staleInfoTicket",
+      "description": "HolidaiButler inter-agent flow HK3",
+      "source": "helpdeskmeester",
+      "target": "verfrisser",
+      "skill": "staleInfoTicket",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/verfrisser/skills/staleInfoTicket.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ML2",
+      "specFile": "ML2_orchestrationSummary.yaml",
+      "title": "ML2 - maestro -> bode/orchestrationSummary",
+      "description": "HolidaiButler inter-agent flow ML2",
+      "source": "maestro",
+      "target": "bode",
+      "skill": "orchestrationSummary",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/orchestrationSummary.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "ML3",
+      "specFile": "ML3_dependencyAwareCheck.yaml",
+      "title": "ML3 - maestro -> dokter/dependencyAwareCheck",
+      "description": "HolidaiButler inter-agent flow ML3",
+      "source": "maestro",
+      "target": "dokter",
+      "skill": "dependencyAwareCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/healthMonitor/skills/dependencyAwareCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "MS2",
+      "specFile": "MS2_sendStockAlert.yaml",
+      "title": "MS2 - magazijnier -> bode/sendStockAlert",
+      "description": "HolidaiButler inter-agent flow MS2",
+      "source": "magazijnier",
+      "target": "bode",
+      "skill": "sendStockAlert",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/ownerInterfaceAgent/skills/sendStockAlert.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "MS3",
+      "specFile": "MS3_excludeOutOfStock.yaml",
+      "title": "MS3 - magazijnier -> personaliseerder/excludeOutOfStock",
+      "description": "HolidaiButler inter-agent flow MS3",
+      "source": "magazijnier",
+      "target": "personaliseerder",
+      "skill": "excludeOutOfStock",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/excludeOutOfStock.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB1",
+      "specFile": "OB1_discoverPOIs.yaml",
+      "title": "OB1 - onthaler -> koerier/discoverPOIs",
+      "description": "HolidaiButler inter-agent flow OB1",
+      "source": "onthaler",
+      "target": "koerier",
+      "skill": "discoverPOIs",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/dataSync/skills/discoverPOIs.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB2",
+      "specFile": "OB2_initBrandAssets.yaml",
+      "title": "OB2 - onthaler -> stylist/initBrandAssets",
+      "description": "HolidaiButler inter-agent flow OB2",
+      "source": "onthaler",
+      "target": "stylist",
+      "skill": "initBrandAssets",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/devLayer/skills/initBrandAssets.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB3",
+      "specFile": "OB3_initSEO.yaml",
+      "title": "OB3 - onthaler -> seoMeester/initSEO",
+      "description": "HolidaiButler inter-agent flow OB3",
+      "source": "onthaler",
+      "target": "seoMeester",
+      "skill": "initSEO",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/seoMeester/skills/initSEO.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB4",
+      "specFile": "OB4_runSecurityBaseline.yaml",
+      "title": "OB4 - onthaler -> bewaker/runSecurityBaseline",
+      "description": "HolidaiButler inter-agent flow OB4",
+      "source": "onthaler",
+      "target": "bewaker",
+      "skill": "runSecurityBaseline",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/devLayer/skills/runSecurityBaseline.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB6",
+      "specFile": "OB6_initGDPRDefaults.yaml",
+      "title": "OB6 - onthaler -> poortwachter/initGDPRDefaults",
+      "description": "HolidaiButler inter-agent flow OB6",
+      "source": "onthaler",
+      "target": "poortwachter",
+      "skill": "initGDPRDefaults",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/gdpr/skills/initGDPRDefaults.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "OB7",
+      "specFile": "OB7_initBrandProfile.yaml",
+      "title": "OB7 - onthaler -> personaliseerder/initBrandProfile",
+      "description": "HolidaiButler inter-agent flow OB7",
+      "source": "onthaler",
+      "target": "personaliseerder",
+      "skill": "initBrandProfile",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/initBrandProfile.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "PF1",
+      "specFile": "PF1_suggestABTest.yaml",
+      "title": "PF1 - performanceWachter -> optimaliseerder/suggestABTest",
+      "description": "HolidaiButler inter-agent flow PF1",
+      "source": "performanceWachter",
+      "target": "optimaliseerder",
+      "skill": "suggestABTest",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/optimaliseerder/skills/suggestABTest.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "PF2",
+      "specFile": "PF2_scheduleUpdate.yaml",
+      "title": "PF2 - performanceWachter -> redacteur/scheduleUpdate",
+      "description": "HolidaiButler inter-agent flow PF2",
+      "source": "performanceWachter",
+      "target": "redacteur",
+      "skill": "scheduleUpdate",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/scheduleUpdate.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "PF3",
+      "specFile": "PF3_triggerCheck.yaml",
+      "title": "PF3 - performanceWachter -> verfrisser/triggerCheck",
+      "description": "HolidaiButler inter-agent flow PF3",
+      "source": "performanceWachter",
+      "target": "verfrisser",
+      "skill": "triggerCheck",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/verfrisser/skills/triggerCheck.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "PF4",
+      "specFile": "PF4_signalDecline.yaml",
+      "title": "PF4 - performanceWachter -> trendspotter/signalDecline",
+      "description": "HolidaiButler inter-agent flow PF4",
+      "source": "performanceWachter",
+      "target": "trendspotter",
+      "skill": "signalDecline",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/trendspotter/skills/signalDecline.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RES1",
+      "specFile": "RES1.yaml",
+      "title": "RES1: anomaliedetective -> maestro/coordinateAnomalyRecovery",
+      "description": "RES1: anomaliedetective -> maestro recovery coordination",
+      "source": "anomaliedetective",
+      "target": "maestro",
+      "skill": "coordinateAnomalyRecovery",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/coordinateAnomalyRecovery.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RES2",
+      "specFile": "RES2.yaml",
+      "title": "RES2: maestro -> maestro/circuitBreakerActivate",
+      "description": "RES2: maestro circuit breaker activation on failure-rate threshold",
+      "source": "maestro",
+      "target": "maestro",
+      "skill": "circuitBreakerActivate",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/circuitBreakerActivate.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RES3",
+      "specFile": "RES3.yaml",
+      "title": "RES3: dokter -> auditeur/logHealthComplianceEvent",
+      "description": "RES3: dokter -> auditeur health degradation compliance logging",
+      "source": "dokter",
+      "target": "auditeur",
+      "skill": "logHealthComplianceEvent",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/auditeur/skills/logHealthComplianceEvent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RES4",
+      "specFile": "RES4.yaml",
+      "title": "RES4: bewaker -> maestro/securityHalt",
+      "description": "RES4: bewaker -> maestro security halt on critical CVE detection",
+      "source": "bewaker",
+      "target": "maestro",
+      "skill": "securityHalt",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/securityHalt.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RES5",
+      "specFile": "RES5.yaml",
+      "title": "RES5: ALL -> maestro/registerHeartbeat",
+      "description": "RES5: ALL agents -> maestro heartbeat registration",
+      "source": "ALL",
+      "target": "maestro",
+      "skill": "registerHeartbeat",
+      "hasOtelSpan": true,
+      "hasAuditLog": false,
+      "codeFiles": [
+        "src/services/agents/maestro/skills/registerHeartbeat.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RJ1",
+      "specFile": "RJ1_journeyContext.yaml",
+      "title": "RJ1 - reisleider -> personaliseerder/journeyContext",
+      "description": "HolidaiButler inter-agent flow RJ1",
+      "source": "reisleider",
+      "target": "personaliseerder",
+      "skill": "journeyContext",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/personaliseerder/skills/journeyContext.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RJ2",
+      "specFile": "RJ2_dropoffOptimization.yaml",
+      "title": "RJ2 - reisleider -> optimaliseerder/dropoffOptimization",
+      "description": "HolidaiButler inter-agent flow RJ2",
+      "source": "reisleider",
+      "target": "optimaliseerder",
+      "skill": "dropoffOptimization",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/optimaliseerder/skills/dropoffOptimization.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "RJ3",
+      "specFile": "RJ3_frustrationPattern.yaml",
+      "title": "RJ3 - reisleider -> helpdeskmeester/frustrationPattern",
+      "description": "HolidaiButler inter-agent flow RJ3",
+      "source": "reisleider",
+      "target": "helpdeskmeester",
+      "skill": "frustrationPattern",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/helpdeskmeester/skills/frustrationPattern.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "SAGA1",
+      "specFile": "SAGA1.yaml",
+      "title": "SAGA1: poiDiscoverySaga",
+      "description": "POI Discovery Saga: scrape -> embed -> enrich -> classify -> notify",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "SAGA2",
+      "specFile": "SAGA2.yaml",
+      "title": "SAGA2: seasonalContentSaga",
+      "description": "Seasonal Content Saga: detect season -> adjust profiles -> suggest content -> publish",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "SAGA3",
+      "specFile": "SAGA3.yaml",
+      "title": "SAGA3: destinationOnboardingSaga",
+      "description": "Destination Onboarding Saga: 7-step wrapper around OB1-OB7 flows",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "SAGA4",
+      "specFile": "SAGA4.yaml",
+      "title": "SAGA4: crisisResponseSaga",
+      "description": "Crisis Response Saga: detect -> assess -> coordinate -> notify -> execute -> resolve",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "SAGA5",
+      "specFile": "SAGA5.yaml",
+      "title": "SAGA5: weeklyLearningCycleSaga",
+      "description": "Weekly Learning Cycle Saga: aggregate -> analyze -> distribute (CD1) -> verify",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "TA1",
+      "specFile": "TA1_proposePOIs.yaml",
+      "title": "TA1 - trendspotter -> koerier/proposePOIs",
+      "description": "HolidaiButler inter-agent flow TA1",
+      "source": "trendspotter",
+      "target": "koerier",
+      "skill": "proposePOIs",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/dataSync/skills/proposePOIs.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "TA2",
+      "specFile": "TA2_prioritizeContent.yaml",
+      "title": "TA2 - trendspotter -> redacteur/prioritizeContent",
+      "description": "HolidaiButler inter-agent flow TA2",
+      "source": "trendspotter",
+      "target": "redacteur",
+      "skill": "prioritizeContent",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/contentRedacteur/skills/prioritizeContent.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "TA3",
+      "specFile": "TA3_generateTrendVisuals.yaml",
+      "title": "TA3 - trendspotter -> beeldenmaker/generateTrendVisuals",
+      "description": "HolidaiButler inter-agent flow TA3",
+      "source": "trendspotter",
+      "target": "beeldenmaker",
+      "skill": "generateTrendVisuals",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/beeldenmaker/skills/generateTrendVisuals.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "TA4",
+      "specFile": "TA4_captureKeywords.yaml",
+      "title": "TA4 - trendspotter -> seoMeester/captureKeywords",
+      "description": "HolidaiButler inter-agent flow TA4",
+      "source": "trendspotter",
+      "target": "seoMeester",
+      "skill": "captureKeywords",
+      "hasOtelSpan": true,
+      "hasAuditLog": true,
+      "codeFiles": [
+        "src/services/agents/seoMeester/skills/captureKeywords.js"
+      ],
+      "status": "implemented"
+    },
+    {
+      "id": "TEMPORAL_1",
+      "specFile": "TEMPORAL_1_selfHealingSaga.yaml",
+      "title": "TEMPORAL_1 - dokter -> selfHealingSaga",
+      "description": "Self-healing saga for sick agent recovery",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "TEMPORAL_2",
+      "specFile": "TEMPORAL_2_publishContentSaga.yaml",
+      "title": "TEMPORAL_2 - redacteur -> publishContentSaga",
+      "description": "6-step content publication with compensations",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    },
+    {
+      "id": "TEMPORAL_3",
+      "specFile": "TEMPORAL_3_tenantOnboardingSaga.yaml",
+      "title": "TEMPORAL_3 - onthaler -> tenantOnboardingSaga",
+      "description": "7-step tenant onboarding orchestration",
+      "source": null,
+      "target": null,
+      "skill": null,
+      "hasOtelSpan": false,
+      "hasAuditLog": false,
+      "codeFiles": [],
+      "status": "spec-only"
+    }
+  ]
+}

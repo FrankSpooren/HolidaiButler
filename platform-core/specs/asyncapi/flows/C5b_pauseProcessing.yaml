@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "C5b - kassier -> vertaler/pauseProcessing"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow C5b"
+
+channels:
+  vertaler-pauseProcessing:
+    address: a2a.vertaler.pauseProcessing
+    messages:
+      pauseProcessingRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokePauseProcessing:
+    action: send
+    channel:
+      $ref: "#/channels/vertaler-pauseProcessing"
+    messages:
+      - $ref: "#/channels/vertaler-pauseProcessing/messages/pauseProcessingRequest"

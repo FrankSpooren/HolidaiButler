@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B9 - auditeur -> poortwachter/auditAccess"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B9"
+
+channels:
+  poortwachter-auditAccess:
+    address: a2a.poortwachter.auditAccess
+    messages:
+      auditAccessRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeAuditAccess:
+    action: send
+    channel:
+      $ref: "#/channels/poortwachter-auditAccess"
+    messages:
+      - $ref: "#/channels/poortwachter-auditAccess/messages/auditAccessRequest"

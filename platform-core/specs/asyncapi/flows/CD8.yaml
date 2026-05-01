@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD8: geheugen -> auditeur/vectorAccessLog'
+  version: '1.0.0'
+  description: 'CD8: geheugen -> auditeur vector DB access logging (EU AI Act art.12)'
+channels:
+  CD8:
+    address: 'a2a/auditeur/vectorAccessLog'
+    messages:
+      invoke:
+        summary: 'geheugen invokes auditeur/vectorAccessLog'
+operations:
+  CD8:
+    action: send
+    channel:
+      $ref: '#/channels/CD8'

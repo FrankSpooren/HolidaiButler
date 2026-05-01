@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A9 - redacteur -> uitgever/schedulePublish"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A9"
+
+channels:
+  uitgever-schedulePublish:
+    address: a2a.uitgever.schedulePublish
+    messages:
+      schedulePublishRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeSchedulePublish:
+    action: send
+    channel:
+      $ref: "#/channels/uitgever-schedulePublish"
+    messages:
+      - $ref: "#/channels/uitgever-schedulePublish/messages/schedulePublishRequest"

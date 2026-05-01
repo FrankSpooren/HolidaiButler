@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "B4 - maestro -> kassier/reconcile"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow B4"
+
+channels:
+  kassier-reconcile:
+    address: a2a.kassier.reconcile
+    messages:
+      reconcileRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeReconcile:
+    action: send
+    channel:
+      $ref: "#/channels/kassier-reconcile"
+    messages:
+      - $ref: "#/channels/kassier-reconcile/messages/reconcileRequest"

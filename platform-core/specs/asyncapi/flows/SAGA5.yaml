@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'SAGA5: weeklyLearningCycleSaga'
+  version: '1.0.0'
+  description: 'Weekly Learning Cycle Saga: aggregate -> analyze -> distribute (CD1) -> verify'
+channels:
+  SAGA5:
+    address: 'temporal/workflows/weeklyLearningCycleSaga'
+    messages:
+      start:
+        summary: 'Start weeklyLearningCycleSaga Temporal workflow'
+operations:
+  SAGA5:
+    action: send
+    channel:
+      $ref: '#/channels/SAGA5'

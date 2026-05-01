@@ -14,6 +14,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+// OpenTelemetry tracing - initialize after env vars, before other imports
+import './observability/tracing.js';
+
 // Sentry Error Monitoring - Initialize early to catch all errors
 import * as Sentry from '@sentry/node';
 if (process.env.SENTRY_DSN) {
@@ -56,6 +59,102 @@ import paymentRoutes from './routes/payment.js';
 import ticketingRoutes from './routes/ticketing.js';
 import reservationRoutes from './routes/reservations.js';
 import pagesRoutes from './routes/pages.js';
+import a2aRoutes from './routes/a2a.js';
+import { registerFase16Skills } from './a2a/skills.js';
+import { registerFase17ASkills } from './a2a/fase17a_skills.js';
+import { registerFase17BSkills } from './a2a/fase17b_skills.js';
+import { registerFase17CSkills } from './a2a/fase17c_skills.js';
+import { registerFase17DSkills } from './a2a/fase17d_skills.js';
+import { registerFase17ESkills } from './a2a/fase17e_skills.js';
+import { registerFase17FSkills } from './a2a/fase17f_skills.js';
+// enterpriseSkills.js loaded dynamically below (after registerFase calls)
+// Fase 18.A — Per-agent dedicated skills (E-categorie)
+import './services/agents/ownerInterfaceAgent/skills/sendSecurityAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendFinancialAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendBudgetAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendComplianceAlert.js';
+import './services/agents/ownerInterfaceAgent/skills/sendSLAAlert.js';
+// Fase 18.A — Per-agent dedicated skills (B-categorie)
+import './services/agents/orchestrator/skills/coordinateRecovery.js';
+import './services/agents/orchestrator/skills/restartCommand.js';
+import './services/agents/financialMonitor/skills/notifyTransaction.js';
+import './services/agents/financialMonitor/skills/inventoryImpact.js';
+import './services/agents/personaliseerder/skills/weatherContext.js';
+// Fase 18.A — Per-agent dedicated skills (C-categorie)
+import './services/agents/boekhouder/skills/budgetReconciliation.js';
+import './services/agents/gdpr/skills/gdprViolation.js';
+import './services/agents/auditeur/skills/costComplianceCheck.js';
+// Fase 18.A — Per-agent dedicated skills (D-categorie)
+import './services/agents/contentRedacteur/skills/contentRefreshNeeded.js';
+import './services/agents/seoMeester/skills/updateKeywords.js';
+import './services/agents/contentRedacteur/skills/personalizeContent.js';
+import './services/agents/contentRedacteur/skills/codeQualityFlag.js';
+import './services/agents/beeldenmaker/skills/brandConsistencyCheck.js';
+import './services/agents/publisher/skills/deprioritizeContent.js';
+// Fase 18.A — Per-agent dedicated skills (E-leer categorie)
+import './services/agents/strategyLayer/skills/reportExperimentResult.js';
+import './services/agents/personaliseerder/skills/updateTrendProfiles.js';
+// Fase 18.A — Per-agent dedicated skills (F-gap categorie)
+import './services/agents/optimaliseerder/skills/journeyPattern.js';
+import './services/agents/trendspotter/skills/recommendationMiss.js';
+import './services/agents/trendspotter/skills/queryMiss.js';
+import './services/agents/auditeur/skills/initCompliance.js';
+import './services/agents/boekhouder/skills/initBudget.js';
+import './services/agents/auditeur/skills/securityFinding.js';
+import './services/agents/orchestrator/skills/lifecycleEvent.js';
+// Fase 18.B — 29 nieuwe ecosystem flows (B.A-B.I)
+import './services/agents/dataSync/skills/discoverPOIs.js';
+import './services/agents/devLayer/skills/initBrandAssets.js';
+import './services/agents/seoMeester/skills/initSEO.js';
+import './services/agents/devLayer/skills/runSecurityBaseline.js';
+import './services/agents/gdpr/skills/initGDPRDefaults.js';
+import './services/agents/personaliseerder/skills/initBrandProfile.js';
+import './services/agents/devLayer/skills/healthSecurityCheck.js';
+import './services/agents/boekhouder/skills/checkCostSpike.js';
+import './services/agents/dataSync/skills/proposePOIs.js';
+import './services/agents/contentRedacteur/skills/prioritizeContent.js';
+import './services/agents/beeldenmaker/skills/generateTrendVisuals.js';
+import './services/agents/seoMeester/skills/captureKeywords.js';
+import './services/agents/optimaliseerder/skills/suggestABTest.js';
+import './services/agents/contentRedacteur/skills/scheduleUpdate.js';
+import './services/agents/verfrisser/skills/triggerCheck.js';
+import './services/agents/trendspotter/skills/signalDecline.js';
+import './services/agents/auditeur/skills/logSecurityFinding.js';
+import './services/agents/gdpr/skills/notifyGDPRRisk.js';
+import './services/agents/devLayer/skills/correlateCodeFinding.js';
+import './services/agents/ownerInterfaceAgent/skills/sendStockAlert.js';
+import './services/agents/personaliseerder/skills/excludeOutOfStock.js';
+import './services/agents/personaliseerder/skills/journeyContext.js';
+import './services/agents/optimaliseerder/skills/dropoffOptimization.js';
+import './services/agents/helpdeskmeester/skills/frustrationPattern.js';
+import './services/agents/contentRedacteur/skills/contentGapDetected.js';
+import './services/agents/personaliseerder/skills/adjustForFrustration.js';
+import './services/agents/verfrisser/skills/staleInfoTicket.js';
+import './services/agents/ownerInterfaceAgent/skills/orchestrationSummary.js';
+import './services/agents/healthMonitor/skills/dependencyAwareCheck.js';
+// Fase 19.B — Resilience & Failure-Handling Skills (RES1-RES5)
+import './services/agents/maestro/skills/coordinateAnomalyRecovery.js';
+import './services/agents/maestro/skills/circuitBreakerActivate.js';
+import './services/agents/auditeur/skills/logHealthComplianceEvent.js';
+import './services/agents/maestro/skills/securityHalt.js';
+import './services/agents/maestro/skills/registerHeartbeat.js';
+// Fase 19.C — Bidirectional Closure Skills (ACK1-ACK5)
+import './services/agents/trendspotter/skills/discoveryComplete.js';
+import './services/agents/contentRedacteur/skills/imageProcessingFailed.js';
+import './services/agents/contentRedacteur/skills/seoValidationResult.js';
+import './services/agents/reisleider/skills/profileUpdated.js';
+import './services/agents/performanceWachter/skills/abTestStarted.js';
+// Fase 19.D — Cross-Domain & Meta-Flows (CD1-CD10)
+import './a2a/cd1Wrappers.js';
+import './services/agents/leermeester/skills/registerWorkflowOutcome.js';
+import './services/agents/inspecteur/skills/codeComplianceCheck.js';
+import './services/agents/bewaker/skills/securityComplianceLink.js';
+import './services/agents/maestro/skills/budgetThresholdReached.js';
+import './services/agents/boekhouder/skills/revenueImpact.js';
+import './services/agents/helpdeskmeester/skills/conversationEscalation.js';
+import './services/agents/auditeur/skills/vectorAccessLog.js';
+import './services/agents/auditeur/skills/staleContentReported.js';
+import './services/agents/auditeur/skills/wcagComplianceFinding.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
@@ -190,7 +289,16 @@ app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 app.use('/api/v1/tickets', ticketingRoutes); // Ticketing Module (Fase III-B)
 app.use('/api/v1/reservations', reservationRoutes); // Reservation Module (Fase III-C)
-app.use('/api/v1/pages', pagesRoutes); // Pages & Destinations (Fase V)
+app.use('/api/v1/pages', pagesRoutes);
+app.use(a2aRoutes); // A2A v1.2 discovery (/.well-known/agents + /a2a/agents/:id/card)
+registerFase16Skills(); // A2A skill handlers for inter-agent communication
+registerFase17ASkills(); // Fase 17.A: Owner Communicatie flows (E1-E8)
+registerFase17BSkills(); // Fase 17.B: Operationele Intelligentie flows (B1-B14)
+registerFase17CSkills(); // Fase 17.C: Cost & Compliance flows (C1-C10)
+registerFase17DSkills(); // Fase 17.D: Content Kwaliteitsketen (A1-A16)
+registerFase17ESkills(); // Fase 17.E: Leer- & Optimalisatielus (D1-D12)
+registerFase17FSkills(); // Fase 17.F: Gap-fix flows (11)
+await import('./a2a/enterpriseSkills.js'); // Fase 20.B: 46 enterprise skills with OTel flow.id spans
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)

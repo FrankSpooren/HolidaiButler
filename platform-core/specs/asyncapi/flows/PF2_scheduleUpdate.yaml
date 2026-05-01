@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "PF2 - performanceWachter -> redacteur/scheduleUpdate"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow PF2"
+
+channels:
+  redacteur-scheduleUpdate:
+    address: a2a.redacteur.scheduleUpdate
+    messages:
+      scheduleUpdateRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeScheduleUpdate:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-scheduleUpdate"
+    messages:
+      - $ref: "#/channels/redacteur-scheduleUpdate/messages/scheduleUpdateRequest"

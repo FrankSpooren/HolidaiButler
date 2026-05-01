@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "E8b - ALL -> dashboard/getEvents"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow E8b"
+
+channels:
+  dashboard-getEvents:
+    address: a2a.dashboard.getEvents
+    messages:
+      getEventsRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeGetEvents:
+    action: send
+    channel:
+      $ref: "#/channels/dashboard-getEvents"
+    messages:
+      - $ref: "#/channels/dashboard-getEvents/messages/getEventsRequest"

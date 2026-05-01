@@ -1,0 +1,16 @@
+asyncapi: 3.0.0
+info:
+  title: 'CD6: kassier -> boekhouder/revenueImpact'
+  version: '1.0.0'
+  description: 'CD6: kassier -> boekhouder revenue impact correlation'
+channels:
+  CD6:
+    address: 'a2a/boekhouder/revenueImpact'
+    messages:
+      invoke:
+        summary: 'kassier invokes boekhouder/revenueImpact'
+operations:
+  CD6:
+    action: send
+    channel:
+      $ref: '#/channels/CD6'

@@ -1,0 +1,25 @@
+asyncapi: 3.0.0
+info:
+  title: "A8b - vertaler -> redacteur/translationReady"
+  version: 1.0.0
+  description: "HolidaiButler inter-agent flow A8b"
+
+channels:
+  redacteur-translationReady:
+    address: a2a.redacteur.translationReady
+    messages:
+      translationReadyRequest:
+        payload:
+          type: object
+          properties:
+            sourceAgent:
+              type: string
+              description: Agent that initiated this flow
+
+operations:
+  invokeTranslationReady:
+    action: send
+    channel:
+      $ref: "#/channels/redacteur-translationReady"
+    messages:
+      - $ref: "#/channels/redacteur-translationReady/messages/translationReadyRequest"

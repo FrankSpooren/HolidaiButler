@@ -7874,3 +7874,354 @@ Endpoints: 295 (+13). BullMQ jobs: 74 (ongewijzigd). CLAUDE.md: v4.54.0.
 - BullMQ jobs: ongewijzigd (94)
 - Agents: 39 (officieel bevestigd in alle documenten)
 - Inter-agent flows: 71 (gespecificeerd)
+
+
+## Sessie 2026-04-29 — Fase 15 Foundation Stack + Fase 16 A2A First-Light
+
+### Fase 15 — Foundation Stack (5 sub-fasen)
+
+**15.A NATS JetStream v2.11.0**
+- Binary install + systemd service (127.0.0.1:4222)
+- 3 streams: AGENT_EVENTS (7d/1GB), AGENT_TRACES (24h/512MB), COMPLIANCE_AUDIT (730d/2GB)
+- Multi-tenant config (HB_PLATFORM account, password auth)
+- Smoke test: pub/sub + stream opslag bevestigd
+
+**15.B Temporal Server + Postgres + Worker**
+- PostgreSQL 16 geïnstalleerd + getuned (shared_buffers 512MB, WAL archiving)
+- Temporal Server v1.27.1 via Docker Compose (temporal + temporal-ui)
+- Namespaces: hb-production (30d retention), hb-development (7d)
+- Temporal Node.js SDK v1.16.1 (@temporalio/client, worker, workflow, activity)
+- PM2 worker `hb-temporal-worker` op queue `hb-agents` (RUNNING)
+- Daily Postgres backup (04:00 systemd timer) + weekly off-site Storage Box
+- DR Runbook: docs/runbooks/temporal-disaster-recovery.md
+- De Dokter health checks: temporalHealth.js (server + postgres + worker)
+
+**15.C OpenTelemetry Stack**
+- OTel Collector contrib v0.116.0 (systemd, receivers :4327/:4328)
+- Node.js OTel SDK (auto-instrumentation, export via gRPC)
+- Pipeline: App → OTel Collector → Grafana Tempo (:4317) → disk
+- Traces bevestigd in Tempo (hb-platform-core service)
+- tracing.js als eerste import na dotenv in index.js
+
+**15.D A2A v1.2 AgentCards**
+- RSA-4096 signing key (/etc/holidaibutler/a2a/)
+- agentCardTemplate.js: generator + signer + verifier
+- 25 signed AgentCards (schemaVersion 1.2)
+- Discovery: GET /.well-known/agents + GET /a2a/agents/:id/card
+- Signature verification: crypto.verify() = true
+
+**15.E MCP Servers (6 externe APIs)**
+- baseMcpServer.js factory (Express-based, A2A token auth)
+- 6 servers: Mistral:7001, Apify:7002, DeepL:7003, Pixtral:7004, ChromaDB:7005, Sistrix:7006
+- 10 tools totaal, alle discovery endpoints werkend
+- PM2: 6 hb-mcp-* processen, ~398MB RAM totaal
+
+### Fase 16 — Eerste 3 A2A Cross-Agent Flows
+
+**A2A Infrastructure**
+- a2aClient.js: generieke client met OTel span tracing
+- a2aSkillRegistry.js: skill registratie + invocation
+- POST /a2a/invoke endpoint + GET /a2a/skills
+- 3 skills geregistreerd bij app startup
+
+**3 Flows Bewezen**
+1. dokter → bode/sendAlert (critical → threema + email)
+2. koerier → bode/sendAlert (warning → email)
+3. kassier → uitgever/pausePublishing (budget control + resume)
+
+### Resource Impact
+- NATS: ~16MB, Temporal Docker: ~90MB, Worker: ~141MB, Postgres: ~50MB
+- OTel Collector: ~187MB, Tempo: ~21MB, MCP servers: ~398MB
+- Totaal: ~903MB extra, 12GB RAM beschikbaar
+
+### Bestanden
+- src/temporal/connection.js, worker.js, workflows/index.js, activities/index.js (4 nieuw)
+- src/observability/tracing.js (1 nieuw)
+- src/a2a/agentCardTemplate.js, a2aClient.js, a2aSkillRegistry.js, skills.js (4 nieuw)
+- src/mcp/servers/baseMcpServer.js + 6 server files (7 nieuw)
+- src/routes/a2a.js (1 nieuw)
+- docs/runbooks/temporal-disaster-recovery.md (1 nieuw)
+- src/services/agents/healthMonitor/checks/temporalHealth.js (1 nieuw)
+- src/services/agents/healthMonitor/reporter.js (gewijzigd)
+- src/index.js (gewijzigd: tracing + a2a imports)
+- /etc/nats/nats.conf, /etc/otel/config.yaml (server config)
+- /opt/temporal/docker-compose.yml, /opt/tempo/docker-compose.yml (Docker config)
+- Systemd: nats.service, otel-collector.service, temporal-backup.timer/.service, temporal-storagebox-backup.timer/.service
+
+CLAUDE.md v4.74.0, MS v8.23
+
+
+## Sessie 2026-04-29 — Fase 17: 71 Inter-Agent Flows + Dashboard Fix + Registry Fix (vervolg)
+
+### Dashboard Enterprise Fix (Laag 1 + Laag 2)
+
+**Root cause**: MongoDB Atlas $facet aggregation query exceeded 32MB sort memory limit (154K+ audit_logs).
+Alle agents toonden "Waarschuwing" + "Stand-by" behalve De Thermostaat (die uit Redis leest).
+
+**Laag 1 — Compound Indexes**: `idx_agent_status_byId` op audit_logs. Query 466ms (was timeout).
+**Laag 2 — Materialized agent_status**: Nieuwe MongoDB collection (1 doc per agent, O(39)).
+- `agentStatusService.js`: updateAgentStatus(), getAllAgentStatuses(), backfillFromAuditLogs()
+- workers.js: auto-update bij elke BullMQ job completion
+- adminPortal.js: BRON 1a (agent_status) + fallback BRON 2 (audit_logs)
+- Resultaat: 37 warning → 31 healthy, partial:false
+
+### Registry Fix: 12 agents in agentRegistry.js
+25 → 37 entries. Alle 12 Repair v2.0 agents (vertaler, beeldenmaker, personaliseerder, performanceWachter,
+anomaliedetective, auditeur, optimaliseerder, reisleider, verfrisser, boekhouder, onthaler, helpdeskmeester)
+nu geimporteerd, gewrapped met destinationAwareness, en in AGENT_REGISTRY.
+A2A discovery: 37 signed AgentCards.
+
+### i18n Fix
+agents.total → "Totaal" (NL/EN/DE/ES/FR). Admin build + deploy.
+
+### Fase 17.A — Owner Communicatie (E1-E8, 8 flows)
+Skills: bode/aggregateBriefing, dashboard/pushUpdate, dashboard/getEvents
+Hooks: agentA2AHooks.js (afterHealthCheck, afterSecurityScan, afterBudgetCheck, etc.)
+Endpoint: GET /a2a/dashboard/events
+
+### Fase 17.B — Operationele Intelligentie (B1-B14, 14 flows)
+Skills: koerier/triggerSync, dokter/runHealthCheck, kassier/checkBudget, kassier/reconcile,
+geheugen/syncNewTenant, optimaliseerder/suggestOptimization, poortwachter/auditAccess,
+personaliseerder/updateProfiles, redacteur/suggestContent
+Temporal Workflow: selfHealingSaga (anomalie → health check → sync → verify → alert/escalate)
+
+### Fase 17.C — Cost & Compliance (C1-C10, 10 flows)
+Skills: poortwachter/enforceCompliance, auditeur/logComplianceEvent,
+beeldenmaker/pauseProcessing+resumeProcessing, vertaler/pauseProcessing+resumeProcessing,
+leermeester/recordComplianceLesson
+
+### Fase 17.D — Content Kwaliteitsketen (A1-A16, 16 flows)
+Skills: seoMeester/validateSEO, beeldenmaker/generateImages, vertaler/translateContent,
+redacteur/reviseDraft+flagStaleContent+flagQualityIssue+imageReady+translationReady,
+uitgever/schedulePublish, performanceWachter/trackPublication
+Temporal Workflow: publishContentSaga (generate → SEO → translate+images → schedule → track, compensaties)
+
+### Fase 17.E — Leer- & Optimalisatielus (D1-D12, 12 flows)
+Skills: maestro/applyLesson, thermostaat/adjustConfig, leermeester/reportConfigEffect+
+reportPerformancePattern+reportAnomalyPattern+reportOptimizationResult+reportQualityTrend,
+personaliseerder/updateSeasonalProfiles, redacteur/suggestSeasonalContent, weermeester/requestForecast
+
+### Fase 17.F — Gap-fix (GF1-GF11, 11 flows)
+Skills: uitgever/notifyTierChange, trendspotter/reportUserTrend,
+leermeester/reportSupportPattern, boekhouder/registerTenant
+
+### Totalen
+- 46 A2A skills geregistreerd
+- 71/71 inter-agent flows bewezen
+- 2 Temporal workflows (selfHealingSaga, publishContentSaga)
+- 6 skill registration files (fase17a-f_skills.js)
+- 2 Temporal activity files (operationalActivities.js, contentActivities.js)
+- 2 Temporal workflow files (selfHealingSaga.js, publishContentSaga.js)
+- agentA2AHooks.js, agentStatusService.js
+
+CLAUDE.md v4.75.0, MS v8.24
+
+
+## Sessie 2026-04-30 — Fase 18: Inter-Agent Flow Completion (106 flows)
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.75.0 → v4.76.0, MS v8.24 → v8.25
+- Cross-doc drift: cosmetisch (v4.58.0 changelog "25 agents" — historisch)
+- Open P1: 0
+- A2A cards: 37 → 38
+- Skills: 46 → 103
+- Healthy: 31, Warning: 7, Error: 0, Deactivated: 1
+- Skills: cc-ops-discipline, cc-quality-standards
+
+### Resultaat
+- **18.A**: 28 nieuwe dedicated skills voor 71 bestaande flows (E3-E7, B5-B6/B12-B14, C8-C10, A11-A16, D11-D12, GF5-GF11)
+- **18.B**: 29 nieuwe skills voor 35 nieuwe ecosystem flows (OB1-OB7, DR2/DR4, TA1-TA4, PF1-PF4, BS1/BS3/BS4, MS2-MS3, RJ1-RJ3, HK1-HK3, ML2-ML3)
+- **18.C**: De Promotor (#38) toegevoegd aan agentRegistry.js (37→38 A2A cards)
+- **18.D**: 31 healthy, 7 warning (schedule-based), 0 errors — geen sick agents
+- **18.E**: 106 AsyncAPI 3.0 specs gegenereerd in specs/asyncapi/flows/
+- Architectuur: per-agent skills/ directories met Zod + OTel tracing
+
+### Bestanden
+- 57 nieuwe skill bestanden in src/services/agents/*/skills/
+- 106 AsyncAPI specs in specs/asyncapi/flows/
+- 1 gewijzigd: src/index.js (40+ skill imports)
+- 1 gewijzigd: src/services/agents/base/agentRegistry.js (De Promotor)
+- 1 gewijzigd: CLAUDE.md (v4.75.0 → v4.76.0)
+
+### Wat ging goed
+- Python generator script voor batch skill creatie (29 skills in 1 run)
+- Consistent patroon: Zod + OTel + registerSkill per skill
+- Alle 106 flows individueel getest via A2A invoke
+
+### Wat ging fout (root cause)
+- Initiële SCP batch faalde voor sommige directories (mkdir ontbrak voor optimaliseerder/skills)
+- MongoDB agent_status heeft geen "status" veld — wordt berekend door calculateAgentStatus()
+- "6 sick agents" uit Fase 18 command was verkeerde aanname — werkelijke status: 0 errors
+
+### Versie-sync delta
+| Metric | Was | Nu |
+|--------|-----|-----|
+| CLAUDE.md | v4.75.0 | v4.76.0 |
+| A2A Skills | 46 | 103 |
+| Inter-agent flows | 71 | 106 |
+| A2A cards | 37 | 38 |
+| AsyncAPI specs | 0 | 106 |
+| Master Strategie | v8.24 | v8.25 |
+
+## Sessie 2026-04-30 — Fase 19.A: Agent Health Restoration
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.76.0 -> v4.76.1, MS v8.25 (ongewijzigd)
+- Cross-doc drift: PASS (1 cosmetische historische ref)
+- Open P1: 0
+- A2A cards: 38
+- Skills: 104 registerSkill calls
+- Healthy: 31 -> 37, Warning: 1 -> 0, Error: 0, Deactivated: 1
+- Skills: cc-ops-discipline
+
+### Resultaat
+- 6 agents ontbraken in agent_status (stylist, inspecteur, contentQuality, seoMeester, promotor, architect)
+- Root causes: JOB_AGENT_MAP mismatches (tier-promotor, koerier), return-bypass in switch-case, mysqlSequelize undefined
+- 8 fixes in workers.js, 38 agent_status docs, 37 healthy + 1 deactivated
+
+### Bestanden
+- 1 gewijzigd: platform-core/src/services/orchestrator/workers.js (+14/-5)
+
+### Wat ging goed
+- Chirurgische diagnose: systematisch JOB_AGENT_MAP vs agentRegistry vs agent_status vergeleken
+- Python script voor betrouwbare multi-fix
+
+### Wat ging fout (root cause)
+- Eerste Python fix script was te agressief (13 imports i.p.v. 4) - git revert + v2 script
+
+### Versie-sync delta
+- CLAUDE.md v4.76.0 -> v4.76.1
+- Healthy: 31 -> 37
+- agent_status docs: 32 -> 38
+
+## Sessie 2026-04-30 — Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.76.1 -> v4.77.0, MS v8.25 -> v8.26
+- Cross-doc drift: PASS
+- Open P1: 0
+- A2A cards: 38
+- Skills: 104 -> 124 static (+37 CD1 runtime = 161)
+- Healthy: 37, Warning: 0, Error: 0, Deactivated: 1
+- AsyncAPI specs: 106 -> 131
+- Temporal workflows: 2 -> 7
+
+### Resultaat
+- **19.A**: 6 agents hersteld (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break)
+- **19.B**: 5 resilience flows (RES1-RES5)
+- **19.C**: 5 closure flows (ACK1-ACK5)
+- **19.D**: 10 cross-domain flows (CD1-CD10, incl 37 broadcast wrappers)
+- **19.E**: 5 Temporal sagas met compensation patterns
+- **19.F**: Runtime verification PASS (131 specs, 38 agents, 7 workflows, 0 P1)
+
+### Bestanden (totaal Fase 19)
+- 1 gewijzigd: workers.js (19.A health fixes)
+- 5 nieuwe: maestro/auditeur skills (19.B RES1-RES5)
+- 5 nieuwe: trendspotter/contentRedacteur/reisleider/performanceWachter skills (19.C ACK1-ACK5)
+- 11 nieuwe: CD skills + base + wrappers (19.D CD1-CD10)
+- 8 nieuwe: 5 saga workflows + activities + index updates (19.E)
+- 25 nieuwe AsyncAPI specs (RES1-5, ACK1-5, CD1-10, SAGA1-5)
+- 3 gewijzigd: src/index.js, workflows/index.js, activities/index.js
+
+### Versie-sync delta
+- CLAUDE.md v4.76.0 -> v4.77.0
+- Skills: 104 -> 124 static + 37 runtime
+- Inter-agent flows: 106 -> 131
+- AsyncAPI specs: 106 -> 131
+- Temporal workflows: 2 -> 7
+- Healthy: 31 -> 37
+
+## Sessie 2026-05-01 — Fase 20.A + 20.B-1: Agent Health + Flow Enterprise Upgrade
+
+### PRE-FLIGHT 0 Output
+- CLAUDE.md v4.77.0 -> v4.77.2, MS v8.26 (ongewijzigd)
+- Healthy agents: 37 -> 38 (bode fixed)
+- A2A skills: 124 static + 37 runtime -> 159 (46 enterprise upgrades)
+- Sagas: 7 (ongewijzigd)
+- Open P1: 0
+- Skills: cc-ops-discipline
+
+### 20.A: 38e Agent Root Cause + Fix
+- **Root cause**: `bode` (De Bode) daily-briefing crashte met `ReferenceError: ecosystemInsights is not defined`
+- **Bug locatie**: `dailyBriefing.js:627` — `sendDailyBriefing()` verwees naar lokale variabele uit `generateDailyBriefing()` scope
+- **Fix**: Vervangen door `briefing.summary.newAgentInsights` (string, beschikbaar via return value)
+- **Bestanden**: 1 gewijzigd (`src/services/orchestrator/ownerInterface/dailyBriefing.js`, +2/-1)
+- **Bewijs**: 38/38 completed, 0 initiated, 0 stale
+
+### 20.B-1: Flow Enterprise Upgrade (4 stappen)
+1. **OTel port fix**: `tracing.js` exporter 4327 -> 4317 (Tempo gRPC). Custom `flow.id` spans verschijnen nu in Tempo (bewezen voor A2, B1).
+2. **flow-registry.json**: Script `build-flow-registry.cjs` gebouwd. 131 specs, 123 implemented, 8 spec-only (SAGA/TEMPORAL stubs).
+3. **audit-flow-runtime-coverage.cjs**: Audit script dat Tempo + MongoDB audit_logs queryt per flow. Rapport in `reports/runtime-coverage-audit.json`.
+4. **46 enterprise skill upgrades**: Fase 16-17 inline skills (5-15 regels, geen Zod/OTel) -> enterprise-level bestanden (Zod InputSchema + OTel span met `flow.id` + error handling). Barrel `src/a2a/enterpriseSkills.js` geladen via dynamic import NA inline registraties (override patroon).
+
+### Kritieke bevinding: 54 van 131 flows waren spec-only
+- Fase 17 skills bestonden als inline registraties in `src/a2a/fase17*.js` maar ZONDER:
+  - Zod input validatie
+  - OTel span met `flow.id` attribute
+  - Proper error handling
+- Na upgrade: 123/131 enterprise-level, 8 SAGA/TEMPORAL stubs (activities doen niets)
+- SAGA/TEMPORAL activity implementatie gepland als 20.B-2 (3-4 sessies)
+
+### Bestanden
+- 1 gewijzigd: `src/services/orchestrator/ownerInterface/dailyBriefing.js` (20.A bode fix)
+- 1 gewijzigd: `src/observability/tracing.js` (OTel port 4327->4317)
+- 1 gewijzigd: `src/index.js` (dynamic import enterpriseSkills.js)
+- 1 nieuw: `src/a2a/enterpriseSkills.js` (barrel, 46 imports)
+- 46 nieuw: `src/services/agents/*/skills/*_*.js` (enterprise skill files)
+- 2 nieuw: `scripts/build-flow-registry.cjs`, `scripts/audit-flow-runtime-coverage.cjs`
+- 1 nieuw: `scripts/flow-registry.json` (generated)
+- 1 nieuw: `reports/runtime-coverage-audit.json` (generated)
+
+### Versie-sync delta
+- CLAUDE.md v4.77.0 -> v4.77.2
+- Healthy: 37 -> 38
+- Implemented flows with OTel: 77 -> 123
+- Spec-only (stubs): 54 -> 8
+- Enterprise skill files: +46
+- A2A registered skills: 124 -> 159
+
+
+## Fase 20.B-2: Saga Activity Implementatie + OSM-First Discovery (01-05-2026)
+
+### Saga Activities (Sessie 1-3)
+- **40 stub activities** in sagaActivities.js vervangen door echte invokeSkill() aanroepen + OTel spans
+- **Sessie 1**: weeklyLearningCycleSaga (4) + crisisResponseSaga (6+1) + OTel TEMPORAL_1/2 spans
+- **Sessie 2**: seasonalContentSaga (4+2) + destinationOnboardingSaga (7+6)
+- **Sessie 3**: poiDiscoverySaga (5+3) + TEMPORAL_3 tenantOnboardingSaga
+- **Temporal worker.js**: dotenv/config + mongoose.connect() + OTel tracing.js import (was ontbrekend)
+- **flow-registry**: 131/131 implemented, 0 spec-only, 131 OTel spans
+- **Bewezen**: alle 7+1 sagas COMPLETED in hb-production namespace met echte data
+
+### Bestanden gewijzigd (Saga)
+- `src/temporal/activities/sagaActivities.js` — 41 activities, 24 invokeSkill, alle OTel
+- `src/temporal/activities/operationalActivities.js` — 9 functies, TEMPORAL_1 OTel
+- `src/temporal/activities/contentActivities.js` — 8 functies, TEMPORAL_2 OTel
+- `src/temporal/worker.js` — dotenv + MongoDB + OTel tracing init
+- `src/temporal/workflows/tenantOnboardingSaga.js` — NIEUW (TEMPORAL_3)
+- `src/temporal/workflows/index.js` — tenantOnboardingSaga export
+
+### Admin Portal Bugfix
+- `PageTemplateDialog.jsx` + `BlockEditorCard.jsx`: 5 ontbrekende MUI icon imports (React error #130)
+
+### OSM-First POI Discovery Pipeline
+- **Probleem**: Apify discovery haalde 80-90% bestaande POIs op (kosten verspilling)
+- **Oplossing**: OpenStreetMap Overpass API (gratis) als eerste filter
+- **Resultaat**: 90%+ kostenreductie ($0.29 vs $3.00 per run)
+- **Bewezen**: Calpe 66 prospects, Texel 62 prospects van 789 OSM POIs
+
+### Bestanden (OSM Discovery)
+- `src/services/osmDiscoveryService.js` — NIEUW: OSM Overpass + fuzzy matching + categorie-filter
+- `src/routes/poiDiscovery.js` — 6 nieuwe endpoints (osm-scan, prospects CRUD, scrape)
+- `src/routes/adminPortal.js` — pendingProspects in dashboard/actions + Verkenner metadata update
+- `src/services/orchestrator/workers.js` — Verkenner job handler → OSM-first
+- `src/services/agents/dataSync/syncScheduler.js` — poi-discovery-osm-scan cron job
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — prospects review UI
+- `admin-module/src/pages/DashboardPage.jsx` — pendingProspects actie-vereist melding
+- MySQL: `discovery_prospects` tabel (18 kolommen, 4 indexes)
+
+### Technische details
+- OSM Overpass mirror: overpass.kumi.systems (overpass-api.de blokkeert Hetzner IPs)
+- Fuzzy matching: Levenshtein + token overlap, threshold 0.65 naam, 0.35 proximity+naam
+- Proximity: haversine <80m, maar alleen als naam-similarity >= 0.35 (voorkomt false positives)
+- Categorie mapping: 70+ OSM types naar 9 HolidaiButler categorieën
+- De Verkenner: maandelijkse OSM scan (cron 0 3 1 * *), kwartaallijkse Apify als vangnet
