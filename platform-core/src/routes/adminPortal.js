@@ -12240,7 +12240,7 @@ Verrijk deze suggestie. Geef alleen de JSON terug.`;
  */
 router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { suggestion_id, content_type, platform, platforms, languages = [], manual, title, body_en, destination_id, persona_id } = req.body;
+    const { suggestion_id, content_type, platform, platforms, languages = [], manual, title, body_en, body_language, destination_id, persona_id } = req.body;
 
     // === Manual content creation (TO DO 4g) — no AI generation ===
     if (manual && title) {
@@ -12260,11 +12260,12 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       );
       const conceptId = conceptResult;
 
-      // Step 2: Detect input language and prepare multi-language columns
-      let bodyColumns = { body_en: body_en || '' };
-      let detectedLang = 'en';
-      if (body_en && body_en.trim().length > 20) {
-        // Simple heuristic: detect Dutch/Spanish/German/French by common words
+      // Step 2: Determine target language and prepare multi-language columns
+      // Use explicit body_language from frontend if provided, otherwise detect
+      let bodyColumns = {};
+      let detectedLang = body_language || 'en';
+      if (!body_language && body_en && body_en.trim().length > 20) {
+        // Heuristic fallback: detect Dutch/Spanish/German/French by common words
         const text = body_en.toLowerCase();
         const langSignals = {
           nl: ['de ', 'het ', 'een ', 'van ', 'voor ', 'met ', 'ook ', 'maar ', 'niet ', 'naar ', 'zijn ', 'wordt ', 'deze ', 'dit '],
@@ -12279,9 +12280,16 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           if (score > bestScore && score >= 3) { bestScore = score; bestLang = lang; }
         }
         detectedLang = bestLang;
-        if (detectedLang !== 'en') {
-          bodyColumns = { [`body_${detectedLang}`]: body_en || '' };
-          // Also store in body_en for backwards compat (will be overwritten by translation if needed)
+      }
+      // Place content in the correct body column
+      bodyColumns[`body_${detectedLang}`] = body_en || '';
+      // Only also store in body_en if detected lang is not EN (backwards compat for multi-lang dests)
+      if (detectedLang !== 'en') {
+        // For single-language destinations, do NOT store in body_en to avoid confusion
+        const [[destInfo]] = await mysqlSequelize.query('SELECT supported_languages FROM destinations WHERE id = ?', { replacements: [destId] });
+        let suppLangs = [];
+        try { suppLangs = typeof destInfo?.supported_languages === 'string' ? JSON.parse(destInfo.supported_languages) : (destInfo?.supported_languages || []); } catch { /* */ }
+        if (suppLangs.includes('en')) {
           bodyColumns.body_en = body_en || '';
         }
       }
@@ -12796,10 +12804,16 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
         let destSupportedLangs = [];
         try { destSupportedLangs = typeof itemDest.supported_languages === 'string' ? JSON.parse(itemDest.supported_languages) : (itemDest.supported_languages || []); } catch { /* empty */ }
         if (destSupportedLangs.length > 0) {
-          // Strip body fields for unsupported languages
+          const destDefaultLang = itemDest.default_language || destSupportedLangs[0];
+          const destDefaultField = `body_${destDefaultLang}`;
+          // Map unsupported body fields to destination default language, then strip
           for (const bf of langBodyFields) {
             const lang = bf.replace('body_', '');
             if (req.body[bf] !== undefined && !destSupportedLangs.includes(lang)) {
+              // If no value for the default language field yet, map this value to it
+              if (req.body[destDefaultField] === undefined) {
+                req.body[destDefaultField] = req.body[bf];
+              }
               delete req.body[bf];
             }
           }
@@ -13006,6 +13020,18 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [Number(req.params.id)] }
     );
     if (!concept) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Concept not found' } });
+
+    // Enrich with destination language config for frontend LANGS filtering
+    try {
+      const [[destLangInfo]] = await mysqlSequelize.query(
+        'SELECT default_language, supported_languages FROM destinations WHERE id = ?',
+        { replacements: [concept.destination_id] }
+      );
+      if (destLangInfo) {
+        concept.default_language = destLangInfo.default_language || 'en';
+        try { concept.supported_languages = typeof destLangInfo.supported_languages === 'string' ? JSON.parse(destLangInfo.supported_languages) : (destLangInfo.supported_languages || []); } catch { concept.supported_languages = []; }
+      }
+    } catch { /* non-blocking */ }
 
     const [items] = await mysqlSequelize.query(
       `SELECT * FROM content_items WHERE concept_id = ? AND approval_status != 'deleted' ORDER BY target_platform`,

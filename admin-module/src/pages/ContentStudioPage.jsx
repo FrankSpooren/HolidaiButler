@@ -1017,6 +1017,7 @@ function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
         platforms,
         title: title.trim(),
         body_en: body,
+        body_language: defaultLanguage || 'en',
         manual: true,
       });
       const lang = result?.data?.detected_language;
