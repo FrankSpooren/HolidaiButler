@@ -14614,10 +14614,11 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
+    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
 
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
-      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
 
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
@@ -14669,10 +14670,11 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
+    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
     const [, meta] = await mysqlSequelize.query(
       `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
-      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
     const affected = meta?.affectedRows ?? 0;
     if (affected === 0) {
@@ -15839,10 +15841,11 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
         { replacements: { itemId, userId: req.adminUser?.id || 'system', comment: `Bulk scheduled for ${scheduled_at}` } }
       );
     }
+    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id IN (:ids) AND approval_status IN ('approved', 'draft', 'pending_review')`,
-      { replacements: { ids: numericIds, scheduledAt: scheduled_at } }
+      { replacements: { ids: numericIds, scheduledAt: parsedScheduledAt } }
     );
     res.json({ success: true, data: { scheduled: numericIds.length, scheduled_at } });
   } catch (error) {
