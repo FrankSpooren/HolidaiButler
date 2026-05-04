@@ -705,7 +705,9 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
     const newKey = `${newDate.getFullYear()}-${newDate.getMonth()}-${newDate.getDate()}`;
     if (oldKey === newKey) { setAutoFillSnack('Item staat al op deze dag'); return; }
     try {
-      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newDate.toISOString() } });
+      const pad2 = n => String(n).padStart(2, '0');
+      const localDateStr = `${newDate.getFullYear()}-${pad2(newDate.getMonth() + 1)}-${pad2(newDate.getDate())} ${pad2(newDate.getHours())}:${pad2(newDate.getMinutes())}:00`;
+      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: localDateStr } });
       setAutoFillSnack(`Verplaatst naar ${newDate.toLocaleDateString('nl-NL')}`);
       await refetch();
     } catch (err) {

@@ -14314,19 +14314,21 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
       scheduleDate.setDate(scheduleDate.getDate() + dayOffset);
       scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
+      const pad2 = n => String(n).padStart(2, '0');
+      const localDateStr = `${scheduleDate.getFullYear()}-${pad2(scheduleDate.getMonth() + 1)}-${pad2(scheduleDate.getDate())} ${pad2(scheduleDate.getHours())}:${pad2(scheduleDate.getMinutes())}:00`;
       await mysqlSequelize.query(
         `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW() WHERE id = :id`,
-        { replacements: { scheduledAt: scheduleDate.toISOString().slice(0, 19).replace('T', ' '), id: item.id } }
+        { replacements: { scheduledAt: localDateStr, id: item.id } }
       );
 
       // Log approval
       await mysqlSequelize.query(
         `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
          VALUES (:itemId, 'approved', 'scheduled', :userId, :comment)`,
-        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${scheduleDate.toISOString().split('T')[0]} ${time}` } }
+        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${localDateStr}` } }
       );
 
-      scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: scheduleDate.toISOString() });
+      scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: localDateStr });
 
       timeIndex++;
       if (timeIndex >= times.length) { timeIndex = 0; dayOffset++; }
@@ -14614,7 +14616,8 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
-    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
+    // Normalize datetime string to MySQL format without UTC conversion (Amsterdam local time)
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
 
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
@@ -14670,7 +14673,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
-    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
     const [, meta] = await mysqlSequelize.query(
       `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
@@ -15841,7 +15844,7 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
         { replacements: { itemId, userId: req.adminUser?.id || 'system', comment: `Bulk scheduled for ${scheduled_at}` } }
       );
     }
-    const parsedScheduledAt = new Date(scheduled_at).toISOString().slice(0, 19).replace('T', ' ');
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id IN (:ids) AND approval_status IN ('approved', 'draft', 'pending_review')`,

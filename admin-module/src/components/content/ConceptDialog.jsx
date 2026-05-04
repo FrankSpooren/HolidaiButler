@@ -744,6 +744,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     try {
       // Spreiding: zelfde kanaaltype krijgt +2 uur offset per extra post
       const platformCounts = {};
+      const pad2 = n => String(n).padStart(2, '0');
       for (const item of items) {
         if (item.approval_status !== 'published' && item.approval_status !== 'scheduled') {
           const p = item.target_platform;
@@ -751,8 +752,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
           const offsetHours = platformCounts[p] * 2; // 2 uur spreiding per duplicaat kanaal
           const baseTime = new Date(scheduleDatetime);
           baseTime.setHours(baseTime.getHours() + offsetHours);
-          const isoTime = baseTime.toISOString();
-          await contentService.scheduleItem(item.id, { scheduled_at: isoTime, platform: p });
+          // Format as local time string — never use .toISOString() (converts to UTC)
+          const localTime = `${baseTime.getFullYear()}-${pad2(baseTime.getMonth() + 1)}-${pad2(baseTime.getDate())} ${pad2(baseTime.getHours())}:${pad2(baseTime.getMinutes())}:00`;
+          await contentService.scheduleItem(item.id, { scheduled_at: localTime, platform: p });
           platformCounts[p]++;
         }
       }
