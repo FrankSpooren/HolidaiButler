@@ -14678,6 +14678,15 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
     if (!original) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
     }
+
+    // Create a NEW concept so the duplicate is fully independent (not mixed in original's tabs)
+    const newTitle = original.title ? `${original.title} (kopie)` : 'Kopie';
+    const [newConceptId] = await mysqlSequelize.query(
+      `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+       VALUES (:destId, :title, :cType, 'draft', false, NOW(), NOW())`,
+      { replacements: { destId: original.destination_id, title: newTitle, cType: original.content_type } }
+    );
+
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
@@ -14687,8 +14696,8 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
         :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
         'draft', NOW(), NOW())`,
       { replacements: {
-        conceptId: original.concept_id, destId: original.destination_id, cType: original.content_type,
-        title: original.title ? `${original.title} (kopie)` : 'Kopie',
+        conceptId: newConceptId, destId: original.destination_id, cType: original.content_type,
+        title: newTitle,
         bodyEn: original.body_en, bodyNl: original.body_nl, bodyDe: original.body_de,
         bodyEs: original.body_es, bodyFr: original.body_fr,
         platform: original.target_platform,
