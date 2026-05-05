@@ -1182,10 +1182,16 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                         </>
                       )}
                       {item.approval_status === 'failed' && (
-                        <Button size="small" variant="outlined" color="error" startIcon={<ScheduleIcon />}
-                          onClick={() => setScheduleDialog({ ...item, approval_status: 'approved' })}>
-                          Opnieuw inplannen
-                        </Button>
+                        <>
+                          <Button size="small" variant="outlined" color="warning" startIcon={<ScheduleIcon />}
+                            onClick={async () => { try { await contentService.republishItem(item.id); setAutoFillSnack('Item wordt opnieuw gepubliceerd'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                            Opnieuw publiceren
+                          </Button>
+                          <Button size="small" variant="outlined" color="error"
+                            onClick={async () => { if (window.confirm('Dit item definitief verwijderen?')) { try { await contentService.deleteItem(item.id); await refetch(); setSelectedDay(null); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } } }}>
+                            Verwijderen
+                          </Button>
+                        </>
                       )}
                       {item.approval_status === 'published' && (
                         <>

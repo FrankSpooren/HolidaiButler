@@ -14705,7 +14705,7 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
 });
 
 /**
- * POST /content/items/:id/republish — Re-publish a published/failed item
+ * POST /content/items/:id/republish — Re-publish a published/failed item (direct, not via cron)
  */
 router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
@@ -14717,21 +14717,23 @@ router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['p
     if (!item) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
     }
-    if (!['published', 'failed'].includes(item.approval_status)) {
-      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: `Alleen gepubliceerde of gefaalde items (huidige: ${item.approval_status})` } });
+    if (!['published', 'failed', 'scheduled'].includes(item.approval_status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: `Kan niet opnieuw publiceren (huidige status: ${item.approval_status})` } });
     }
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = NOW(), publish_error = NULL, updated_at = NOW() WHERE id = :id`,
-      { replacements: { id: Number(id) } }
-    );
+
+    // Log status change
     try {
       await mysqlSequelize.query(
         `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-         VALUES (:itemId, :fromStatus, 'scheduled', :changedBy, 'Opnieuw publiceren')`,
+         VALUES (:itemId, :fromStatus, 'publishing', :changedBy, 'Opnieuw publiceren')`,
         { replacements: { itemId: Number(id), fromStatus: item.approval_status, changedBy: req.adminUser?.id || 'system' } }
       );
     } catch { /* non-blocking */ }
-    res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled' } });
+
+    // Direct publish — same as publish-now
+    const publisher = (await import('../services/agents/publisher/index.js')).default;
+    const result = await publisher.publishItem(Number(id));
+    res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
   } catch (error) {
     logger.error('[AdminPortal] Republish error:', error);
     res.status(500).json({ success: false, error: { code: 'REPUBLISH_ERROR', message: error.message } });
