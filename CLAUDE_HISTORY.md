@@ -8,6 +8,48 @@
 ---
 
 
+---
+
+## Content Studio Enterprise Fixes — 05-05-2026 (v4.79.0)
+
+**7 commits, 5 bestanden gewijzigd, 2 nieuwe endpoints (305 totaal)**
+
+### Taal-fixes (single-language destinations)
+- PATCH /content/items/:id: body_en→body_<destLang> mapping i.p.v. strippen (fixte 400 NO_UPDATES voor BUTE/WarreWijzer/Alicante)
+- GET /content/concepts/:id: enriched met default_language + supported_languages van destinations tabel
+- POST /content/items/generate: body_language param, single-lang dests krijgen geen body_en
+- ConceptDialog: LANGS gefilterd op destination.supported_languages (useMemo)
+- Data migratie: 4 BUTE items body_en→body_nl
+
+### Schedule timezone (6 plekken)
+- Backend (4): schedule, reschedule, bulk-schedule, auto-fill — `new Date().toISOString()` vervangen door string-normalisatie
+- Frontend (2): ConceptDialog handleScheduleAll, ContentCalendarTab DnD — `.toISOString()` vervangen door lokale string formatter
+- Root cause: `dateStrings:true` + Sequelize `timezone:+02:00` → NOW()=Amsterdam maar .toISOString()=UTC → 2 uur verschil
+- Items 223+224 data gecorrigeerd (+2 uur)
+
+### Publisher image lookup volgorde
+- `resolveOneMediaId()`: media library EERST, POI images TWEEDE (was omgekeerd)
+- Root cause: bare numeric media_ids (bijv. [288]) bestonden in zowel `media` als `imageurls` tabel → ID-collision → random POI-foto gepubliceerd
+- 4 van 10 BUTE items geraakt
+
+### Nieuwe endpoints
+- POST /content/items/:id/duplicate — eigen concept_id + alle platform-versies als draft
+- POST /content/items/:id/republish — direct via publisher.publishItem() (niet via 15-min cron)
+
+### Kalender UX
+- Published items: Opnieuw publiceren + Verwijderen + Dupliceren buttons
+- Failed items: Opnieuw publiceren + Verwijderen buttons (was alleen "Opnieuw inplannen")
+- Items tabel: Dupliceren icon in Acties kolom
+
+### Bestanden
+- `platform-core/src/routes/adminPortal.js` — taal mapping, schedule timezone, duplicate+republish endpoints
+- `platform-core/src/services/agents/publisher/index.js` — media library lookup first
+- `admin-module/src/components/content/ConceptDialog.jsx` — LANGS filter, handleScheduleAll timezone
+- `admin-module/src/pages/ContentCalendarTab.jsx` — DnD timezone, published/failed buttons
+- `admin-module/src/pages/ContentStudioPage.jsx` — body_language param, dupliceren icon
+- `admin-module/src/api/contentService.js` — duplicateItem() + republishItem()
+
+
 ## Agent Ecosystem Repair Command v2.0 — 28 april 2026
 
 ### Scope

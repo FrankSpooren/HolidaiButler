@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.78.0
-> **Laatst bijgewerkt**: 1 mei 2026
+> **Versie**: 4.79.0
+> **Laatst bijgewerkt**: 5 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -410,10 +410,10 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | BullMQ jobs | 94 (BullMQ scheduling + 7 Temporal workflows voor sagas) |
 | Inter-agent flows (gespecificeerd) | 131 (60 Blueprint + 11 gap-fix + 35 ecosystem + 20 resilience/closure/cross-domain + 5 sagas) |
 | Inter-agent flows (geimplementeerd) | 131 (124 dedicated skills + 37 CD1 wrappers, 7 Temporal workflows) |
-| Admin endpoints | 303 |
+| Admin endpoints | 305 |
 | adminPortal.js | v3.50.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.77.0 |
+| CLAUDE.md | v4.79.0 |
 | Master Strategie | v8.26 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
@@ -882,6 +882,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.79.0** | **2026-05-05** | **Content Studio Enterprise Fixes — 7 commits**. **Taal-fixes**: PATCH body mapping single-lang destinations (body_en→body_nl voor BUTE/WarreWijzer/Alicante), getConcept enriched met destination language config, generate endpoint body_language param, ConceptDialog LANGS filtered by supported_languages, 4 BUTE items data migratie. **Schedule timezone**: 6 write-paths fixed (schedule/reschedule/bulk/auto-fill backend + handleScheduleAll/DnD frontend) — .toISOString()→lokale string formatter, items 223+224 gecorrigeerd. **Publisher images**: media library lookup EERST (was: POI images eerst → random foto bij ID-collision). **Nieuwe endpoints**: POST /content/items/:id/duplicate (eigen concept + alle platform-versies), POST /content/items/:id/republish (direct via publishItem, niet via 15-min cron). **Kalender UX**: Dupliceren/Opnieuw publiceren/Verwijderen buttons voor published+failed items. **Items tabel**: Dupliceren icon in Acties kolom. 305 endpoints (+2). adminPortal.js v3.50.0. |
 | **4.77.0** | **2026-04-30** | **Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows**. **19.A Agent Health**: 31->38 healthy (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break). **19.B Resilience**: 5 flows (RES1-RES5: coordinateAnomalyRecovery, circuitBreakerActivate, logHealthComplianceEvent, securityHalt, registerHeartbeat). **19.C Closure**: 5 flows (ACK1-ACK5: discoveryComplete, imageProcessingFailed, seoValidationResult, profileUpdated, abTestStarted). **19.D Cross-Domain**: 10 flows (CD1-CD10: applyDistributedLesson broadcast 37 wrappers, registerWorkflowOutcome, codeComplianceCheck, securityComplianceLink, budgetThresholdReached, revenueImpact, conversationEscalation, vectorAccessLog, staleContentReported, wcagComplianceFinding). **19.E Sagas**: 5 Temporal sagas (poiDiscovery, seasonalContent, destinationOnboarding, crisisResponse, weeklyLearningCycle). **19.F Verification**: 131 AsyncAPI specs, 124 static + 37 runtime skills, 7 Temporal workflows, 38 agent_status docs, 0 P1. |
 | **4.76.1** | **2026-04-30** | **Fase 19.A: Agent Health Restoration -- 31->38 healthy**. JOB_AGENT_MAP fixes: tier-promotor->promotor, content-quality-audit->contentQuality. tier-promotion switch-case return->result+break (bypassed updateAgentStatus). 4 case blocks mysqlSequelize/QueryTypes dynamic imports (media-performance-aggregator, media-revenue-attribution, content-readiness-analyzer, content-gap-detector). 38 agent_status docs (was 32). 0 warnings, 0 errors, 0 P1. 1 bestand gewijzigd. |
 | **4.76.0** | **2026-04-30** | **Fase 18 COMPLEET: 106 Inter-Agent Flows — Full Ecosystem Coverage**. **18.A Implementatie-gaps (71 flows)**: 28 nieuwe dedicated skills in per-agent `skills/` directories (E3-E7 bode alerts, B5-B6 maestro recovery, B12-B14 kassier/personaliseerder, C8-C10 budget/gdpr/audit, A11-A16 content pipeline, D11-D12 learning, GF5-GF11 gap-fix). Alle 71 flows nu 1-op-1 skill coverage. **18.B Nieuwe flows (35)**: 29 nieuwe skills in 9 categorieën: B.A Onboarding (OB1-OB7 tenant setup), B.B Recovery (DR2/DR4), B.C Trend-actie (TA1-TA4), B.D Performance (PF1-PF4), B.E Security (BS1/BS3/BS4), B.F Supply-chain (MS2-MS3), B.G Journey (RJ1-RJ3), B.H Knowledge (HK1-HK3), B.I Lifecycle (ML2-ML3). **18.C A2A AgentCard**: De Promotor (#38) toegevoegd aan agentRegistry.js (37→38 cards). **18.D Agent Health**: 31 healthy, 7 warning (schedule-based), 0 errors, 1 deactivated. **18.E AsyncAPI**: 106 AsyncAPI 3.0 specs in `specs/asyncapi/flows/`. **Architectuur**: Per-agent skill directories (Zod input validation + OTel tracing), centraal a2aSkillRegistry.js. 57 nieuwe skill bestanden + 106 spec bestanden. Skills 46→103. |
