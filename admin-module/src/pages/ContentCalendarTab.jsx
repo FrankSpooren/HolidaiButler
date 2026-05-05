@@ -705,7 +705,9 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
     const newKey = `${newDate.getFullYear()}-${newDate.getMonth()}-${newDate.getDate()}`;
     if (oldKey === newKey) { setAutoFillSnack('Item staat al op deze dag'); return; }
     try {
-      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: newDate.toISOString() } });
+      const pad2 = n => String(n).padStart(2, '0');
+      const localDateStr = `${newDate.getFullYear()}-${pad2(newDate.getMonth() + 1)}-${pad2(newDate.getDate())} ${pad2(newDate.getHours())}:${pad2(newDate.getMinutes())}:00`;
+      await rescheduleMut.mutateAsync({ id: itemId, data: { scheduled_at: localDateStr } });
       setAutoFillSnack(`Verplaatst naar ${newDate.toLocaleDateString('nl-NL')}`);
       await refetch();
     } catch (err) {
@@ -1180,11 +1182,33 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                         </>
                       )}
                       {item.approval_status === 'failed' && (
-                        <Button size="small" variant="outlined" color="error" startIcon={<ScheduleIcon />}
-                          onClick={() => setScheduleDialog({ ...item, approval_status: 'approved' })}>
-                          Opnieuw inplannen
-                        </Button>
+                        <>
+                          <Button size="small" variant="outlined" color="warning" startIcon={<ScheduleIcon />}
+                            onClick={async () => { try { await contentService.republishItem(item.id); setAutoFillSnack('Item wordt opnieuw gepubliceerd'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                            Opnieuw publiceren
+                          </Button>
+                          <Button size="small" variant="outlined" color="error"
+                            onClick={async () => { if (window.confirm('Dit item definitief verwijderen?')) { try { await contentService.deleteItem(item.id); await refetch(); setSelectedDay(null); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } } }}>
+                            Verwijderen
+                          </Button>
+                        </>
                       )}
+                      {item.approval_status === 'published' && (
+                        <>
+                          <Button size="small" variant="outlined" color="warning" startIcon={<ScheduleIcon />}
+                            onClick={async () => { try { await contentService.republishItem(item.id); setAutoFillSnack('Item wordt opnieuw gepubliceerd'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                            Opnieuw publiceren
+                          </Button>
+                          <Button size="small" variant="outlined" color="error"
+                            onClick={async () => { if (window.confirm('Dit item definitief verwijderen?')) { try { await contentService.deleteItem(item.id); await refetch(); setSelectedDay(null); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } } }}>
+                            Verwijderen
+                          </Button>
+                        </>
+                      )}
+                      <Button size="small" variant="outlined" sx={{ ml: 'auto' }}
+                        onClick={async () => { try { await contentService.duplicateItem(item.id); setAutoFillSnack('Item gedupliceerd als concept'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                        Dupliceren
+                      </Button>
                     </Box>
                   </CardContent>
                 </Card>
