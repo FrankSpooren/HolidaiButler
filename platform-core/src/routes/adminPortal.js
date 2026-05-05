@@ -12240,7 +12240,7 @@ Verrijk deze suggestie. Geef alleen de JSON terug.`;
  */
 router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
-    const { suggestion_id, content_type, platform, platforms, languages = [], manual, title, body_en, destination_id, persona_id } = req.body;
+    const { suggestion_id, content_type, platform, platforms, languages = [], manual, title, body_en, body_language, destination_id, persona_id } = req.body;
 
     // === Manual content creation (TO DO 4g) — no AI generation ===
     if (manual && title) {
@@ -12260,11 +12260,12 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       );
       const conceptId = conceptResult;
 
-      // Step 2: Detect input language and prepare multi-language columns
-      let bodyColumns = { body_en: body_en || '' };
-      let detectedLang = 'en';
-      if (body_en && body_en.trim().length > 20) {
-        // Simple heuristic: detect Dutch/Spanish/German/French by common words
+      // Step 2: Determine target language and prepare multi-language columns
+      // Use explicit body_language from frontend if provided, otherwise detect
+      let bodyColumns = {};
+      let detectedLang = body_language || 'en';
+      if (!body_language && body_en && body_en.trim().length > 20) {
+        // Heuristic fallback: detect Dutch/Spanish/German/French by common words
         const text = body_en.toLowerCase();
         const langSignals = {
           nl: ['de ', 'het ', 'een ', 'van ', 'voor ', 'met ', 'ook ', 'maar ', 'niet ', 'naar ', 'zijn ', 'wordt ', 'deze ', 'dit '],
@@ -12279,9 +12280,16 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
           if (score > bestScore && score >= 3) { bestScore = score; bestLang = lang; }
         }
         detectedLang = bestLang;
-        if (detectedLang !== 'en') {
-          bodyColumns = { [`body_${detectedLang}`]: body_en || '' };
-          // Also store in body_en for backwards compat (will be overwritten by translation if needed)
+      }
+      // Place content in the correct body column
+      bodyColumns[`body_${detectedLang}`] = body_en || '';
+      // Only also store in body_en if detected lang is not EN (backwards compat for multi-lang dests)
+      if (detectedLang !== 'en') {
+        // For single-language destinations, do NOT store in body_en to avoid confusion
+        const [[destInfo]] = await mysqlSequelize.query('SELECT supported_languages FROM destinations WHERE id = ?', { replacements: [destId] });
+        let suppLangs = [];
+        try { suppLangs = typeof destInfo?.supported_languages === 'string' ? JSON.parse(destInfo.supported_languages) : (destInfo?.supported_languages || []); } catch { /* */ }
+        if (suppLangs.includes('en')) {
           bodyColumns.body_en = body_en || '';
         }
       }
@@ -12796,10 +12804,16 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
         let destSupportedLangs = [];
         try { destSupportedLangs = typeof itemDest.supported_languages === 'string' ? JSON.parse(itemDest.supported_languages) : (itemDest.supported_languages || []); } catch { /* empty */ }
         if (destSupportedLangs.length > 0) {
-          // Strip body fields for unsupported languages
+          const destDefaultLang = itemDest.default_language || destSupportedLangs[0];
+          const destDefaultField = `body_${destDefaultLang}`;
+          // Map unsupported body fields to destination default language, then strip
           for (const bf of langBodyFields) {
             const lang = bf.replace('body_', '');
             if (req.body[bf] !== undefined && !destSupportedLangs.includes(lang)) {
+              // If no value for the default language field yet, map this value to it
+              if (req.body[destDefaultField] === undefined) {
+                req.body[destDefaultField] = req.body[bf];
+              }
               delete req.body[bf];
             }
           }
@@ -13006,6 +13020,18 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [Number(req.params.id)] }
     );
     if (!concept) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Concept not found' } });
+
+    // Enrich with destination language config for frontend LANGS filtering
+    try {
+      const [[destLangInfo]] = await mysqlSequelize.query(
+        'SELECT default_language, supported_languages FROM destinations WHERE id = ?',
+        { replacements: [concept.destination_id] }
+      );
+      if (destLangInfo) {
+        concept.default_language = destLangInfo.default_language || 'en';
+        try { concept.supported_languages = typeof destLangInfo.supported_languages === 'string' ? JSON.parse(destLangInfo.supported_languages) : (destLangInfo.supported_languages || []); } catch { concept.supported_languages = []; }
+      }
+    } catch { /* non-blocking */ }
 
     const [items] = await mysqlSequelize.query(
       `SELECT * FROM content_items WHERE concept_id = ? AND approval_status != 'deleted' ORDER BY target_platform`,
@@ -14288,19 +14314,21 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
       scheduleDate.setDate(scheduleDate.getDate() + dayOffset);
       scheduleDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
+      const pad2 = n => String(n).padStart(2, '0');
+      const localDateStr = `${scheduleDate.getFullYear()}-${pad2(scheduleDate.getMonth() + 1)}-${pad2(scheduleDate.getDate())} ${pad2(scheduleDate.getHours())}:${pad2(scheduleDate.getMinutes())}:00`;
       await mysqlSequelize.query(
         `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW() WHERE id = :id`,
-        { replacements: { scheduledAt: scheduleDate.toISOString().slice(0, 19).replace('T', ' '), id: item.id } }
+        { replacements: { scheduledAt: localDateStr, id: item.id } }
       );
 
       // Log approval
       await mysqlSequelize.query(
         `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
          VALUES (:itemId, 'approved', 'scheduled', :userId, :comment)`,
-        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${scheduleDate.toISOString().split('T')[0]} ${time}` } }
+        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${localDateStr}` } }
       );
 
-      scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: scheduleDate.toISOString() });
+      scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: localDateStr });
 
       timeIndex++;
       if (timeIndex >= times.length) { timeIndex = 0; dayOffset++; }
@@ -14588,10 +14616,12 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
+    // Normalize datetime string to MySQL format without UTC conversion (Amsterdam local time)
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
 
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
-      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
 
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
@@ -14634,6 +14664,108 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
 });
 
 /**
+ * POST /content/items/:id/duplicate — Duplicate a content item as draft
+ */
+router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Find the original item to get its concept_id
+    const [[original]] = await mysqlSequelize.query(
+      'SELECT concept_id, destination_id, content_type, title FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!original) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+
+    // Get ALL platform items of this concept (not just the clicked one)
+    const [allItems] = await mysqlSequelize.query(
+      `SELECT destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated
+       FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'
+       ORDER BY target_platform`,
+      { replacements: { conceptId: original.concept_id } }
+    );
+    if (!allItems.length) {
+      return res.status(404).json({ success: false, error: { code: 'NO_ITEMS', message: 'No items found for this concept' } });
+    }
+
+    // Create a NEW concept for the duplicate
+    const newTitle = original.title ? `${original.title} (kopie)` : 'Kopie';
+    const [newConceptId] = await mysqlSequelize.query(
+      `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
+       VALUES (:destId, :title, :cType, 'draft', false, NOW(), NOW())`,
+      { replacements: { destId: original.destination_id, title: newTitle, cType: original.content_type } }
+    );
+
+    // Copy ALL platform items into the new concept
+    const createdIds = [];
+    for (const item of allItems) {
+      const [insertId] = await mysqlSequelize.query(
+        `INSERT INTO content_items
+         (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
+          approval_status, created_at, updated_at)
+         VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
+          'draft', NOW(), NOW())`,
+        { replacements: {
+          conceptId: newConceptId, destId: item.destination_id, cType: item.content_type,
+          title: newTitle,
+          bodyEn: item.body_en, bodyNl: item.body_nl, bodyDe: item.body_de,
+          bodyEs: item.body_es, bodyFr: item.body_fr,
+          platform: item.target_platform,
+          mediaIds: item.media_ids,
+          seoData: item.seo_data ? (typeof item.seo_data === 'object' ? JSON.stringify(item.seo_data) : item.seo_data) : null,
+          pillarId: item.pillar_id, aiModel: item.ai_model, aiGenerated: item.ai_generated,
+        }}
+      );
+      createdIds.push({ id: insertId, platform: item.target_platform });
+    }
+    res.json({ success: true, data: { concept_id: newConceptId, items: createdIds, platforms: createdIds.length, approval_status: 'draft' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Duplicate item error:', error);
+    res.status(500).json({ success: false, error: { code: 'DUPLICATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/republish — Re-publish a published/failed item (direct, not via cron)
+ */
+router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, approval_status FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    if (!['published', 'failed', 'scheduled'].includes(item.approval_status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: `Kan niet opnieuw publiceren (huidige status: ${item.approval_status})` } });
+    }
+
+    // Log status change
+    try {
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         VALUES (:itemId, :fromStatus, 'publishing', :changedBy, 'Opnieuw publiceren')`,
+        { replacements: { itemId: Number(id), fromStatus: item.approval_status, changedBy: req.adminUser?.id || 'system' } }
+      );
+    } catch { /* non-blocking */ }
+
+    // Direct publish — same as publish-now
+    const publisher = (await import('../services/agents/publisher/index.js')).default;
+    const result = await publisher.publishItem(Number(id));
+    res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Republish error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPUBLISH_ERROR', message: error.message } });
+  }
+});
+
+/**
  * PATCH /content/items/:id/reschedule — Move scheduled post to new datetime
  */
 router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, res) => {
@@ -14643,10 +14775,11 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     if (!scheduled_at) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
     const [, meta] = await mysqlSequelize.query(
       `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
-      { replacements: { scheduledAt: scheduled_at, id: Number(id) } }
+      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
     const affected = meta?.affectedRows ?? 0;
     if (affected === 0) {
@@ -15813,10 +15946,11 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
         { replacements: { itemId, userId: req.adminUser?.id || 'system', comment: `Bulk scheduled for ${scheduled_at}` } }
       );
     }
+    const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
        WHERE id IN (:ids) AND approval_status IN ('approved', 'draft', 'pending_review')`,
-      { replacements: { ids: numericIds, scheduledAt: scheduled_at } }
+      { replacements: { ids: numericIds, scheduledAt: parsedScheduledAt } }
     );
     res.json({ success: true, data: { scheduled: numericIds.length, scheduled_at } });
   } catch (error) {

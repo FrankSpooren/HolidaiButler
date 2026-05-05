@@ -130,7 +130,7 @@ class PublisherAgent extends BaseAgent {
               if (typeof mid === 'string' && mid.startsWith('media:')) return resolveMediaLibrary(Number(mid.slice(6)));
               if (typeof mid === 'number' || (typeof mid === 'string' && /^\d+$/.test(mid))) {
                 const num = Number(mid);
-                return (await resolvePoiImage(num)) || (await resolveMediaLibrary(num));
+                return (await resolveMediaLibrary(num)) || (await resolvePoiImage(num));
               }
               return null;
             };

@@ -4,7 +4,7 @@
  * Right panel (40%): Acties, Kwaliteit (SEO+Brand), Preview, Performance, Info
  * Opdracht 1+2+3: Volledig rechter paneel met werkende acties, scores, preview
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Dialog, DialogTitle, DialogActions, DialogContent,
   Box, Typography, Button, IconButton, Tabs, Tab, Chip, TextField,
@@ -70,7 +70,7 @@ const CONTENT_TYPE_LABELS = {
   social_post: 'Social Post', blog: 'Blog', video_script: 'Video Script', newsletter: 'Newsletter',
 };
 
-const LANGS = ['en', 'nl', 'de', 'es', 'fr'];
+const ALL_LANGS = ['en', 'nl', 'de', 'es', 'fr'];
 
 // Emoji categories for tourism content creation
 const EMOJI_CATEGORIES = {
@@ -257,6 +257,14 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const [blogMetaTitle, setBlogMetaTitle] = useState('');
   const [blogMetaDesc, setBlogMetaDesc] = useState('');
   const [blogSlug, setBlogSlug] = useState('');
+
+  // Derive available languages from destination config (Fix 3)
+  const LANGS = useMemo(() => {
+    if (concept?.supported_languages && Array.isArray(concept.supported_languages) && concept.supported_languages.length > 0) {
+      return concept.supported_languages.filter(l => ALL_LANGS.includes(l));
+    }
+    return ALL_LANGS;
+  }, [concept?.supported_languages]);
 
   // Add Platform dialog (Opdracht 5)
   const [addPlatformOpen, setAddPlatformOpen] = useState(false);
@@ -687,7 +695,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     try {
       // Show progress via timeout (actual API call is async)
       const statusTimer = setTimeout(() => {
-        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: 'Instagram heeft verwerkingstijd nodig' } : prev);
+        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: t('contentStudio.publish.pleaseWait', 'Even geduld a.u.b.') } : prev);
       }, 3000);
       const statusTimer2 = setTimeout(() => {
         setPublishStatus(prev => prev ? { ...prev, step: 'Bijna klaar...', detail: 'Content wordt gepubliceerd' } : prev);
@@ -715,7 +723,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       await contentService.updateItem(itemId, { approval_status: 'approved' });
       setPublishStatus({ platform, step: 'Verbinden met platform...', detail: null });
       const statusTimer = setTimeout(() => {
-        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: 'Instagram heeft verwerkingstijd nodig' } : prev);
+        setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: t('contentStudio.publish.pleaseWait', 'Even geduld a.u.b.') } : prev);
       }, 3000);
       await contentService.publishNow(itemId, { platform });
       clearTimeout(statusTimer);
@@ -736,6 +744,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     try {
       // Spreiding: zelfde kanaaltype krijgt +2 uur offset per extra post
       const platformCounts = {};
+      const pad2 = n => String(n).padStart(2, '0');
       for (const item of items) {
         if (item.approval_status !== 'published' && item.approval_status !== 'scheduled') {
           const p = item.target_platform;
@@ -743,8 +752,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
           const offsetHours = platformCounts[p] * 2; // 2 uur spreiding per duplicaat kanaal
           const baseTime = new Date(scheduleDatetime);
           baseTime.setHours(baseTime.getHours() + offsetHours);
-          const isoTime = baseTime.toISOString();
-          await contentService.scheduleItem(item.id, { scheduled_at: isoTime, platform: p });
+          // Format as local time string — never use .toISOString() (converts to UTC)
+          const localTime = `${baseTime.getFullYear()}-${pad2(baseTime.getMonth() + 1)}-${pad2(baseTime.getDate())} ${pad2(baseTime.getHours())}:${pad2(baseTime.getMinutes())}:00`;
+          await contentService.scheduleItem(item.id, { scheduled_at: localTime, platform: p });
           platformCounts[p]++;
         }
       }
@@ -1518,10 +1528,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       {/* Checks Breakdown */}
                       {(seoData.checks || []).slice(0, 6).map((check, i) => (
                         <Box key={i} sx={{ mb: 0.8 }}>
+                          <Tooltip title={check.details || ''} placement="left" arrow>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.2 }}>
                             <Typography variant="caption" sx={{ fontSize: 10 }}>{check.name}</Typography>
                             <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 600 }}>{check.score}/{check.maxScore}</Typography>
                           </Box>
+                          </Tooltip>
                           <LinearProgress variant="determinate" value={(check.score / (check.maxScore || 1)) * 100}
                             color={check.score >= check.maxScore ? 'success' : check.score >= check.maxScore * 0.6 ? 'warning' : 'error'}
                             sx={{ height: 3, borderRadius: 2 }} />
