@@ -1584,7 +1584,7 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         case "gsc-query-sync":
           try {
-            const gscSyncService = (await import("../services/visual/gscSyncService.js")).default;
+            const gscSyncService = (await import("../visual/gscSyncService.js")).default;
             const gscDestIds = [1, 2]; // calpe, texel
             const gscResults = {};
             for (const dId of gscDestIds) {
