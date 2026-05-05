@@ -144,6 +144,14 @@ const contentService = {
     return client.patch(`/content/items/${id}/reschedule`, data).then(r => r.data);
   },
 
+  duplicateItem(id) {
+    return client.post(`/content/items/${id}/duplicate`).then(r => r.data);
+  },
+
+  republishItem(id) {
+    return client.post(`/content/items/${id}/republish`).then(r => r.data);
+  },
+
   // === Performance (Fase C) ===
 
   getPerformanceSummary(destinationId, { days = 30 } = {}) {

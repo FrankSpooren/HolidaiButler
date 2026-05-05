@@ -14664,6 +14664,81 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
 });
 
 /**
+ * POST /content/items/:id/duplicate — Duplicate a content item as draft
+ */
+router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[original]] = await mysqlSequelize.query(
+      `SELECT concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+              target_platform, media_ids, seo_data, social_metadata, pillar_id, ai_model, ai_generated
+       FROM content_items WHERE id = :id`,
+      { replacements: { id: Number(id) } }
+    );
+    if (!original) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    const [insertResult] = await mysqlSequelize.query(
+      `INSERT INTO content_items
+       (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+        target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
+        approval_status, created_at, updated_at)
+       VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+        :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
+        'draft', NOW(), NOW())`,
+      { replacements: {
+        conceptId: original.concept_id, destId: original.destination_id, cType: original.content_type,
+        title: original.title ? `${original.title} (kopie)` : 'Kopie',
+        bodyEn: original.body_en, bodyNl: original.body_nl, bodyDe: original.body_de,
+        bodyEs: original.body_es, bodyFr: original.body_fr,
+        platform: original.target_platform,
+        mediaIds: original.media_ids,
+        seoData: original.seo_data ? (typeof original.seo_data === 'object' ? JSON.stringify(original.seo_data) : original.seo_data) : null,
+        pillarId: original.pillar_id, aiModel: original.ai_model, aiGenerated: original.ai_generated,
+      }}
+    );
+    res.json({ success: true, data: { id: insertResult, original_id: Number(id), approval_status: 'draft' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Duplicate item error:', error);
+    res.status(500).json({ success: false, error: { code: 'DUPLICATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/republish — Re-publish a published/failed item
+ */
+router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT id, approval_status FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
+    );
+    if (!item) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    }
+    if (!['published', 'failed'].includes(item.approval_status)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: `Alleen gepubliceerde of gefaalde items (huidige: ${item.approval_status})` } });
+    }
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = NOW(), publish_error = NULL, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: Number(id) } }
+    );
+    try {
+      await mysqlSequelize.query(
+        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+         VALUES (:itemId, :fromStatus, 'scheduled', :changedBy, 'Opnieuw publiceren')`,
+        { replacements: { itemId: Number(id), fromStatus: item.approval_status, changedBy: req.adminUser?.id || 'system' } }
+      );
+    } catch { /* non-blocking */ }
+    res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled' } });
+  } catch (error) {
+    logger.error('[AdminPortal] Republish error:', error);
+    res.status(500).json({ success: false, error: { code: 'REPUBLISH_ERROR', message: error.message } });
+  }
+});
+
+/**
  * PATCH /content/items/:id/reschedule — Move scheduled post to new datetime
  */
 router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, res) => {

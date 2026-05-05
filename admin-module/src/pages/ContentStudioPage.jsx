@@ -4105,6 +4105,9 @@ export default function ContentStudioPage() {
                               <Tooltip title={t('common.edit', 'Bewerken')}>
                                 <IconButton size="small" onClick={() => { if (firstItemId) setSelectedItemId(firstItemId); }}><EditIcon sx={{ fontSize: 16 }} /></IconButton>
                               </Tooltip>
+                              <Tooltip title="Dupliceren">
+                                <IconButton size="small" onClick={async () => { try { await contentService.duplicateItem(firstItemId); loadItems(); } catch {} }}><ContentCopyIcon sx={{ fontSize: 16 }} /></IconButton>
+                              </Tooltip>
                               <Tooltip title={t('common.delete', 'Verwijderen')}>
                                 <IconButton size="small" color="error" aria-label="Verwijderen" onClick={async () => { await contentService.deleteConcept(concept.id); loadItems(); }}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
                               </Tooltip>

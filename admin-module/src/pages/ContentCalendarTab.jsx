@@ -1187,6 +1187,22 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                           Opnieuw inplannen
                         </Button>
                       )}
+                      {item.approval_status === 'published' && (
+                        <>
+                          <Button size="small" variant="outlined" color="warning" startIcon={<ScheduleIcon />}
+                            onClick={async () => { try { await contentService.republishItem(item.id); setAutoFillSnack('Item wordt opnieuw gepubliceerd'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                            Opnieuw publiceren
+                          </Button>
+                          <Button size="small" variant="outlined" color="error"
+                            onClick={async () => { if (window.confirm('Dit item definitief verwijderen?')) { try { await contentService.deleteItem(item.id); await refetch(); setSelectedDay(null); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } } }}>
+                            Verwijderen
+                          </Button>
+                        </>
+                      )}
+                      <Button size="small" variant="outlined" sx={{ ml: 'auto' }}
+                        onClick={async () => { try { await contentService.duplicateItem(item.id); setAutoFillSnack('Item gedupliceerd als concept'); await refetch(); } catch (e) { setAutoFillSnack(`Fout: ${e.message}`); } }}>
+                        Dupliceren
+                      </Button>
                     </Box>
                   </CardContent>
                 </Card>
