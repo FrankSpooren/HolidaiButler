@@ -8267,3 +8267,14 @@ CLAUDE.md v4.75.0, MS v8.24
 - Proximity: haversine <80m, maar alleen als naam-similarity >= 0.35 (voorkomt false positives)
 - Categorie mapping: 70+ OSM types naar 9 HolidaiButler categorieën
 - De Verkenner: maandelijkse OSM scan (cron 0 3 1 * *), kwartaallijkse Apify als vangnet
+
+
+## Sessie 2026-05-05 -- Corporate Landing Page Enterprise Upgrade v6.0
+
+### 9 Opdrachten: theme, stats, ecosystem, i18n, projects, tekst, scroll, modules, QA
+- 16 bestanden, 2.045 i18n vertalingen, 409 keys x 5 talen
+- Agent Ecosystem SVG: 38 agents, 3 ringen, Human-in-Command EU-blauw
+- Business Value KPIs: ~80h/wk, EUR230k/yr, Nx, 24/7
+- 12 module sub-pages: dark theme, 87 specs vertaald, actuele content
+- Learning Loop 6->11+ (incl. Temporal saga)
+- CLAUDE.md v4.79.0 -> v4.80.0, MS v8.26 -> v8.27

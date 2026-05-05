@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.79.0
+> **Versie**: 4.80.0
 > **Laatst bijgewerkt**: 5 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -413,7 +413,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 305 |
 | adminPortal.js | v3.50.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.79.0 |
+| CLAUDE.md | v4.80.0 |
 | Master Strategie | v8.26 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
@@ -882,6 +882,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.80.0** | **2026-05-05** | **Corporate Landing Page Enterprise Upgrade v6.0 -- 9 opdrachten**. PubliQio dark theme + light toggle + DM Sans/Serif Display. Stats 6->7 (1 System highlight). Agent Ecosystem SVG (38 agents, 3 ringen, Business Value KPIs). i18n 39 agents x 5 talen. TexelMaps uit live, PubliQio teal Q. Tekst-fixes (Strategy, RaaS weg). Scroll-interactiviteit. 12 module sub-pages + privacy dark theme + 87 specs x 5 talen. Learning Loop 6->11+. 409 keys x 5 talen = 2.045 vertalingen. 16 bestanden. |
 | **4.79.0** | **2026-05-05** | **Content Studio Enterprise Fixes — 7 commits**. **Taal-fixes**: PATCH body mapping single-lang destinations (body_en→body_nl voor BUTE/WarreWijzer/Alicante), getConcept enriched met destination language config, generate endpoint body_language param, ConceptDialog LANGS filtered by supported_languages, 4 BUTE items data migratie. **Schedule timezone**: 6 write-paths fixed (schedule/reschedule/bulk/auto-fill backend + handleScheduleAll/DnD frontend) — .toISOString()→lokale string formatter, items 223+224 gecorrigeerd. **Publisher images**: media library lookup EERST (was: POI images eerst → random foto bij ID-collision). **Nieuwe endpoints**: POST /content/items/:id/duplicate (eigen concept + alle platform-versies), POST /content/items/:id/republish (direct via publishItem, niet via 15-min cron). **Kalender UX**: Dupliceren/Opnieuw publiceren/Verwijderen buttons voor published+failed items. **Items tabel**: Dupliceren icon in Acties kolom. 305 endpoints (+2). adminPortal.js v3.50.0. |
 | **4.77.0** | **2026-04-30** | **Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows**. **19.A Agent Health**: 31->38 healthy (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break). **19.B Resilience**: 5 flows (RES1-RES5: coordinateAnomalyRecovery, circuitBreakerActivate, logHealthComplianceEvent, securityHalt, registerHeartbeat). **19.C Closure**: 5 flows (ACK1-ACK5: discoveryComplete, imageProcessingFailed, seoValidationResult, profileUpdated, abTestStarted). **19.D Cross-Domain**: 10 flows (CD1-CD10: applyDistributedLesson broadcast 37 wrappers, registerWorkflowOutcome, codeComplianceCheck, securityComplianceLink, budgetThresholdReached, revenueImpact, conversationEscalation, vectorAccessLog, staleContentReported, wcagComplianceFinding). **19.E Sagas**: 5 Temporal sagas (poiDiscovery, seasonalContent, destinationOnboarding, crisisResponse, weeklyLearningCycle). **19.F Verification**: 131 AsyncAPI specs, 124 static + 37 runtime skills, 7 Temporal workflows, 38 agent_status docs, 0 P1. |
 | **4.76.1** | **2026-04-30** | **Fase 19.A: Agent Health Restoration -- 31->38 healthy**. JOB_AGENT_MAP fixes: tier-promotor->promotor, content-quality-audit->contentQuality. tier-promotion switch-case return->result+break (bypassed updateAgentStatus). 4 case blocks mysqlSequelize/QueryTypes dynamic imports (media-performance-aggregator, media-revenue-attribution, content-readiness-analyzer, content-gap-detector). 38 agent_status docs (was 32). 0 warnings, 0 errors, 0 P1. 1 bestand gewijzigd. |
