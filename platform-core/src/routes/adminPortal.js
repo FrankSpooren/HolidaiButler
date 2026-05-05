@@ -14669,17 +14669,28 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
 router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const { id } = req.params;
+    // Find the original item to get its concept_id
     const [[original]] = await mysqlSequelize.query(
-      `SELECT concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-              target_platform, media_ids, seo_data, social_metadata, pillar_id, ai_model, ai_generated
-       FROM content_items WHERE id = :id`,
+      'SELECT concept_id, destination_id, content_type, title FROM content_items WHERE id = :id',
       { replacements: { id: Number(id) } }
     );
     if (!original) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
     }
 
-    // Create a NEW concept so the duplicate is fully independent (not mixed in original's tabs)
+    // Get ALL platform items of this concept (not just the clicked one)
+    const [allItems] = await mysqlSequelize.query(
+      `SELECT destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated
+       FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'
+       ORDER BY target_platform`,
+      { replacements: { conceptId: original.concept_id } }
+    );
+    if (!allItems.length) {
+      return res.status(404).json({ success: false, error: { code: 'NO_ITEMS', message: 'No items found for this concept' } });
+    }
+
+    // Create a NEW concept for the duplicate
     const newTitle = original.title ? `${original.title} (kopie)` : 'Kopie';
     const [newConceptId] = await mysqlSequelize.query(
       `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
@@ -14687,26 +14698,31 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
       { replacements: { destId: original.destination_id, title: newTitle, cType: original.content_type } }
     );
 
-    const [insertResult] = await mysqlSequelize.query(
-      `INSERT INTO content_items
-       (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
-        approval_status, created_at, updated_at)
-       VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
-        'draft', NOW(), NOW())`,
-      { replacements: {
-        conceptId: newConceptId, destId: original.destination_id, cType: original.content_type,
-        title: newTitle,
-        bodyEn: original.body_en, bodyNl: original.body_nl, bodyDe: original.body_de,
-        bodyEs: original.body_es, bodyFr: original.body_fr,
-        platform: original.target_platform,
-        mediaIds: original.media_ids,
-        seoData: original.seo_data ? (typeof original.seo_data === 'object' ? JSON.stringify(original.seo_data) : original.seo_data) : null,
-        pillarId: original.pillar_id, aiModel: original.ai_model, aiGenerated: original.ai_generated,
-      }}
-    );
-    res.json({ success: true, data: { id: insertResult, original_id: Number(id), approval_status: 'draft' } });
+    // Copy ALL platform items into the new concept
+    const createdIds = [];
+    for (const item of allItems) {
+      const [insertId] = await mysqlSequelize.query(
+        `INSERT INTO content_items
+         (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
+          approval_status, created_at, updated_at)
+         VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
+          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
+          'draft', NOW(), NOW())`,
+        { replacements: {
+          conceptId: newConceptId, destId: item.destination_id, cType: item.content_type,
+          title: newTitle,
+          bodyEn: item.body_en, bodyNl: item.body_nl, bodyDe: item.body_de,
+          bodyEs: item.body_es, bodyFr: item.body_fr,
+          platform: item.target_platform,
+          mediaIds: item.media_ids,
+          seoData: item.seo_data ? (typeof item.seo_data === 'object' ? JSON.stringify(item.seo_data) : item.seo_data) : null,
+          pillarId: item.pillar_id, aiModel: item.ai_model, aiGenerated: item.ai_generated,
+        }}
+      );
+      createdIds.push({ id: insertId, platform: item.target_platform });
+    }
+    res.json({ success: true, data: { concept_id: newConceptId, items: createdIds, platforms: createdIds.length, approval_status: 'draft' } });
   } catch (error) {
     logger.error('[AdminPortal] Duplicate item error:', error);
     res.status(500).json({ success: false, error: { code: 'DUPLICATE_ERROR', message: error.message } });
