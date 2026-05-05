@@ -1781,4 +1781,4 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 *Dit document wordt bijgewerkt na elke implementatiefase.*
-*Laatst bijgewerkt: 5 mei 2026 — Content Studio Enterprise Fixes. Taal single-lang dests, schedule timezone, publisher image order, duplicate+republish direct, kalender UX. 305 endpoints. 39 agents. CLAUDE.md v4.79.0. MS v8.28.*
+*Laatst bijgewerkt: 5 mei 2026 -- Corporate Landing Page v6.0 COMPLEET. PubliQio dark theme + light toggle. Agent Ecosystem SVG (38 agents). 12 module sub-pages vertaald. CLAUDE.md v4.80.0. MS v8.27.*
