@@ -344,8 +344,8 @@ class OsmDiscoveryService {
   }
 
   /**
-   * Trigger Apify scraping for all approved prospects.
-   * This is a placeholder — actual Apify integration connects to existing poiSyncService.
+   * Full pipeline: Apify scrape → POI create → bronze/silver/gold → classify → reviews → images.
+   * Uses existing enterprise services (apifyIntegration, poiSyncService, poiClassification).
    */
   async scrapeApproved(destinationId) {
     const approved = await DiscoveryProspect.findAll({
@@ -353,45 +353,148 @@ class OsmDiscoveryService {
     });
 
     if (approved.length === 0) {
-      return { message: 'Geen goedgekeurde prospects om te scrapen', scraped: 0 };
+      return { message: 'Geen goedgekeurde prospects om te scrapen', scraped: 0, failed: 0, created: 0 };
     }
 
-    logger.info(`Starting Apify scrape for ${approved.length} approved prospects`);
+    logger.info(`Starting Apify enrichment for ${approved.length} approved prospects`);
+
+    // Dynamic imports — enterprise services from dataSync agent
+    const { default: apifyIntegration } = await import('./agents/dataSync/apifyIntegration.js');
+    const { default: dataSyncAgent } = await import('./agents/dataSync/index.js');
+    let poiClassificationService;
+    try {
+      const mod = await import('./poiClassification.js');
+      poiClassificationService = mod.default;
+    } catch { /* classification optional */ }
 
     let scraped = 0;
     let failed = 0;
+    let created = 0;
 
     for (const prospect of approved) {
       try {
-        // Use existing Apify service to search by name + coordinates
-        const { default: apifyService } = await import('./apify.js');
-        const searchQuery = `${prospect.osm_name} ${DESTINATION_BOUNDS[prospect.destination_id]?.name || ''}`;
+        // Step 1: Apify search by name + location
+        const destName = DESTINATION_BOUNDS[prospect.destination_id]?.name || '';
+        const searchResults = await apifyIntegration.searchPlaces(
+          destName,
+          [`${prospect.osm_name} ${destName}`],
+          { maxResults: 3, maxImages: 10 }
+        );
 
-        const results = await apifyService.searchPlaces(searchQuery, {
-          lat: parseFloat(prospect.latitude),
-          lng: parseFloat(prospect.longitude),
-          maxResults: 1,
-        });
+        // Find best match from results (by name similarity)
+        let bestPlace = null;
+        let bestScore = 0;
+        for (const place of (searchResults || [])) {
+          const score = this.diceCoefficient(
+            (prospect.osm_name || '').toLowerCase(),
+            (place.title || '').toLowerCase()
+          );
+          if (score > bestScore) {
+            bestScore = score;
+            bestPlace = place;
+          }
+        }
 
-        if (results && results.length > 0) {
-          const place = results[0];
-          prospect.apify_place_id = place.placeId || place.google_place_id || null;
-          prospect.status = 'scraped';
-          scraped++;
-        } else {
+        if (!bestPlace || bestScore < 0.3) {
+          logger.warn(`No Apify match for prospect ${prospect.id} "${prospect.osm_name}" (best score: ${bestScore.toFixed(2)})`);
           prospect.status = 'failed';
           failed++;
+          await prospect.save();
+          continue;
         }
+
+        const placeId = bestPlace.placeId || null;
+        prospect.apify_place_id = placeId;
+
+        // Step 2: Check if POI already exists by google_placeid
+        const [existingRows] = await mysqlSequelize.query(
+          'SELECT id FROM POI WHERE google_placeid = ? LIMIT 1',
+          { replacements: [placeId] }
+        );
+
+        let poiId;
+        if (existingRows && existingRows.length > 0) {
+          // POI already exists — link prospect to it
+          poiId = existingRows[0].id;
+          logger.info(`Prospect ${prospect.id} matched existing POI ${poiId}`);
+        } else {
+          // Step 3: Create new POI record
+          const transformed = apifyIntegration.transformToHolidaiButlerFormat(bestPlace);
+          const [insertResult] = await mysqlSequelize.query(`
+            INSERT INTO POI (
+              google_placeid, name, address, latitude, longitude,
+              phone, website, category, subcategory, rating,
+              review_count, price_level, opening_hours_json, is_active,
+              destination_id, city, tier, created_at, last_updated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 4, NOW(), NOW())
+          `, {
+            replacements: [
+              transformed.google_placeid, transformed.name, transformed.address,
+              transformed.latitude, transformed.longitude, transformed.phone,
+              transformed.website, transformed.category || prospect.hb_category,
+              transformed.subcategory || bestPlace.categoryName,
+              transformed.rating, transformed.review_count,
+              transformed.price_level, JSON.stringify(bestPlace.openingHours || {}),
+              prospect.destination_id, destName
+            ]
+          });
+          poiId = insertResult; // insertId
+          created++;
+          logger.info(`Created new POI ${poiId} from prospect ${prospect.id} "${prospect.osm_name}"`);
+        }
+
+        // Step 4: Bronze/Silver pipeline — full Apify data processing
+        try {
+          const poiSyncMod = await import('./agents/dataSync/poiSyncService.js');
+          const poiSyncService = poiSyncMod.default;
+          if (poiSyncService.sequelize || poiSyncService.initialize) {
+            if (poiSyncService.initialize) await poiSyncService.initialize(mysqlSequelize);
+            // Bronze: save raw data
+            await poiSyncService.saveRawData(poiId, placeId, prospect.destination_id, bestPlace);
+            // Silver: update POI with structured Apify fields
+            await poiSyncService.updatePOI(poiId, bestPlace, prospect.destination_id);
+            // Reviews
+            if (bestPlace.reviews && bestPlace.reviews.length > 0) {
+              await poiSyncService.extractReviews(poiId, prospect.destination_id, bestPlace.reviews);
+            }
+            // Images
+            if (bestPlace.imageUrls || bestPlace.images) {
+              await poiSyncService.downloadNewImages(poiId, prospect.destination_id, placeId, bestPlace);
+            }
+          }
+        } catch (pipelineErr) {
+          logger.error(`Bronze/Silver pipeline error for POI ${poiId}:`, pipelineErr);
+          // Continue — POI is created, enrichment can be retried via tier sync
+        }
+
+        // Step 5: 3-level classification
+        try {
+          if (poiClassificationService) {
+            await poiClassificationService.classifyPOI(poiId);
+            logger.info(`Classified POI ${poiId}`);
+          }
+        } catch (classErr) {
+          logger.error(`Classification error for POI ${poiId}:`, classErr);
+          // Non-fatal — tier sync will classify later
+        }
+
+        // Step 6: Update prospect with poi_id
+        prospect.poi_id = poiId;
+        prospect.status = 'scraped';
+        scraped++;
+        await prospect.save();
+
+        logger.info(`Prospect ${prospect.id} fully processed → POI ${poiId}`);
       } catch (error) {
-        logger.error(`Apify scrape failed for prospect ${prospect.id}:`, error);
+        logger.error(`Full pipeline failed for prospect ${prospect.id}:`, error);
         prospect.status = 'failed';
         failed++;
+        await prospect.save();
       }
-      await prospect.save();
     }
 
-    logger.info(`Apify scrape complete: ${scraped} scraped, ${failed} failed`);
-    return { message: `${scraped} prospects gescraped, ${failed} mislukt`, scraped, failed };
+    logger.info(`Discovery import complete: ${scraped} scraped, ${created} new POIs, ${failed} failed`);
+    return { message: `${scraped} prospects verwerkt, ${created} nieuwe POIs, ${failed} mislukt`, scraped, created, failed };
   }
 
   async rateLimit() {
