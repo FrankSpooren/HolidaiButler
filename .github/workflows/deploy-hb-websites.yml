@@ -11,12 +11,8 @@ concurrency:
   group: deploy-hb-websites-${{ github.repository }}
   cancel-in-progress: false
 
+# AUTO-DEPLOY DISABLED (06-05-2026): Server is SSOT, CI/CD alleen via handmatige trigger.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'hb-websites/**'
-      - '.github/workflows/deploy-hb-websites.yml'
   workflow_dispatch:
     inputs:
       environment:
