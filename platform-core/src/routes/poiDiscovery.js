@@ -5,6 +5,7 @@
 
 import express from 'express';
 import poiDiscoveryService from '../services/poiDiscovery.js';
+import osmDiscoveryService from '../services/osmDiscoveryService.js';
 import DestinationConfig from '../models/DestinationConfig.js';
 import DiscoveryRun from '../models/DiscoveryRun.js';
 import workflowManager from '../automation/workflowManager.js';
@@ -484,6 +485,150 @@ router.get('/stats', async (req, res) => {
       success: false,
       error: error.message,
     });
+  }
+});
+
+// ============================================================
+// OSM-First Discovery Pipeline
+// ============================================================
+
+/**
+ * POST /api/v1/poi-discovery/osm-scan
+ * Start an OSM scan for a destination. Returns new prospects count.
+ */
+router.post('/osm-scan', async (req, res) => {
+  try {
+    const { destination_id } = req.body;
+    if (!destination_id) {
+      return res.status(400).json({ success: false, error: 'destination_id is required' });
+    }
+
+    const result = await osmDiscoveryService.scanDestination(
+      parseInt(destination_id),
+      req.user?.id || 'admin'
+    );
+
+    res.json({ success: true, ...result });
+  } catch (error) {
+    logger.error('OSM scan API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/poi-discovery/prospects
+ * List discovery prospects with filtering + pagination.
+ */
+router.get('/prospects', async (req, res) => {
+  try {
+    const { status, destination_id, scan_id, page, limit } = req.query;
+    const result = await osmDiscoveryService.getProspects({
+      status, destination_id, scan_id, page, limit,
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    logger.error('Get prospects API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/poi-discovery/prospects/approve
+ * Approve one or more prospects by ID.
+ */
+router.post('/prospects/approve', async (req, res) => {
+  try {
+    const { prospect_ids } = req.body;
+    if (!Array.isArray(prospect_ids) || prospect_ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'prospect_ids array is required' });
+    }
+
+    const count = await osmDiscoveryService.approveProspects(
+      prospect_ids,
+      req.user?.email || req.user?.id || 'admin'
+    );
+    res.json({ success: true, approved: count });
+  } catch (error) {
+    logger.error('Approve prospects API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/poi-discovery/prospects/reject
+ * Reject one or more prospects by ID.
+ */
+router.post('/prospects/reject', async (req, res) => {
+  try {
+    const { prospect_ids } = req.body;
+    if (!Array.isArray(prospect_ids) || prospect_ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'prospect_ids array is required' });
+    }
+
+    const count = await osmDiscoveryService.rejectProspects(
+      prospect_ids,
+      req.user?.email || req.user?.id || 'admin'
+    );
+    res.json({ success: true, rejected: count });
+  } catch (error) {
+    logger.error('Reject prospects API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/v1/poi-discovery/prospects/scrape
+ * Trigger Apify scraping for all approved prospects.
+ */
+router.post('/prospects/scrape', async (req, res) => {
+  try {
+    const { destination_id } = req.body;
+    const result = await osmDiscoveryService.scrapeApproved(
+      destination_id ? parseInt(destination_id) : null
+    );
+    res.json({ success: true, ...result });
+  } catch (error) {
+    logger.error('Scrape prospects API error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/v1/poi-discovery/prospects/summary
+ * Get prospect counts per status + destination.
+ */
+router.get('/prospects/summary', async (req, res) => {
+  try {
+    const { QueryTypes } = await import('sequelize');
+    const { mysqlSequelize } = await import('../config/database.js');
+
+    const [byStatus] = await mysqlSequelize.query(
+      `SELECT status, COUNT(*) as count FROM discovery_prospects GROUP BY status`,
+      { type: QueryTypes.SELECT }
+    );
+    const [byDest] = await mysqlSequelize.query(
+      `SELECT destination_id, status, COUNT(*) as count FROM discovery_prospects GROUP BY destination_id, status`,
+      { type: QueryTypes.SELECT }
+    );
+
+    // query with type SELECT returns flat array
+    const statusArr = Array.isArray(byStatus) ? [byStatus] : [];
+    const destArr = Array.isArray(byDest) ? [byDest] : [];
+
+    res.json({
+      success: true,
+      by_status: statusArr.length ? statusArr : await mysqlSequelize.query(
+        `SELECT status, COUNT(*) as count FROM discovery_prospects GROUP BY status`,
+        { type: QueryTypes.SELECT }
+      ),
+      by_destination: destArr.length ? destArr : await mysqlSequelize.query(
+        `SELECT destination_id, status, COUNT(*) as count FROM discovery_prospects GROUP BY destination_id, status`,
+        { type: QueryTypes.SELECT }
+      ),
+    });
+  } catch (error) {
+    logger.error('Prospects summary API error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 /**
  * Google Search Console Sync Service
  * Syncs top search queries from GSC API per destination.
@@ -171,7 +172,7 @@ const gscSyncService = {
       // Try loading google-auth-library (optional dependency)
       const { GoogleAuth } = await import('google-auth-library');
       const auth = new GoogleAuth({
-        credentials: GSC_SERVICE_ACCOUNT_JSON ? JSON.parse(require('fs').readFileSync(GSC_SERVICE_ACCOUNT_JSON, 'utf8')) : {
+        credentials: GSC_SERVICE_ACCOUNT_JSON ? JSON.parse(readFileSync(GSC_SERVICE_ACCOUNT_JSON, 'utf8')) : {
           client_email: GSC_CLIENT_EMAIL,
           private_key: GSC_PRIVATE_KEY.replace(/\\n/g, '\n')
         },

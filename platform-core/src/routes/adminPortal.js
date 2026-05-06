@@ -16824,7 +16824,7 @@ router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeA
 // GET /content/studio/overview — Executive overview aggregation (Opdracht 6 v4.0)
 router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => {
   try {
-    const destId = req.destinationId || 1;
+    const destId = parseInt(req.headers["x-destination-id"]) || parseInt(req.query.destination_id) || 1;
 
     // Today's scheduled + published
     const [todayScheduled] = await mysqlSequelize.query(
@@ -16922,7 +16922,7 @@ router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => 
 // ─── Sidebar Badge Counts (studio mode) ────────────────────────────
 router.get('/content/studio/sidebar-badges', adminAuth('reviewer'), async (req, res) => {
   try {
-    const destId = req.destinationId;
+    const destId = parseInt(req.headers['x-destination-id']) || parseInt(req.query.destination_id) || null;
     if (!destId) return res.json({ success: true, data: {} });
 
     // Drafts count
