@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -304,6 +305,9 @@ export default function DashboardPage() {
               {actions.failedPublishes > 0 && (
                 <ActionRow icon={<WarningAmberIcon fontSize="small" color="error" />} text={`${actions.failedPublishes} ${t('dashboard.failedPublishes', 'publicaties mislukt')}`} onClick={() => navigate('/content-studio?tab=items')} />
               )}
+              {actions.pendingProspects > 0 && (
+                <ActionRow icon={<TravelExploreIcon fontSize="small" color="warning" />} text={`${actions.pendingProspects} ${t('dashboard.pendingProspects', 'nieuwe POI prospects wachten op review')}`} onClick={() => navigate('/pois?tab=3')} />
+              )}
               {actions.expiringTokens?.length > 0 && actions.expiringTokens.map((tok, i) => (
                 <ActionRow key={i} icon={<WarningAmberIcon fontSize="small" color="warning" />} text={`${tok.platform} token ${tok.days_left < 0 ? 'verlopen' : `verloopt over ${tok.days_left} dagen`}`} onClick={() => navigate('/content-studio?tab=social')} />
               ))}
@@ -313,7 +317,7 @@ export default function DashboardPage() {
               {actions.trendingTopic && (
                 <ActionRow icon={<TrendingUpIcon fontSize="small" color="primary" />} text={`${t('dashboard.trending', 'Trending')}: ${actions.trendingTopic.keyword}`} />
               )}
-              {!actions.draftItems && !actions.pendingReviews && !actions.failedPublishes && !actions.expiringTokens?.length && (
+              {!actions.draftItems && !actions.pendingReviews && !actions.failedPublishes && !actions.pendingProspects && !actions.expiringTokens?.length && (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
                   {t('dashboard.noActions', 'Geen openstaande acties. Alles op orde!')}
                 </Typography>
