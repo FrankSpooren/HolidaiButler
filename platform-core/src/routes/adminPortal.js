@@ -1378,6 +1378,15 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
       failedPublishes = fp?.cnt || 0;
     } catch { /* */ }
 
+    // 9. Pending discovery prospects
+    let pendingProspects = 0;
+    try {
+      const [[pp]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM discovery_prospects WHERE status = 'pending'`
+      );
+      pendingProspects = pp?.cnt || 0;
+    } catch { /* table may not exist yet */ }
+
     res.json({
       success: true,
       data: {
@@ -1386,6 +1395,7 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
           draftItems,
           expiringTokens,
           failedPublishes,
+          pendingProspects,
           topPerformer,
           trendingTopic,
         },
@@ -1543,9 +1553,9 @@ const AGENT_METADATA = [
 5. Herstart API: pm2 restart holidaibutler-api
 6. Wacht op volgende run (dagelijks 06:00 UTC) en verifieer status` } },
   { id: 'verkenner', name: 'De Verkenner', englishName: 'POI Discovery Agent', category: 'operations', type: 'A',
-    description: 'Automatische POI discovery via Apify (Google Places)',
-    description_en: 'Automatic POI discovery via Apify (Google Places) for new destinations and categories',
-    tasks: ['Kwartaallijkse POI discovery Calpe (6 categorieën)', 'Jaarlijkse volledige POI scan alle categorieën', 'Deduplicatie en kwaliteitsfiltering', 'Automatische classificatie en verrijking nieuwe POIs'],
+    description: 'OSM-First POI discovery: gratis OpenStreetMap scan, Apify enrichment voor goedgekeurde prospects (90%+ kostenbesparing)',
+    description_en: 'OSM-First POI discovery: free OpenStreetMap scan, Apify enrichment for approved prospects only (90%+ cost saving)',
+    tasks: ['Maandelijkse OSM scan alle bestemmingen (gratis)', 'Prospect review → Apify enrichment pipeline', 'Deduplicatie via Dice coefficient + coördinaat-proximity', 'Automatische POI creatie, classificatie en verrijking', 'Kwartaallijkse Apify vangnet-scan'],
     monitoring_scope: 'discovery_runs tabel, destination_configs, Apify budget',
     output_description: 'Nieuwe POIs in database, discovery run logs, admin notificaties',
     schedule: '0 2 1 1,4,7,10 *', actorNames: ['poi-discovery-quarterly', 'poi-discovery-annual'],

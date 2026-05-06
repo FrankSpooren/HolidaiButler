@@ -538,6 +538,29 @@ const AGENT_REGISTRY = {
 
   // Tier Promotion Agent
   promotor: tierPromotionAgent,            // #38
+
+  // POI Discovery Agent (OSM-First Pipeline)
+  verkenner: {                               // #39 (virtual — no dedicated module, uses osmDiscoveryService)
+    execute: async () => {
+      const { default: osmDiscoveryService } = await import('../../services/osmDiscoveryService.js');
+      const results = [];
+      for (const destId of [1, 2]) {
+        try {
+          const r = await osmDiscoveryService.scanDestination(destId, 'verkenner-agent');
+          results.push({ destination_id: destId, prospects: r.prospects });
+        } catch (e) { results.push({ destination_id: destId, error: e.message }); }
+      }
+      return { status: 'completed', results };
+    },
+    runForDestination: async (destinationId) => {
+      const { default: osmDiscoveryService } = await import('../../services/osmDiscoveryService.js');
+      return osmDiscoveryService.scanDestination(destinationId, 'verkenner-agent');
+    },
+    name: 'De Verkenner',
+    category: 'Operations',
+    version: '2.0.0',
+    destinationAware: true,
+  },
 };
 
 /**
