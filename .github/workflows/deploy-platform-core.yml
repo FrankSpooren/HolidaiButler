@@ -76,6 +76,22 @@ jobs:
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 91.98.71.87 >> ~/.ssh/known_hosts
+      - name: Pre-deploy safety check
+        run: |
+          echo "Checking for uncommitted server-side changes that would be destroyed by rsync --delete..."
+          DIRTY=$(ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com && git diff --name-only HEAD -- platform-core/ 2>/dev/null | head -20")
+          UNTRACKED=$(ssh root@91.98.71.87 "cd /var/www/api.holidaibutler.com && git ls-files --others --exclude-standard -- platform-core/ 2>/dev/null | head -20")
+          if [ -n "$DIRTY" ] || [ -n "$UNTRACKED" ]; then
+            echo "::error::DEPLOY BLOCKED — uncommitted changes on server would be destroyed by rsync --delete!"
+            echo "Modified files:"
+            echo "$DIRTY"
+            echo "Untracked files:"
+            echo "$UNTRACKED"
+            echo ""
+            echo "ACTION REQUIRED: SSH to server and commit these files first, or use workflow_dispatch with force=true"
+            exit 1
+          fi
+          echo "Server clean — safe to deploy"
       - name: Backup and Deploy
         run: |
           ssh root@91.98.71.87 "mkdir -p /var/www/backups/platform-core && cp -r ${{ env.DEPLOY_PATH }} /var/www/backups/platform-core/backup-\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true"
