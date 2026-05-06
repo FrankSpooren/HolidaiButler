@@ -8278,3 +8278,45 @@ CLAUDE.md v4.75.0, MS v8.24
 - 12 module sub-pages: dark theme, 87 specs vertaald, actuele content
 - Learning Loop 6->11+ (incl. Temporal saga)
 - CLAUDE.md v4.79.0 -> v4.80.0, MS v8.26 -> v8.27
+
+## Sessie 2026-05-06 -- OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety
+
+### Diagnose
+- Frank meldde: discovery prospects niet meer zichtbaar in Admin Portal Discovery tab
+- Eerste analyse (FOUT): concludeerde dat endpoints nooit bestonden — logisch onmogelijk gezien Frank's 19 goedgekeurde prospects
+- Forensisch onderzoek: commit 8e01668 (Fase 20.B-2, 1 mei) beschreef 6 endpoints + osmDiscoveryService.js maar committede alleen 3 documentatiebestanden
+- Root cause: `rsync --delete` in deploy-platform-core.yml wiste alle bestanden die niet in git stonden
+- CI/CD deploy op 5 mei vernietigde de niet-gecommitte backend code
+- Frontend diff (POIDiscoveryDashboard.jsx) bleef bewaard als uncommitted wijziging (apart deploy-pad)
+- Database data volledig intact: 128 prospects (97 pending, 19 approved, 12 rejected)
+
+### Herstel
+- **DiscoveryProspect.js**: Sequelize model voor discovery_prospects tabel (18 kolommen)
+- **osmDiscoveryService.js**: OSM Overpass query, Dice coefficient fuzzy matching, prospect CRUD, Apify scrape trigger
+- **poiDiscovery.js**: +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary)
+- **POIDiscoveryDashboard.jsx**: prospect review UI gecommit (was uncommitted diff)
+- **deploy-platform-core.yml**: pre-deploy safety check — blokkeert deploy bij uncommitted server-side wijzigingen
+- 2 zombie discovery_runs (status=running >4 dagen) gemarkeerd als failed
+- Admin module herbouwd en gedeployed
+
+### End-to-end verificatie (7/7 geslaagd)
+1. 97 pending prospects bereikbaar via API
+2. 19 approved prospects bereikbaar via API
+3. 12 rejected prospects bereikbaar via API
+4. Summary endpoint werkt (per status + per destination)
+5. 2 zombie runs gemarkeerd als failed
+6. Admin build bevat OSM discovery code
+7. Alle 5 bestanden gecommit in git (geen uncommitted drift)
+
+### Bestanden
+- `platform-core/src/models/DiscoveryProspect.js` — NIEUW: Sequelize model
+- `platform-core/src/services/osmDiscoveryService.js` — NIEUW: OSM scan + prospect CRUD
+- `platform-core/src/routes/poiDiscovery.js` — +6 endpoints
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — gecommit (was uncommitted)
+- `.github/workflows/deploy-platform-core.yml` — pre-deploy safety check
+
+### Documentatie-update
+- CLAUDE.md v4.80.0 -> v4.81.0
+- Master Strategie v8.28 -> v8.29
+- CLAUDE_HISTORY.md sessie toegevoegd
+- Memory: feedback_rsync_delete_danger.md aangemaakt

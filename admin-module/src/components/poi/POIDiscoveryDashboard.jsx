@@ -4,9 +4,13 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Dialog, DialogTitle, DialogContent, DialogActions,
   Snackbar, IconButton, Tooltip, Select, MenuItem, FormControl, InputLabel,
-  Autocomplete
+  Autocomplete, Checkbox, FormControlLabel
 } from '@mui/material';
 import ExploreIcon from '@mui/icons-material/Explore';
+import TravelExploreIcon from '@mui/icons-material/TravelExplore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import MapIcon from '@mui/icons-material/Map';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AddIcon from '@mui/icons-material/Add';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -35,6 +39,12 @@ const api = {
   createConfig: (data) => axios.post(`${API_BASE}/api/v1/poi-discovery/configs`, data, { headers: getAuthHeaders() }).then(r => r.data),
   updateConfig: (id, data) => axios.put(`${API_BASE}/api/v1/poi-discovery/configs/${id}`, data, { headers: getAuthHeaders() }).then(r => r.data),
   deleteConfig: (id) => axios.delete(`${API_BASE}/api/v1/poi-discovery/configs/${id}`, { headers: getAuthHeaders() }).then(r => r.data),
+  // OSM-first pipeline
+  osmScan: (data) => axios.post(`${API_BASE}/api/v1/poi-discovery/osm-scan`, data, { headers: getAuthHeaders() }).then(r => r.data),
+  getProspects: (params) => axios.get(`${API_BASE}/api/v1/poi-discovery/prospects`, { headers: getAuthHeaders(), params }).then(r => r.data),
+  approveProspects: (ids) => axios.post(`${API_BASE}/api/v1/poi-discovery/prospects/approve`, { prospect_ids: ids }, { headers: getAuthHeaders() }).then(r => r.data),
+  rejectProspects: (ids) => axios.post(`${API_BASE}/api/v1/poi-discovery/prospects/reject`, { prospect_ids: ids }, { headers: getAuthHeaders() }).then(r => r.data),
+  scrapeApproved: () => axios.post(`${API_BASE}/api/v1/poi-discovery/prospects/scrape`, {}, { headers: getAuthHeaders() }).then(r => r.data),
 };
 
 const STATUS_COLORS = { pending: 'default', running: 'primary', completed: 'success', failed: 'error', cancelled: 'warning' };
@@ -78,6 +88,9 @@ export default function POIDiscoveryDashboard() {
   const [configForm, setConfigForm] = useState({
     name: '', description: '', categories: [], sources: 'google_places', maxPOIsPerCategory: 50,
   });
+  const [prospects, setProspects] = useState([]);
+  const [selectedProspects, setSelectedProspects] = useState(new Set());
+  const [prospectDest, setProspectDest] = useState('');
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -89,6 +102,11 @@ export default function POIDiscoveryDashboard() {
       if (statsR.status === 'fulfilled') setStats(statsR.value.stats || statsR.value);
       if (runsR.status === 'fulfilled') setRuns(runsR.value.runs || runsR.value.data || []);
       if (configsR.status === 'fulfilled') setConfigs(configsR.value.configs || []);
+      // Load prospects
+      try {
+        const prosp = await api.getProspects({ status: 'pending' });
+        setProspects(prosp.prospects || []);
+      } catch { /* ignore */ }
     } catch (e) { setError(e.message); }
     finally { setLoading(false); }
   }, []);
@@ -143,6 +161,68 @@ export default function POIDiscoveryDashboard() {
       setSnack('Configuratie verwijderd');
       loadAll();
     } catch (e) { setSnack('Fout: ' + (e.response?.data?.error || e.message)); }
+  };
+
+  const handleOsmScan = async (destId) => {
+    setActionLoading('osm-scan');
+    try {
+      const result = await api.osmScan({ destination_id: destId });
+      setSnack(`OSM scan voltooid: ${result.prospects} nieuwe prospects gevonden`);
+      loadAll();
+    } catch (e) {
+      setSnack('Fout: ' + (e.response?.data?.error || e.message));
+    } finally { setActionLoading(null); }
+  };
+
+  const handleApproveSelected = async () => {
+    if (selectedProspects.size === 0) return;
+    setActionLoading('approve');
+    try {
+      await api.approveProspects([...selectedProspects]);
+      setSnack(`${selectedProspects.size} prospects goedgekeurd`);
+      setSelectedProspects(new Set());
+      loadAll();
+    } catch (e) { setSnack('Fout: ' + (e.response?.data?.error || e.message)); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleRejectSelected = async () => {
+    if (selectedProspects.size === 0) return;
+    setActionLoading('reject');
+    try {
+      await api.rejectProspects([...selectedProspects]);
+      setSnack(`${selectedProspects.size} prospects afgewezen`);
+      setSelectedProspects(new Set());
+      loadAll();
+    } catch (e) { setSnack('Fout: ' + (e.response?.data?.error || e.message)); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleScrapeApproved = async () => {
+    setActionLoading('scrape');
+    try {
+      const result = await api.scrapeApproved();
+      setSnack(result.message || 'Scraping voltooid');
+      loadAll();
+    } catch (e) { setSnack('Fout: ' + (e.response?.data?.error || e.message)); }
+    finally { setActionLoading(null); }
+  };
+
+  const toggleProspect = (id) => {
+    setSelectedProspects(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllProspects = () => {
+    const filtered = prospects.filter(p => !prospectDest || p.destination_id === parseInt(prospectDest));
+    if (selectedProspects.size === filtered.length) {
+      setSelectedProspects(new Set());
+    } else {
+      setSelectedProspects(new Set(filtered.map(p => p.id)));
+    }
   };
 
   if (loading) return <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>;
@@ -371,6 +451,92 @@ export default function POIDiscoveryDashboard() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* === OSM-FIRST DISCOVERY PROSPECTS === */}
+      <Paper variant="outlined" sx={{ p: 2, mb: 3, borderColor: prospects.length > 0 ? 'warning.main' : 'divider', borderWidth: prospects.length > 0 ? 2 : 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TravelExploreIcon fontSize="small" color={prospects.length > 0 ? 'warning' : 'inherit'} />
+              OSM Discovery Prospects
+              {prospects.length > 0 && <Chip label={prospects.length} size="small" color="warning" sx={{ height: 20, fontSize: 10 }} />}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Gratis scan via OpenStreetMap. Nieuwe POIs die niet in je database staan. Review en keur goed voor Apify scraping.
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {prospects.length > 0 && (
+              <>
+                <Button size="small" color="success" variant="contained" startIcon={<CheckCircleIcon />}
+                  disabled={selectedProspects.size === 0 || actionLoading === 'approve'}
+                  onClick={handleApproveSelected}>
+                  Goedkeuren ({selectedProspects.size})
+                </Button>
+                <Button size="small" color="error" variant="outlined" startIcon={<CancelIcon />}
+                  disabled={selectedProspects.size === 0 || actionLoading === 'reject'}
+                  onClick={handleRejectSelected}>
+                  Afwijzen ({selectedProspects.size})
+                </Button>
+              </>
+            )}
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select value={prospectDest || ''} displayEmpty onChange={e => setProspectDest(e.target.value)} sx={{ height: 32 }}>
+                <MenuItem value="">Alle</MenuItem>
+                {DESTINATIONS.map(d => <MenuItem key={d.id} value={d.id}>{d.name.split(' ')[0]}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <Button size="small" variant="outlined" startIcon={actionLoading === 'osm-scan' ? <CircularProgress size={14} /> : <MapIcon />}
+              disabled={!!actionLoading}
+              onClick={() => handleOsmScan(prospectDest || 1)}>
+              OSM Scan
+            </Button>
+          </Box>
+        </Box>
+
+        {prospects.length > 0 ? (
+          <TableContainer sx={{ maxHeight: 400 }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox">
+                    <Checkbox size="small" checked={selectedProspects.size === prospects.filter(p => !prospectDest || p.destination_id === parseInt(prospectDest)).length && selectedProspects.size > 0} onChange={toggleAllProspects} />
+                  </TableCell>
+                  <TableCell>Naam</TableCell>
+                  <TableCell>Categorie</TableCell>
+                  <TableCell>OSM Type</TableCell>
+                  <TableCell>Dichtstbijzijnd</TableCell>
+                  <TableCell>Score</TableCell>
+                  <TableCell>Dest</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {prospects
+                  .filter(p => !prospectDest || p.destination_id === parseInt(prospectDest))
+                  .map(p => (
+                  <TableRow key={p.id} hover selected={selectedProspects.has(p.id)} onClick={() => toggleProspect(p.id)} sx={{ cursor: 'pointer' }}>
+                    <TableCell padding="checkbox">
+                      <Checkbox size="small" checked={selectedProspects.has(p.id)} />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{p.osm_name}</Typography>
+                    </TableCell>
+                    <TableCell><Chip label={p.hb_category} size="small" sx={{ height: 18, fontSize: 9 }} /></TableCell>
+                    <TableCell><Typography variant="caption">{p.osm_type}</Typography></TableCell>
+                    <TableCell><Typography variant="caption" color="text.secondary">{p.best_match_name || '—'}</Typography></TableCell>
+                    <TableCell><Typography variant="caption">{(parseFloat(p.best_match_score) || 0).toFixed(2)}</Typography></TableCell>
+                    <TableCell><Typography variant="caption">{p.destination_id}</Typography></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Geen openstaande prospects. Start een OSM Scan om nieuwe POIs te ontdekken.
+          </Typography>
+        )}
+      </Paper>
 
       {/* Config Dialog */}
       <Dialog open={!!configDialog} onClose={() => setConfigDialog(null)} maxWidth="sm" fullWidth>

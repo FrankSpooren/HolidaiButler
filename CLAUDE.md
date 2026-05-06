@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.80.0
-> **Laatst bijgewerkt**: 5 mei 2026
+> **Versie**: 4.81.0
+> **Laatst bijgewerkt**: 6 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -286,6 +286,17 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 - **poiSyncService.js**: saveRawData(), validateRawData(), detectSignificantChanges(), updatePOI() (herschreven), extractReviews(), updateFreshnessScore()
 - **Backfill**: `scripts/apify_backfill.py` — 3.167 historische runs → 1.023 unieke POIs, dedup op placeId
 
+### OSM-First Discovery Pipeline (Fase 20.B-2 — Hersteld 06-05-2026)
+```
+OSM Overpass API (gratis) → discovery_prospects (pending) → Admin review → approved → Apify scrape (betaald) → POI import
+```
+- **Tabel**: `discovery_prospects` (18 kolommen: osm_node_id, osm_name, hb_category, lat/lon, best_match_name/score, status ENUM, reviewed_at/by, apify_place_id, poi_id)
+- **Service**: `osmDiscoveryService.js` — Overpass query, fuzzy dedup (Dice coefficient + coordinate proximity), prospect CRUD
+- **Model**: `DiscoveryProspect.js` (Sequelize)
+- **6 Endpoints** in `poiDiscovery.js`: POST /osm-scan, GET /prospects, POST /prospects/approve, POST /prospects/reject, POST /prospects/scrape, GET /prospects/summary
+- **Frontend**: POIDiscoveryDashboard.jsx — prospect review tabel, bulk approve/reject, destination filter, OSM scan trigger
+- **Kostenbesparing**: 90%+ — OSM als gratis eerste filter, Apify alleen voor goedgekeurde delta
+- **Incident 06-05-2026**: Backend code verloren door `rsync --delete` in CI/CD (code was niet gecommit). Hersteld + preventie ingebouwd.
 ### POI Coverage
 | Destination | Actief | EN/NL/DE/ES | Coverage |
 |-------------|--------|-------------|----------|
@@ -402,6 +413,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Content Studio + BUTE Pipeline | v4.66.0 (image reorder, MUI tree-shaking 9.5→2.8MB, destination-aware taal-pipeline) | ✅ COMPLEET | apr 2026 |
 | Admin UI Gap-Close | 12 nieuwe componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth, ContentReport) | ✅ COMPLEET | apr 2026 |
 | Foundation + A2A + Flows | Fase 13 SSOT, 15 Foundation Stack, 16 First-Light, 17 71-Flows, 18 106-Flows, 19 Resilience/Closure/Cross-Domain | ✅ COMPLEET | apr 2026 |
+| OSM Discovery + CI/CD Safety | Fase 20.B-2 restore, CI/CD pre-deploy check | ✅ COMPLEET | mei 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
@@ -413,8 +425,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 305 |
 | adminPortal.js | v3.50.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.80.0 |
-| Master Strategie | v8.26 |
+| CLAUDE.md | v4.81.0 |
+| Master Strategie | v8.29 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
 
@@ -864,6 +876,7 @@ git pull origin dev
 5. **ALTIJD GitHub pushen** na elke commit — server + GitHub moeten in sync zijn
 6. **Feature branches** voor grotere wijzigingen (meer dan 5 bestanden), direct op dev voor kleine fixes
 7. **PM2 save** na elke productie-deploy: `pm2 save`
+8. **CI/CD pre-deploy safety check**: `deploy-platform-core.yml` blokkeert deploy wanneer uncommitted wijzigingen op de server bestaan (`rsync --delete` zou deze vernietigen). Bij blokkade: eerst committen op server, dan opnieuw deployen. (Toegevoegd 06-05-2026 n.a.v. incident: 6 endpoints + osmDiscoveryService.js verloren door rsync --delete)
 
 
 ## 📞 Contact & Escalatie
@@ -882,6 +895,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.81.0** | **2026-05-06** | **OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety**. Root cause: Fase 20.B-2 backend code (osmDiscoveryService.js, 6 prospect endpoints) was deployed maar niet gecommit; rsync --delete in CI/CD wiste het. 128 prospects intact in DB. **Hersteld**: DiscoveryProspect.js model, osmDiscoveryService.js (OSM Overpass + Dice fuzzy match + prospect CRUD), poiDiscovery.js +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary), POIDiscoveryDashboard.jsx prospect review UI gecommit. **Preventie**: deploy-platform-core.yml pre-deploy safety check blokkeert deploy bij uncommitted server-side wijzigingen. 2 zombie discovery_runs gefixed. Admin build herbouwd. 5 bestanden, commit b37e0cc. |
 | **4.80.0** | **2026-05-05** | **Corporate Landing Page Enterprise Upgrade v6.0 -- 9 opdrachten**. PubliQio dark theme + light toggle + DM Sans/Serif Display. Stats 6->7 (1 System highlight). Agent Ecosystem SVG (38 agents, 3 ringen, Business Value KPIs). i18n 39 agents x 5 talen. TexelMaps uit live, PubliQio teal Q. Tekst-fixes (Strategy, RaaS weg). Scroll-interactiviteit. 12 module sub-pages + privacy dark theme + 87 specs x 5 talen. Learning Loop 6->11+. 409 keys x 5 talen = 2.045 vertalingen. 16 bestanden. |
 | **4.79.0** | **2026-05-05** | **Content Studio Enterprise Fixes — 7 commits**. **Taal-fixes**: PATCH body mapping single-lang destinations (body_en→body_nl voor BUTE/WarreWijzer/Alicante), getConcept enriched met destination language config, generate endpoint body_language param, ConceptDialog LANGS filtered by supported_languages, 4 BUTE items data migratie. **Schedule timezone**: 6 write-paths fixed (schedule/reschedule/bulk/auto-fill backend + handleScheduleAll/DnD frontend) — .toISOString()→lokale string formatter, items 223+224 gecorrigeerd. **Publisher images**: media library lookup EERST (was: POI images eerst → random foto bij ID-collision). **Nieuwe endpoints**: POST /content/items/:id/duplicate (eigen concept + alle platform-versies), POST /content/items/:id/republish (direct via publishItem, niet via 15-min cron). **Kalender UX**: Dupliceren/Opnieuw publiceren/Verwijderen buttons voor published+failed items. **Items tabel**: Dupliceren icon in Acties kolom. 305 endpoints (+2). adminPortal.js v3.50.0. |
 | **4.77.0** | **2026-04-30** | **Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows**. **19.A Agent Health**: 31->38 healthy (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break). **19.B Resilience**: 5 flows (RES1-RES5: coordinateAnomalyRecovery, circuitBreakerActivate, logHealthComplianceEvent, securityHalt, registerHeartbeat). **19.C Closure**: 5 flows (ACK1-ACK5: discoveryComplete, imageProcessingFailed, seoValidationResult, profileUpdated, abTestStarted). **19.D Cross-Domain**: 10 flows (CD1-CD10: applyDistributedLesson broadcast 37 wrappers, registerWorkflowOutcome, codeComplianceCheck, securityComplianceLink, budgetThresholdReached, revenueImpact, conversationEscalation, vectorAccessLog, staleContentReported, wcagComplianceFinding). **19.E Sagas**: 5 Temporal sagas (poiDiscovery, seasonalContent, destinationOnboarding, crisisResponse, weeklyLearningCycle). **19.F Verification**: 131 AsyncAPI specs, 124 static + 37 runtime skills, 7 Temporal workflows, 38 agent_status docs, 0 P1. |
@@ -926,7 +940,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.26 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.29 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
