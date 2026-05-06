@@ -8358,3 +8358,67 @@ CLAUDE.md v4.75.0, MS v8.24
 - Master Strategie v8.28 -> v8.29
 - CLAUDE_HISTORY.md sessie toegevoegd
 - Memory: feedback_rsync_delete_danger.md aangemaakt
+
+## Sessie 2026-05-06 (vervolg) -- OSM Discovery Full Platform Integration + Bug Fixes
+
+### 13 Integration Gaps gefixed (commit 616aa2e)
+
+**G1-G6: scrapeApproved() volledig herschreven**
+- Was: placeholder die `apify.js` importeerde (methode bestond niet) → crash bij scrape
+- Nu: enterprise pipeline via `apifyIntegration.js`:
+  1. Apify searchPlaces (naam + locatie, max 3 resultaten)
+  2. Dice coefficient matching (threshold 0.3)
+  3. POI.create (of link naar bestaande POI via google_placeid)
+  4. poiSyncService.saveRawData (bronze)
+  5. poiSyncService.updatePOI (silver: 80+ velden)
+  6. poiSyncService.extractReviews (reviews tabel)
+  7. poiSyncService.downloadNewImages (server opslag)
+  8. poiClassification.classifyPOI (3-level categorie)
+  9. prospect.poi_id linkback + status='scraped'
+
+**G7: Dashboard pendingProspects**
+- adminPortal.js `/dashboard/actions`: +query discovery_prospects WHERE status='pending'
+- Response bevat nu `pendingProspects` count
+
+**G8: DashboardPage.jsx pendingProspects ActionRow**
+- TravelExploreIcon + warning kleur + navigatie naar /pois?tab=3
+
+**G9-G10: De Verkenner in agentRegistry.js**
+- Virtual agent #39 (geen apart bestand, gebruikt osmDiscoveryService)
+- execute() scant alle destinations, runForDestination() scant 1
+
+**G11: Worker case handler OSM-first**
+- Was: importeerde oude poiDiscovery.discoverDestination (Apify-first, duur)
+- Nu: osmDiscoveryService.scanDestination (gratis) + scrapeApproved (alleen goedgekeurde)
+
+**G12: i18n dashboard.pendingProspects**
+- 5 talen: NL/EN/DE/ES/FR
+
+**G13: Agent metadata update**
+- De Verkenner beschrijving + taken bijgewerkt naar OSM-first pipeline
+
+### Pre-bestaande bugs gefixt
+
+**adminPortal.js:1490 SyntaxError (commit 0b6bb7e)**
+- DELETE /dashboard/actions/:actionKey had lege SQL query (bare komma)
+- ESM kon hele adminPortal.js niet compileren → ALLE admin endpoints 503
+- Fix: SQL string toegevoegd
+
+**DashboardPage.jsx dismissedMenuAnchor (commit 98e22ee)**
+- useState voor dismissedMenuAnchor ontbrak in uncommitted wijzigingen
+- React crash (ReferenceError) bij laden Dashboard
+- Fix: useState(null) toegevoegd
+
+### Bestanden (cumulatief deze sessie)
+- `platform-core/src/models/DiscoveryProspect.js` — NIEUW
+- `platform-core/src/services/osmDiscoveryService.js` — NIEUW + herschreven scrapeApproved
+- `platform-core/src/routes/poiDiscovery.js` — +6 endpoints
+- `platform-core/src/routes/adminPortal.js` — +pendingProspects + SQL fix
+- `platform-core/src/services/agents/base/agentRegistry.js` — +verkenner #39
+- `platform-core/src/services/orchestrator/workers.js` — OSM-first case handler
+- `.github/workflows/deploy-platform-core.yml` — pre-deploy safety check
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — gecommit
+- `admin-module/src/pages/DashboardPage.jsx` — +pendingProspects + dismissedMenuAnchor fix
+- `admin-module/src/i18n/{nl,en,de,es,fr}.json` — +dashboard.pendingProspects
+- CLAUDE.md v4.80.0 -> v4.82.0
+- Master Strategie v8.28 -> v8.30

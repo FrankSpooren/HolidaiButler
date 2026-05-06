@@ -425,8 +425,8 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 314 |
 | adminPortal.js | v3.51.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.81.0 |
-| Master Strategie | v8.29 |
+| CLAUDE.md | v4.82.0 |
+| Master Strategie | v8.30 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
 
@@ -895,6 +895,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.82.0** | **2026-05-06** | **OSM Discovery Full Platform Integration + Bug Fixes**. **13 gaps gefixed**: G1-G6 scrapeApproved() herschreven met volledige pipeline (Apify searchPlaces via apifyIntegration.js -> POI.create -> poiSyncService bronze/silver/gold -> poiClassification 3-level -> extractReviews -> downloadNewImages -> prospect.poi_id linkback). G7 Dashboard /dashboard/actions +pendingProspects count. G8 DashboardPage.jsx pendingProspects ActionRow. G9-G10 De Verkenner #39 in agentRegistry.js (virtual agent). G11 Worker case handler OSM-first i.p.v. Apify-first. G12 i18n 5 talen. G13 Agent metadata OSM-first. **2 pre-bestaande bugs gefixt**: adminPortal.js:1490 lege SQL query (SyntaxError blokkeerde alle admin endpoints), DashboardPage.jsx dismissedMenuAnchor useState ontbrak (React crash). 6 commits, 16 bestanden. |
 | **4.81.0** | **2026-05-06** | **OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety**. Root cause: Fase 20.B-2 backend code (osmDiscoveryService.js, 6 prospect endpoints) was deployed maar niet gecommit; rsync --delete in CI/CD wiste het. 128 prospects intact in DB. **Hersteld**: DiscoveryProspect.js model, osmDiscoveryService.js (OSM Overpass + Dice fuzzy match + prospect CRUD), poiDiscovery.js +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary), POIDiscoveryDashboard.jsx prospect review UI gecommit. **Preventie**: deploy-platform-core.yml pre-deploy safety check blokkeert deploy bij uncommitted server-side wijzigingen. 2 zombie discovery_runs gefixed. Admin build herbouwd. 5 bestanden, commit b37e0cc. |
 | **4.82.0** | **2026-05-06** | **Dashboard Acties & Snelkoppelingen Aanpasbaar**. **A. Acties vereist**: (1) Dismiss/verwijder per actie-item (snapshot-tracking: verschijnt opnieuw bij data-wijziging), permanent verwijderen via menu, (2) Delegeren naar andere gebruiker binnen bestemming (dialoog met gebruikerslijst), (3) Gelezen/ongelezen toggle (vetgedrukt + blauw bolletje voor ongelezen, envelop-iconen). Unread-badge naast sectietitel. Verborgen-menu met Alles herstellen + Permanent verwijderen (rood). **B. Snelkoppelingen**: Edit-icoon rechts naast sectietitel. Dialoog met 12 beschikbare snelkoppelingen (checkboxes), Standaard-reset knop. Per-user opslag in DB (persistent over sessies/apparaten). **Backend**: 2 nieuwe DB tabellen (dashboard_action_states, dashboard_user_shortcuts). 9 nieuwe endpoints: GET action-states, POST dismiss/restore/read/delegate, DELETE permanent, GET delegates, GET/PUT shortcuts. **Frontend**: DashboardPage.jsx uitgebreid met React Query mutations, ActionRow controls (3 iconen: gelezen/delegeren/verwijderen), delegate dialoog, shortcuts dialoog, snackbar feedback. 314 endpoints (+9). adminPortal.js v3.51.0. |
 | **4.80.0** | **2026-05-05** | **Corporate Landing Page Enterprise Upgrade v6.0 -- 9 opdrachten**. PubliQio dark theme + light toggle + DM Sans/Serif Display. Stats 6->7 (1 System highlight). Agent Ecosystem SVG (38 agents, 3 ringen, Business Value KPIs). i18n 39 agents x 5 talen. TexelMaps uit live, PubliQio teal Q. Tekst-fixes (Strategy, RaaS weg). Scroll-interactiviteit. 12 module sub-pages + privacy dark theme + 87 specs x 5 talen. Learning Loop 6->11+. 409 keys x 5 talen = 2.045 vertalingen. 16 bestanden. |
@@ -941,7 +942,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.29 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.30 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |
