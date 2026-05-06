@@ -6,12 +6,8 @@
 # =============================================================================
 name: "Deploy: Admin Module"
 
+# AUTO-DEPLOY DISABLED (06-05-2026): Server is SSOT, CI/CD alleen via handmatige trigger.
 on:
-  push:
-    branches: [dev, test, main]
-    paths:
-      - 'admin-module/**'
-      - '.github/workflows/deploy-admin-module.yml'
   workflow_dispatch:
     inputs:
       environment:

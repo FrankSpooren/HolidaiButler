@@ -9,12 +9,9 @@ concurrency:
   group: deploy-platform-core-${{ github.repository }}
   cancel-in-progress: false  # Queue deployments, don't cancel them
 
+# AUTO-DEPLOY DISABLED (06-05-2026): Server is SSOT, CI/CD alleen via handmatige trigger.
+# Reden: push-triggers op main veroorzaakten destructieve rsync --delete over werkende server-state.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'platform-core/**'
-      - '!platform-core/README.md'
   workflow_dispatch:
     inputs:
       environment:
