@@ -35,3 +35,7 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Credentials (server-only, never commit)
+config/google-tts-credentials.json
+config/gsc-service-account.json
