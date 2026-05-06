@@ -10,6 +10,44 @@
 
 ---
 
+## v4.82.0 -- Dashboard Acties & Snelkoppelingen Aanpasbaar (6 mei 2026)
+
+### Samenvatting
+Dashboard "Acties vereist" blok uitgebreid met dismiss/delegeer/gelezen-ongelezen functionaliteit. Dashboard "Snelkoppelingen" blok aanpasbaar gemaakt met per-user opslag.
+
+### A. Acties vereist -- 3 nieuwe functies
+1. **Verwijderen (dismiss)**: X-icoon per actie-rij, snapshot-tracking (verschijnt opnieuw bij data-wijziging), permanent verwijderen via dropdown menu
+2. **Delegeren**: PersonAdd-icoon per actie-rij, dialoog met gebruikerslijst (bestemming-scoped), gedelegeerde naam zichtbaar onder actie + verschijnt op dashboard ontvanger
+3. **Gelezen/ongelezen**: Envelop-icoon toggle, vetgedrukt + blauw bolletje voor ongelezen, unread-badge naast sectietitel
+
+### B. Snelkoppelingen -- aanpasbaar
+- Edit-icoon rechts naast sectietitel "Snelkoppelingen"
+- Dialoog met 12 beschikbare snelkoppelingen (checkboxes)
+- Standaard-reset knop
+- Per-user opslag in database (persistent over sessies/apparaten)
+
+### Backend
+- 2 nieuwe DB tabellen: dashboard_action_states, dashboard_user_shortcuts
+- 9 nieuwe endpoints: GET action-states, POST dismiss/restore/read/delegate, DELETE permanent, GET delegates, GET/PUT shortcuts
+- 314 endpoints totaal (+9), adminPortal.js v3.51.0
+
+### Frontend
+- DashboardPage.jsx: ActionRow component met 3 control-iconen (gelezen/delegeren/verwijderen)
+- Delegate dialoog met gebruikersselectie
+- Shortcuts dialoog met 12 opties + standaard-reset
+- Verborgen-acties menu: Alles herstellen + Permanent verwijderen
+- Snackbar feedback voor alle acties
+- color text.secondary op alle IconButtons voor light/dark mode compatibiliteit
+
+### Bestanden gewijzigd
+- platform-core/src/routes/adminPortal.js -- 9 nieuwe endpoints + DELETE
+- admin-module/src/pages/DashboardPage.jsx -- volledig uitgebreid (~550 LOC)
+
+### Bugs gefixt
+- Action control icons onzichtbaar in light/dark mode (opacity:0 verwijderd, color text.secondary toegevoegd)
+- permanentDeleteMutation ReferenceError (useMutation declaratie ontbrak)
+
+
 ## Content Studio Enterprise Fixes — 05-05-2026 (v4.79.0)
 
 **7 commits, 5 bestanden gewijzigd, 2 nieuwe endpoints (305 totaal)**

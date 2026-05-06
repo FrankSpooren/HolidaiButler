@@ -315,6 +315,11 @@ export default function DashboardPage() {
     onSuccess: () => { statesRefetch(); setSnackMsg(t('dashboard.actionRestored', 'Actie hersteld')); },
   });
 
+  const permanentDeleteMutation = useMutation({
+    mutationFn: ({ actionKey }) => client.delete(`/dashboard/actions/${actionKey}`),
+    onSuccess: () => { statesRefetch(); setSnackMsg(t('dashboard.actionPermanentlyDeleted', 'Actie permanent verwijderd')); },
+  });
+
   const saveShortcutsMutation = useMutation({
     mutationFn: (shortcuts) => client.put('/dashboard/shortcuts', { shortcuts }),
     onSuccess: () => { queryClient.invalidateQueries(['dashboard-shortcuts']); setSnackMsg(t('dashboard.shortcutsSaved', 'Snelkoppelingen opgeslagen')); },
