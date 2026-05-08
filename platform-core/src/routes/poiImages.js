@@ -308,15 +308,10 @@ router.post('/:id/reject', async (req, res) => {
       }
     );
 
-    // Log moderation
-    await aggregationService.logModeration(
-      id,
-      image.poi_id,
-      'reject',
-      moderatorId,
-      false,
-      image.quality_score
-    );
+    // Log moderation (optional — aggregationService may not be initialized)
+    if (aggregationService?.logModeration) {
+      await aggregationService.logModeration(id, image.poi_id, 'reject', moderatorId, false, image.quality_score);
+    }
 
     res.json({
       success: true,
@@ -390,6 +385,9 @@ router.post('/discover/:poiId', async (req, res) => {
     const poi = pois[0];
 
     // Discover images
+    if (!aggregationService) {
+      return res.status(503).json({ success: false, error: 'Image discovery service not available' });
+    }
     const images = await aggregationService.discoverImagesForPOI(poi, {
       sources,
       maxPerSource: maxImages
