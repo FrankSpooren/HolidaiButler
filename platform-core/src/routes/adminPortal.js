@@ -1378,6 +1378,15 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
       failedPublishes = fp?.cnt || 0;
     } catch { /* */ }
 
+    // 9. Pending discovery prospects
+    let pendingProspects = 0;
+    try {
+      const [[pp]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM discovery_prospects WHERE status = 'pending'`
+      );
+      pendingProspects = pp?.cnt || 0;
+    } catch { /* table may not exist yet */ }
+
     res.json({
       success: true,
       data: {
@@ -1386,6 +1395,7 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
           draftItems,
           expiringTokens,
           failedPublishes,
+          pendingProspects,
           topPerformer,
           trendingTopic,
         },
@@ -1396,6 +1406,232 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
   } catch (error) {
     logger.error('[AdminPortal] Dashboard actions error:', error);
     res.status(500).json({ success: false, error: { code: 'DASHBOARD_ACTIONS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// DASHBOARD ACTION STATES + SHORTCUTS
+// ============================================================
+
+/**
+ * GET /dashboard/action-states - Get user action states (dismissed, read, delegated)
+ */
+router.get('/dashboard/action-states', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const [states] = await mysqlSequelize.query(
+      `SELECT action_key, snapshot_value, is_dismissed, is_read, delegated_to, delegated_at,
+              (SELECT CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,'')) FROM admin_users WHERE id = das.delegated_to) as delegated_to_name
+       FROM dashboard_action_states das WHERE user_id = ?`,
+      { replacements: [userId] }
+    );
+    const [delegatedToMe] = await mysqlSequelize.query(
+      `SELECT das.action_key, das.snapshot_value, das.delegated_at,
+              (SELECT CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,'')) FROM admin_users WHERE id = das.user_id) as delegated_by_name,
+              das.user_id as delegated_by_id
+       FROM dashboard_action_states das WHERE das.delegated_to = ? AND das.is_dismissed = 0`,
+      { replacements: [userId] }
+    );
+    res.json({ success: true, data: { states, delegatedToMe } });
+  } catch (error) {
+    logger.error('[AdminPortal] Get action states error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /dashboard/actions/:actionKey/dismiss - Dismiss an action item
+ */
+router.post('/dashboard/actions/:actionKey/dismiss', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { actionKey } = req.params;
+    const { snapshotValue } = req.body || {};
+    await mysqlSequelize.query(
+      `INSERT INTO dashboard_action_states (user_id, action_key, snapshot_value, is_dismissed, is_read)
+       VALUES (?, ?, ?, 1, 1)
+       ON DUPLICATE KEY UPDATE is_dismissed = 1, is_read = 1, snapshot_value = VALUES(snapshot_value), updated_at = NOW()`,
+      { replacements: [userId, actionKey, snapshotValue || null] }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Dismiss action error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /dashboard/actions/:actionKey/restore - Restore a dismissed action item
+ */
+router.post('/dashboard/actions/:actionKey/restore', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { actionKey } = req.params;
+    await mysqlSequelize.query(
+      `UPDATE dashboard_action_states SET is_dismissed = 0, updated_at = NOW() WHERE user_id = ? AND action_key = ?`,
+      { replacements: [userId, actionKey] }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Restore action error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /dashboard/actions/:actionKey - Permanently delete a dismissed action state
+ */
+router.delete('/dashboard/actions/:actionKey', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { actionKey } = req.params;
+    await mysqlSequelize.query(
+      'DELETE FROM admin_action_states WHERE user_id = ? AND action_key = ?',
+      { replacements: [userId, actionKey] }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Permanent delete action error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /dashboard/actions/:actionKey/read - Toggle read/unread status
+ */
+router.post('/dashboard/actions/:actionKey/read', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { actionKey } = req.params;
+    const { isRead } = req.body;
+    await mysqlSequelize.query(
+      `INSERT INTO dashboard_action_states (user_id, action_key, is_read)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE is_read = VALUES(is_read), updated_at = NOW()`,
+      { replacements: [userId, actionKey, isRead ? 1 : 0] }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Toggle read error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /dashboard/actions/:actionKey/delegate - Delegate action to another user
+ */
+router.post('/dashboard/actions/:actionKey/delegate', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { actionKey } = req.params;
+    const { delegateTo, snapshotValue } = req.body;
+    if (!delegateTo) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_DELEGATE', message: 'delegateTo is required' } });
+    }
+    const [targetUser] = await mysqlSequelize.query(
+      `SELECT id, first_name, last_name, allowed_destinations FROM admin_users WHERE id = ? AND status = 'active'`,
+      { replacements: [delegateTo], type: QueryTypes.SELECT }
+    );
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: { code: 'USER_NOT_FOUND', message: 'Target user not found or inactive' } });
+    }
+    await mysqlSequelize.query(
+      `INSERT INTO dashboard_action_states (user_id, action_key, snapshot_value, delegated_to, delegated_at, is_read)
+       VALUES (?, ?, ?, ?, NOW(), 1)
+       ON DUPLICATE KEY UPDATE delegated_to = VALUES(delegated_to), delegated_at = NOW(), snapshot_value = VALUES(snapshot_value), is_read = 1, updated_at = NOW()`,
+      { replacements: [userId, actionKey, snapshotValue || null, delegateTo] }
+    );
+    res.json({ success: true, data: { delegatedTo: `${targetUser.first_name || ''} ${targetUser.last_name || ''}`.trim() } });
+  } catch (error) {
+    logger.error('[AdminPortal] Delegate action error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /dashboard/delegates - List users available for delegation
+ */
+router.get('/dashboard/delegates', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const user = req.adminUser;
+    let users;
+    if (user.role === 'platform_admin') {
+      users = await mysqlSequelize.query(
+        `SELECT id, first_name, last_name, email, role FROM admin_users WHERE status = 'active' AND id != ? ORDER BY first_name, last_name`,
+        { replacements: [user.id], type: QueryTypes.SELECT }
+      );
+    } else {
+      const userDests = user.allowed_destination_ids || [];
+      if (userDests.length === 0) {
+        return res.json({ success: true, data: { users: [] } });
+      }
+      users = await mysqlSequelize.query(
+        `SELECT id, first_name, last_name, email, role, allowed_destinations FROM admin_users WHERE status = 'active' AND id != ? ORDER BY first_name, last_name`,
+        { replacements: [user.id], type: QueryTypes.SELECT }
+      );
+      users = users.filter(u => {
+        if (u.role === 'platform_admin') return true;
+        try {
+          const dests = JSON.parse(u.allowed_destinations || '[]');
+          return dests.some(d => userDests.includes(d));
+        } catch { return false; }
+      });
+    }
+    const mapped = users.map(u => ({
+      id: u.id,
+      name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+      email: u.email,
+      role: u.role,
+    }));
+    res.json({ success: true, data: { users: mapped } });
+  } catch (error) {
+    logger.error('[AdminPortal] List delegates error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /dashboard/shortcuts - Get user custom shortcuts
+ */
+router.get('/dashboard/shortcuts', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const [row] = await mysqlSequelize.query(
+      `SELECT shortcuts FROM dashboard_user_shortcuts WHERE user_id = ?`,
+      { replacements: [userId], type: QueryTypes.SELECT }
+    );
+    let shortcuts = null;
+    if (row) {
+      try { shortcuts = typeof row.shortcuts === 'string' ? JSON.parse(row.shortcuts) : row.shortcuts; } catch { shortcuts = null; }
+    }
+    res.json({ success: true, data: { shortcuts } });
+  } catch (error) {
+    logger.error('[AdminPortal] Get shortcuts error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /dashboard/shortcuts - Save user custom shortcuts
+ */
+router.put('/dashboard/shortcuts', adminAuth('reviewer'), async (req, res) => {
+  try {
+    const userId = req.adminUser.id;
+    const { shortcuts } = req.body;
+    if (!Array.isArray(shortcuts)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_INPUT', message: 'shortcuts must be an array' } });
+    }
+    await mysqlSequelize.query(
+      `INSERT INTO dashboard_user_shortcuts (user_id, shortcuts)
+       VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE shortcuts = VALUES(shortcuts), updated_at = NOW()`,
+      { replacements: [userId, JSON.stringify(shortcuts)] }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('[AdminPortal] Save shortcuts error:', error);
+    res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: error.message } });
   }
 });
 
@@ -1543,9 +1779,9 @@ const AGENT_METADATA = [
 5. Herstart API: pm2 restart holidaibutler-api
 6. Wacht op volgende run (dagelijks 06:00 UTC) en verifieer status` } },
   { id: 'verkenner', name: 'De Verkenner', englishName: 'POI Discovery Agent', category: 'operations', type: 'A',
-    description: 'Automatische POI discovery via Apify (Google Places)',
-    description_en: 'Automatic POI discovery via Apify (Google Places) for new destinations and categories',
-    tasks: ['Kwartaallijkse POI discovery Calpe (6 categorieën)', 'Jaarlijkse volledige POI scan alle categorieën', 'Deduplicatie en kwaliteitsfiltering', 'Automatische classificatie en verrijking nieuwe POIs'],
+    description: 'OSM-First POI discovery: gratis OpenStreetMap scan, Apify enrichment voor goedgekeurde prospects (90%+ kostenbesparing)',
+    description_en: 'OSM-First POI discovery: free OpenStreetMap scan, Apify enrichment for approved prospects only (90%+ cost saving)',
+    tasks: ['Maandelijkse OSM scan alle bestemmingen (gratis)', 'Prospect review → Apify enrichment pipeline', 'Deduplicatie via Dice coefficient + coördinaat-proximity', 'Automatische POI creatie, classificatie en verrijking', 'Kwartaallijkse Apify vangnet-scan'],
     monitoring_scope: 'discovery_runs tabel, destination_configs, Apify budget',
     output_description: 'Nieuwe POIs in database, discovery run logs, admin notificaties',
     schedule: '0 2 1 1,4,7,10 *', actorNames: ['poi-discovery-quarterly', 'poi-discovery-annual'],
@@ -16824,7 +17060,7 @@ router.post('/agents/jobs/:name/trigger', adminAuth('destination_admin'), writeA
 // GET /content/studio/overview — Executive overview aggregation (Opdracht 6 v4.0)
 router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => {
   try {
-    const destId = req.destinationId || 1;
+    const destId = parseInt(req.headers["x-destination-id"]) || parseInt(req.query.destination_id) || 1;
 
     // Today's scheduled + published
     const [todayScheduled] = await mysqlSequelize.query(
@@ -16922,7 +17158,7 @@ router.get('/content/studio/overview', adminAuth('editor'), async (req, res) => 
 // ─── Sidebar Badge Counts (studio mode) ────────────────────────────
 router.get('/content/studio/sidebar-badges', adminAuth('reviewer'), async (req, res) => {
   try {
-    const destId = req.destinationId;
+    const destId = parseInt(req.headers['x-destination-id']) || parseInt(req.query.destination_id) || null;
     if (!destId) return res.json({ success: true, data: {} });
 
     // Drafts count

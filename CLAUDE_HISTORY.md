@@ -10,6 +10,44 @@
 
 ---
 
+## v4.82.0 -- Dashboard Acties & Snelkoppelingen Aanpasbaar (6 mei 2026)
+
+### Samenvatting
+Dashboard "Acties vereist" blok uitgebreid met dismiss/delegeer/gelezen-ongelezen functionaliteit. Dashboard "Snelkoppelingen" blok aanpasbaar gemaakt met per-user opslag.
+
+### A. Acties vereist -- 3 nieuwe functies
+1. **Verwijderen (dismiss)**: X-icoon per actie-rij, snapshot-tracking (verschijnt opnieuw bij data-wijziging), permanent verwijderen via dropdown menu
+2. **Delegeren**: PersonAdd-icoon per actie-rij, dialoog met gebruikerslijst (bestemming-scoped), gedelegeerde naam zichtbaar onder actie + verschijnt op dashboard ontvanger
+3. **Gelezen/ongelezen**: Envelop-icoon toggle, vetgedrukt + blauw bolletje voor ongelezen, unread-badge naast sectietitel
+
+### B. Snelkoppelingen -- aanpasbaar
+- Edit-icoon rechts naast sectietitel "Snelkoppelingen"
+- Dialoog met 12 beschikbare snelkoppelingen (checkboxes)
+- Standaard-reset knop
+- Per-user opslag in database (persistent over sessies/apparaten)
+
+### Backend
+- 2 nieuwe DB tabellen: dashboard_action_states, dashboard_user_shortcuts
+- 9 nieuwe endpoints: GET action-states, POST dismiss/restore/read/delegate, DELETE permanent, GET delegates, GET/PUT shortcuts
+- 314 endpoints totaal (+9), adminPortal.js v3.51.0
+
+### Frontend
+- DashboardPage.jsx: ActionRow component met 3 control-iconen (gelezen/delegeren/verwijderen)
+- Delegate dialoog met gebruikersselectie
+- Shortcuts dialoog met 12 opties + standaard-reset
+- Verborgen-acties menu: Alles herstellen + Permanent verwijderen
+- Snackbar feedback voor alle acties
+- color text.secondary op alle IconButtons voor light/dark mode compatibiliteit
+
+### Bestanden gewijzigd
+- platform-core/src/routes/adminPortal.js -- 9 nieuwe endpoints + DELETE
+- admin-module/src/pages/DashboardPage.jsx -- volledig uitgebreid (~550 LOC)
+
+### Bugs gefixt
+- Action control icons onzichtbaar in light/dark mode (opacity:0 verwijderd, color text.secondary toegevoegd)
+- permanentDeleteMutation ReferenceError (useMutation declaratie ontbrak)
+
+
 ## Content Studio Enterprise Fixes — 05-05-2026 (v4.79.0)
 
 **7 commits, 5 bestanden gewijzigd, 2 nieuwe endpoints (305 totaal)**
@@ -8278,3 +8316,150 @@ CLAUDE.md v4.75.0, MS v8.24
 - 12 module sub-pages: dark theme, 87 specs vertaald, actuele content
 - Learning Loop 6->11+ (incl. Temporal saga)
 - CLAUDE.md v4.79.0 -> v4.80.0, MS v8.26 -> v8.27
+
+## Sessie 2026-05-06 -- OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety
+
+### Diagnose
+- Frank meldde: discovery prospects niet meer zichtbaar in Admin Portal Discovery tab
+- Eerste analyse (FOUT): concludeerde dat endpoints nooit bestonden — logisch onmogelijk gezien Frank's 19 goedgekeurde prospects
+- Forensisch onderzoek: commit 8e01668 (Fase 20.B-2, 1 mei) beschreef 6 endpoints + osmDiscoveryService.js maar committede alleen 3 documentatiebestanden
+- Root cause: `rsync --delete` in deploy-platform-core.yml wiste alle bestanden die niet in git stonden
+- CI/CD deploy op 5 mei vernietigde de niet-gecommitte backend code
+- Frontend diff (POIDiscoveryDashboard.jsx) bleef bewaard als uncommitted wijziging (apart deploy-pad)
+- Database data volledig intact: 128 prospects (97 pending, 19 approved, 12 rejected)
+
+### Herstel
+- **DiscoveryProspect.js**: Sequelize model voor discovery_prospects tabel (18 kolommen)
+- **osmDiscoveryService.js**: OSM Overpass query, Dice coefficient fuzzy matching, prospect CRUD, Apify scrape trigger
+- **poiDiscovery.js**: +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary)
+- **POIDiscoveryDashboard.jsx**: prospect review UI gecommit (was uncommitted diff)
+- **deploy-platform-core.yml**: pre-deploy safety check — blokkeert deploy bij uncommitted server-side wijzigingen
+- 2 zombie discovery_runs (status=running >4 dagen) gemarkeerd als failed
+- Admin module herbouwd en gedeployed
+
+### End-to-end verificatie (7/7 geslaagd)
+1. 97 pending prospects bereikbaar via API
+2. 19 approved prospects bereikbaar via API
+3. 12 rejected prospects bereikbaar via API
+4. Summary endpoint werkt (per status + per destination)
+5. 2 zombie runs gemarkeerd als failed
+6. Admin build bevat OSM discovery code
+7. Alle 5 bestanden gecommit in git (geen uncommitted drift)
+
+### Bestanden
+- `platform-core/src/models/DiscoveryProspect.js` — NIEUW: Sequelize model
+- `platform-core/src/services/osmDiscoveryService.js` — NIEUW: OSM scan + prospect CRUD
+- `platform-core/src/routes/poiDiscovery.js` — +6 endpoints
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — gecommit (was uncommitted)
+- `.github/workflows/deploy-platform-core.yml` — pre-deploy safety check
+
+### Documentatie-update
+- CLAUDE.md v4.80.0 -> v4.81.0
+- Master Strategie v8.28 -> v8.29
+- CLAUDE_HISTORY.md sessie toegevoegd
+- Memory: feedback_rsync_delete_danger.md aangemaakt
+
+## Sessie 2026-05-06 (vervolg) -- OSM Discovery Full Platform Integration + Bug Fixes
+
+### 13 Integration Gaps gefixed (commit 616aa2e)
+
+**G1-G6: scrapeApproved() volledig herschreven**
+- Was: placeholder die `apify.js` importeerde (methode bestond niet) → crash bij scrape
+- Nu: enterprise pipeline via `apifyIntegration.js`:
+  1. Apify searchPlaces (naam + locatie, max 3 resultaten)
+  2. Dice coefficient matching (threshold 0.3)
+  3. POI.create (of link naar bestaande POI via google_placeid)
+  4. poiSyncService.saveRawData (bronze)
+  5. poiSyncService.updatePOI (silver: 80+ velden)
+  6. poiSyncService.extractReviews (reviews tabel)
+  7. poiSyncService.downloadNewImages (server opslag)
+  8. poiClassification.classifyPOI (3-level categorie)
+  9. prospect.poi_id linkback + status='scraped'
+
+**G7: Dashboard pendingProspects**
+- adminPortal.js `/dashboard/actions`: +query discovery_prospects WHERE status='pending'
+- Response bevat nu `pendingProspects` count
+
+**G8: DashboardPage.jsx pendingProspects ActionRow**
+- TravelExploreIcon + warning kleur + navigatie naar /pois?tab=3
+
+**G9-G10: De Verkenner in agentRegistry.js**
+- Virtual agent #39 (geen apart bestand, gebruikt osmDiscoveryService)
+- execute() scant alle destinations, runForDestination() scant 1
+
+**G11: Worker case handler OSM-first**
+- Was: importeerde oude poiDiscovery.discoverDestination (Apify-first, duur)
+- Nu: osmDiscoveryService.scanDestination (gratis) + scrapeApproved (alleen goedgekeurde)
+
+**G12: i18n dashboard.pendingProspects**
+- 5 talen: NL/EN/DE/ES/FR
+
+**G13: Agent metadata update**
+- De Verkenner beschrijving + taken bijgewerkt naar OSM-first pipeline
+
+### Pre-bestaande bugs gefixt
+
+**adminPortal.js:1490 SyntaxError (commit 0b6bb7e)**
+- DELETE /dashboard/actions/:actionKey had lege SQL query (bare komma)
+- ESM kon hele adminPortal.js niet compileren → ALLE admin endpoints 503
+- Fix: SQL string toegevoegd
+
+**DashboardPage.jsx dismissedMenuAnchor (commit 98e22ee)**
+- useState voor dismissedMenuAnchor ontbrak in uncommitted wijzigingen
+- React crash (ReferenceError) bij laden Dashboard
+- Fix: useState(null) toegevoegd
+
+### Bestanden (cumulatief deze sessie)
+- `platform-core/src/models/DiscoveryProspect.js` — NIEUW
+- `platform-core/src/services/osmDiscoveryService.js` — NIEUW + herschreven scrapeApproved
+- `platform-core/src/routes/poiDiscovery.js` — +6 endpoints
+- `platform-core/src/routes/adminPortal.js` — +pendingProspects + SQL fix
+- `platform-core/src/services/agents/base/agentRegistry.js` — +verkenner #39
+- `platform-core/src/services/orchestrator/workers.js` — OSM-first case handler
+- `.github/workflows/deploy-platform-core.yml` — pre-deploy safety check
+- `admin-module/src/components/poi/POIDiscoveryDashboard.jsx` — gecommit
+- `admin-module/src/pages/DashboardPage.jsx` — +pendingProspects + dismissedMenuAnchor fix
+- `admin-module/src/i18n/{nl,en,de,es,fr}.json` — +dashboard.pendingProspects
+- CLAUDE.md v4.80.0 -> v4.82.0
+- Master Strategie v8.28 -> v8.30
+
+
+---
+
+## Sessie 2026-05-08 — EU-First Stack v3: Interactieve Kaart op Corporate Landing
+
+**CLAUDE.md v4.82.0 → v4.83.0 | MS v8.30 → v8.31**
+
+### EU-Stack Visual v3 — Standalone
+- North target: Stockholm-breedte → Örebro (x:546, y:306)
+- Benelux target: boven Eindhoven → Brussel (x:438, y:441)
+- Legenda: "EU — één markt zonder grenzen" verwijderd
+- Legenda volgorde: Hub → EU Provider → Bereik → Buurland
+- "Detail per provider" → "Details per provider"
+- Deployed als `eu-stack.html` op holidaibutler.com
+
+### Integratie in Corporate Landing Page (index.html)
+- Statische EU-stack lijst (8 rijen met vlaggen) vervangen door interactieve SVG kaart
+- hybrid-shell layout: kaart links (1.6fr) + provider details rechts (1fr)
+- JS SyntaxError fix: themeToggle code kapot door regex-cleaning → verwijderd
+- CSS scoping fix: `.stats-bar` / `.stat-num` / `.stat-label` hadden geen `.eu-stack` scope → overschreven globale statistieken-balk
+- Map-pane: flexbox + `flex:1` voor volledige vulling (geen witruimte onder legenda)
+- Sectie-header aangepast naar landing page stijl (section-label + section-title + section-subtitle)
+- eu-footer tagline: DM Serif Display 28px, `<em>Punt.</em>` in teal, gecentreerd
+
+### i18n Updates
+- `eu_sub` tekst bijgewerkt in 5 talen (NL/EN/DE/ES/FR): "Vrij verkeer van goederen, diensten..."
+- 6 nieuwe keys × 5 talen: eu_map_eyebrow, eu_map_title, eu_map_sub, eu_detail_eyebrow, eu_detail_title, eu_detail_sub
+- Cache-buster i18n.js vernieuwd (v=1778292000)
+
+### Light-mode overrides
+- EU-stack sectie blijft altijd donker (background: #0F172A in light mode)
+- CSS variabelen voor light: --panel-3, --eu-fill, --noneu-fill, --noneu-stroke, --grid-line, --eu-flag-stars
+
+### Bestanden
+- `holidaibutler.com/index.html` — EU-stack v3 geïntegreerd
+- `holidaibutler.com/i18n.js` — +6 keys × 5 talen + eu_sub update
+- `holidaibutler.com/eu-stack.html` — standalone visual (backup/referentie)
+- Backup: `index.html.bak-before-eustack-v3`
+- CLAUDE.md v4.82.0 → v4.83.0
+- Master Strategie v8.30 → v8.31

@@ -391,28 +391,22 @@ export function startWorkers() {
         case "poi-discovery-quarterly":
         case "poi-discovery-annual": {
           try {
-            const { default: poiDiscoveryService } = await import("../services/poiDiscovery.js");
-            const dest = job.data.destination || "Calpe, Spain";
-            const cats = job.data.categories || [];
-            const maxPOIs = job.data.maxPOIsPerCategory || 50;
-            console.log(`[Orchestrator] Auto-discovery: ${dest}, categories: ${cats.length || 'all'}`);
-            const result = await poiDiscoveryService.discoverDestination({
-              destination: dest,
-              categories: cats,
-              maxPOIsPerCategory: maxPOIs,
-              sources: ["google_places"],
-              autoClassify: true,
-              autoEnrich: true,
-              triggeredBy: "auto-scheduler",
-            });
-            console.log(`[Orchestrator] Auto-discovery complete:`, JSON.stringify({
-              destination: dest,
-              poisCreated: result.run?.pois_created || 0,
-              poisUpdated: result.run?.pois_updated || 0,
-            }));
-            return result;
+            // OSM-First pipeline: scan free OSM data, then Apify only for approved prospects
+            const { default: osmDiscoveryService } = await import("../services/osmDiscoveryService.js");
+            const destId = job.data.destination_id || 1;
+            console.log(`[Orchestrator] OSM-First discovery for destination ${destId}`);
+
+            // Step 1: OSM scan (free)
+            const scanResult = await osmDiscoveryService.scanDestination(destId, "auto-scheduler");
+            console.log(`[Orchestrator] OSM scan: ${scanResult.prospects} new prospects`);
+
+            // Step 2: Auto-scrape any previously approved prospects (from manual review)
+            const scrapeResult = await osmDiscoveryService.scrapeApproved(destId);
+            console.log(`[Orchestrator] Auto-scrape approved: ${scrapeResult.scraped} processed, ${scrapeResult.created || 0} new POIs`);
+
+            return { scan: scanResult, scrape: scrapeResult };
           } catch (error) {
-            console.error("[Orchestrator] Auto-discovery failed:", error.message);
+            console.error("[Orchestrator] OSM-First discovery failed:", error.message);
             throw error;
           }
         }
@@ -1584,7 +1578,7 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
 
         case "gsc-query-sync":
           try {
-            const gscSyncService = (await import("../services/visual/gscSyncService.js")).default;
+            const gscSyncService = (await import("../visual/gscSyncService.js")).default;
             const gscDestIds = [1, 2]; // calpe, texel
             const gscResults = {};
             for (const dId of gscDestIds) {

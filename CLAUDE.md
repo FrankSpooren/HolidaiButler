@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.80.0
-> **Laatst bijgewerkt**: 5 mei 2026
+> **Versie**: 4.82.0
+> **Laatst bijgewerkt**: 6 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -286,6 +286,17 @@ Gold:   Customer Portal + Admin Portal (dynamic rendering)
 - **poiSyncService.js**: saveRawData(), validateRawData(), detectSignificantChanges(), updatePOI() (herschreven), extractReviews(), updateFreshnessScore()
 - **Backfill**: `scripts/apify_backfill.py` — 3.167 historische runs → 1.023 unieke POIs, dedup op placeId
 
+### OSM-First Discovery Pipeline (Fase 20.B-2 — Hersteld 06-05-2026)
+```
+OSM Overpass API (gratis) → discovery_prospects (pending) → Admin review → approved → Apify scrape (betaald) → POI import
+```
+- **Tabel**: `discovery_prospects` (18 kolommen: osm_node_id, osm_name, hb_category, lat/lon, best_match_name/score, status ENUM, reviewed_at/by, apify_place_id, poi_id)
+- **Service**: `osmDiscoveryService.js` — Overpass query, fuzzy dedup (Dice coefficient + coordinate proximity), prospect CRUD
+- **Model**: `DiscoveryProspect.js` (Sequelize)
+- **6 Endpoints** in `poiDiscovery.js`: POST /osm-scan, GET /prospects, POST /prospects/approve, POST /prospects/reject, POST /prospects/scrape, GET /prospects/summary
+- **Frontend**: POIDiscoveryDashboard.jsx — prospect review tabel, bulk approve/reject, destination filter, OSM scan trigger
+- **Kostenbesparing**: 90%+ — OSM als gratis eerste filter, Apify alleen voor goedgekeurde delta
+- **Incident 06-05-2026**: Backend code verloren door `rsync --delete` in CI/CD (code was niet gecommit). Hersteld + preventie ingebouwd.
 ### POI Coverage
 | Destination | Actief | EN/NL/DE/ES | Coverage |
 |-------------|--------|-------------|----------|
@@ -397,11 +408,12 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Content Studio Redesign | v4.36.0 (Opdracht 1-4 + Blog + Kwaliteit) | ✅ COMPLEET | apr 2026 |
 | Studio Landing Upgrade | v4.42.0 (7 opdrachten dark theme redesign + i18n 5 talen) | ✅ COMPLEET | apr 2026 |
 | PubliQio Branding & Polish | v4.43.0 (10 opdrachten branding + mockup + dark popups + privacy + per-user taal) | ✅ COMPLEET | apr 2026 |
-| Corporate Landing Page | v4.44.0 (9 opdrachten) + **v4.58.0 Enterprise Upgrade v5.1** (8 opdrachten: outcome-first CTA, 12 modules, 6 stats, flywheel, USP spotlight, EU-stack 8 providers, compliance, i18n 5 talen) | ✅ COMPLEET | apr 2026 |
+| Corporate Landing Page | v4.44.0 (9 opdrachten) + **v4.58.0 Enterprise Upgrade v5.1** + **v4.83.0 EU-Stack v3 Interactieve Kaart** (SVG kaart + provider details, i18n 5 talen) | ✅ COMPLEET | mei 2026 |
 | Page Builder Enterprise | Fase VII-A t/m VII-D (22 blokken ARIA/container queries/schema.org/srcset) | ✅ COMPLEET | apr 2026 |
 | Content Studio + BUTE Pipeline | v4.66.0 (image reorder, MUI tree-shaking 9.5→2.8MB, destination-aware taal-pipeline) | ✅ COMPLEET | apr 2026 |
 | Admin UI Gap-Close | 12 nieuwe componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth, ContentReport) | ✅ COMPLEET | apr 2026 |
 | Foundation + A2A + Flows | Fase 13 SSOT, 15 Foundation Stack, 16 First-Light, 17 71-Flows, 18 106-Flows, 19 Resilience/Closure/Cross-Domain | ✅ COMPLEET | apr 2026 |
+| OSM Discovery + CI/CD Safety | Fase 20.B-2 restore, CI/CD pre-deploy check | ✅ COMPLEET | mei 2026 |
 
 ### Huidige Tellingen
 | Metric | Waarde |
@@ -410,11 +422,11 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | BullMQ jobs | 94 (BullMQ scheduling + 7 Temporal workflows voor sagas) |
 | Inter-agent flows (gespecificeerd) | 131 (60 Blueprint + 11 gap-fix + 35 ecosystem + 20 resilience/closure/cross-domain + 5 sagas) |
 | Inter-agent flows (geimplementeerd) | 131 (124 dedicated skills + 37 CD1 wrappers, 7 Temporal workflows) |
-| Admin endpoints | 305 |
-| adminPortal.js | v3.50.0 |
+| Admin endpoints | 314 |
+| adminPortal.js | v3.51.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.80.0 |
-| Master Strategie | v8.26 |
+| CLAUDE.md | v4.82.0 |
+| Master Strategie | v8.30 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
 
@@ -864,6 +876,7 @@ git pull origin dev
 5. **ALTIJD GitHub pushen** na elke commit — server + GitHub moeten in sync zijn
 6. **Feature branches** voor grotere wijzigingen (meer dan 5 bestanden), direct op dev voor kleine fixes
 7. **PM2 save** na elke productie-deploy: `pm2 save`
+8. **CI/CD pre-deploy safety check**: `deploy-platform-core.yml` blokkeert deploy wanneer uncommitted wijzigingen op de server bestaan (`rsync --delete` zou deze vernietigen). Bij blokkade: eerst committen op server, dan opnieuw deployen. (Toegevoegd 06-05-2026 n.a.v. incident: 6 endpoints + osmDiscoveryService.js verloren door rsync --delete)
 
 
 ## 📞 Contact & Escalatie
@@ -882,6 +895,11 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.82.0** | **2026-05-06** | **OSM Discovery Full Platform Integration + Bug Fixes**. **13 gaps gefixed**: G1-G6 scrapeApproved() herschreven met volledige pipeline (Apify searchPlaces via apifyIntegration.js -> POI.create -> poiSyncService bronze/silver/gold -> poiClassification 3-level -> extractReviews -> downloadNewImages -> prospect.poi_id linkback). G7 Dashboard /dashboard/actions +pendingProspects count. G8 DashboardPage.jsx pendingProspects ActionRow. G9-G10 De Verkenner #39 in agentRegistry.js (virtual agent). G11 Worker case handler OSM-first i.p.v. Apify-first. G12 i18n 5 talen. G13 Agent metadata OSM-first. **2 pre-bestaande bugs gefixt**: adminPortal.js:1490 lege SQL query (SyntaxError blokkeerde alle admin endpoints), DashboardPage.jsx dismissedMenuAnchor useState ontbrak (React crash). 6 commits, 16 bestanden. |
+| **4.81.0** | **2026-05-06** | **OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety**. Root cause: Fase 20.B-2 backend code (osmDiscoveryService.js, 6 prospect endpoints) was deployed maar niet gecommit; rsync --delete in CI/CD wiste het. 128 prospects intact in DB. **Hersteld**: DiscoveryProspect.js model, osmDiscoveryService.js (OSM Overpass + Dice fuzzy match + prospect CRUD), poiDiscovery.js +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary), POIDiscoveryDashboard.jsx prospect review UI gecommit. **Preventie**: deploy-platform-core.yml pre-deploy safety check blokkeert deploy bij uncommitted server-side wijzigingen. 2 zombie discovery_runs gefixed. Admin build herbouwd. 5 bestanden, commit b37e0cc. |
+| **4.82.0** | **2026-05-06** | **Dashboard Acties & Snelkoppelingen Aanpasbaar**. **A. Acties vereist**: (1) Dismiss/verwijder per actie-item (snapshot-tracking: verschijnt opnieuw bij data-wijziging), permanent verwijderen via menu, (2) Delegeren naar andere gebruiker binnen bestemming (dialoog met gebruikerslijst), (3) Gelezen/ongelezen toggle (vetgedrukt + blauw bolletje voor ongelezen, envelop-iconen). Unread-badge naast sectietitel. Verborgen-menu met Alles herstellen + Permanent verwijderen (rood). **B. Snelkoppelingen**: Edit-icoon rechts naast sectietitel. Dialoog met 12 beschikbare snelkoppelingen (checkboxes), Standaard-reset knop. Per-user opslag in DB (persistent over sessies/apparaten). **Backend**: 2 nieuwe DB tabellen (dashboard_action_states, dashboard_user_shortcuts). 9 nieuwe endpoints: GET action-states, POST dismiss/restore/read/delegate, DELETE permanent, GET delegates, GET/PUT shortcuts. **Frontend**: DashboardPage.jsx uitgebreid met React Query mutations, ActionRow controls (3 iconen: gelezen/delegeren/verwijderen), delegate dialoog, shortcuts dialoog, snackbar feedback. 314 endpoints (+9). adminPortal.js v3.51.0. |
+| **4.83.0** | **2026-05-08** | **EU-First Stack v3 — Interactieve Kaart op Corporate Landing Page**. Statische EU-stack lijst vervangen door interactieve SVG kaart met 8 EU-providers op geografische posities. **Standalone visual** (`eu-stack.html`): north target verfijnd naar Örebro (centraal Zweden), benelux target verplaatst naar Brussel (EU-capital). Legenda: "EU — één markt zonder grenzen" verwijderd, volgorde geherordend (Hub→Provider→Bereik→Buurland). **Integratie in index.html**: hybrid-shell layout (kaart links 1.6fr + provider details rechts 1fr). CSS scoping fix (`.stats-bar` conflictte met globale stats-balk). JS SyntaxError fix (kapotte themeToggle regex-restant). Map-pane flexbox voor volledige vulling. **i18n**: `eu_sub` tekst bijgewerkt in 5 talen + 6 nieuwe paneel-keys (`eu_map_eyebrow/title/sub`, `eu_detail_eyebrow/title/sub`) × 5 talen. "Detail" → "Details" per provider. `eu-footer` tagline: DM Serif Display 28px, `<em>Punt.</em>` in teal. Cache-buster i18n.js vernieuwd. Bestanden: `index.html`, `i18n.js`, `eu-stack.html` (standalone). |
+| **4.83.0** | **2026-05-08** | **EU-First Stack v3 — Interactieve Kaart op Corporate Landing Page**. Statische EU-stack lijst vervangen door interactieve SVG kaart met 8 EU-providers op geografische posities. **Standalone visual** (`eu-stack.html`): north target verfijnd naar Örebro (centraal Zweden), benelux target verplaatst naar Brussel (EU-capital). Legenda: "EU — één markt zonder grenzen" verwijderd, volgorde geherordend (Hub→Provider→Bereik→Buurland). **Integratie in index.html**: hybrid-shell layout (kaart links 1.6fr + provider details rechts 1fr). CSS scoping fix (`.stats-bar` conflictte met globale stats-balk). JS SyntaxError fix (kapotte themeToggle regex-restant). Map-pane flexbox voor volledige vulling. **i18n**: `eu_sub` tekst bijgewerkt in 5 talen + 6 nieuwe paneel-keys (`eu_map_eyebrow/title/sub`, `eu_detail_eyebrow/title/sub`) × 5 talen. "Detail" → "Details" per provider. `eu-footer` tagline: DM Serif Display 28px, `<em>Punt.</em>` in teal. Cache-buster i18n.js vernieuwd. Bestanden: `index.html`, `i18n.js`, `eu-stack.html` (standalone). |
 | **4.80.0** | **2026-05-05** | **Corporate Landing Page Enterprise Upgrade v6.0 -- 9 opdrachten**. PubliQio dark theme + light toggle + DM Sans/Serif Display. Stats 6->7 (1 System highlight). Agent Ecosystem SVG (38 agents, 3 ringen, Business Value KPIs). i18n 39 agents x 5 talen. TexelMaps uit live, PubliQio teal Q. Tekst-fixes (Strategy, RaaS weg). Scroll-interactiviteit. 12 module sub-pages + privacy dark theme + 87 specs x 5 talen. Learning Loop 6->11+. 409 keys x 5 talen = 2.045 vertalingen. 16 bestanden. |
 | **4.79.0** | **2026-05-05** | **Content Studio Enterprise Fixes — 7 commits**. **Taal-fixes**: PATCH body mapping single-lang destinations (body_en→body_nl voor BUTE/WarreWijzer/Alicante), getConcept enriched met destination language config, generate endpoint body_language param, ConceptDialog LANGS filtered by supported_languages, 4 BUTE items data migratie. **Schedule timezone**: 6 write-paths fixed (schedule/reschedule/bulk/auto-fill backend + handleScheduleAll/DnD frontend) — .toISOString()→lokale string formatter, items 223+224 gecorrigeerd. **Publisher images**: media library lookup EERST (was: POI images eerst → random foto bij ID-collision). **Nieuwe endpoints**: POST /content/items/:id/duplicate (eigen concept + alle platform-versies), POST /content/items/:id/republish (direct via publishItem, niet via 15-min cron). **Kalender UX**: Dupliceren/Opnieuw publiceren/Verwijderen buttons voor published+failed items. **Items tabel**: Dupliceren icon in Acties kolom. 305 endpoints (+2). adminPortal.js v3.50.0. |
 | **4.77.0** | **2026-04-30** | **Fase 19 COMPLEET: Resilience, Closure & Cross-Domain Flows**. **19.A Agent Health**: 31->38 healthy (JOB_AGENT_MAP fixes, mysqlSequelize imports, return->break). **19.B Resilience**: 5 flows (RES1-RES5: coordinateAnomalyRecovery, circuitBreakerActivate, logHealthComplianceEvent, securityHalt, registerHeartbeat). **19.C Closure**: 5 flows (ACK1-ACK5: discoveryComplete, imageProcessingFailed, seoValidationResult, profileUpdated, abTestStarted). **19.D Cross-Domain**: 10 flows (CD1-CD10: applyDistributedLesson broadcast 37 wrappers, registerWorkflowOutcome, codeComplianceCheck, securityComplianceLink, budgetThresholdReached, revenueImpact, conversationEscalation, vectorAccessLog, staleContentReported, wcagComplianceFinding). **19.E Sagas**: 5 Temporal sagas (poiDiscovery, seasonalContent, destinationOnboarding, crisisResponse, weeklyLearningCycle). **19.F Verification**: 131 AsyncAPI specs, 124 static + 37 runtime skills, 7 Temporal workflows, 38 agent_status docs, 0 P1. |
@@ -926,7 +944,7 @@ git pull origin dev
 
 | Document | Locatie | Versie |
 |----------|---------|--------|
-| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.26 |
+| Master Strategie | `docs/strategy/HolidaiButler_Master_Strategie.md` | 8.30 |
 | Agent Masterplan | `docs/CLAUDE_AGENTS_MASTERPLAN.md` | 4.2.0 |
 | Fase History | `CLAUDE_HISTORY.md` | 1.0.0 |
 | API Docs | `docs/api/` | — |

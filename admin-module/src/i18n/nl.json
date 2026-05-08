@@ -314,7 +314,8 @@
     "newContent": "Nieuwe content",
     "calendar": "Kalender",
     "analytics": "Analytics",
-    "poiManagement": "POI beheer"
+    "poiManagement": "POI beheer",
+    "pendingProspects": "nieuwe POI prospects wachten op review"
   },
   "agents": {
     "title": "Agent Dashboard",
@@ -1849,6 +1850,9 @@
       "holibot": "HoliBot Insights",
       "gsc": "Zoekintentie",
       "overview": "Overzicht"
+    },
+    "publish": {
+      "pleaseWait": "Even geduld a.u.b."
     }
   },
   "brandProfile": {
