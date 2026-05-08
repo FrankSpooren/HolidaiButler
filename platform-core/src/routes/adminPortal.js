@@ -1421,7 +1421,7 @@ router.get('/dashboard/action-states', adminAuth('reviewer'), async (req, res) =
   try {
     const userId = req.adminUser.id;
     const [states] = await mysqlSequelize.query(
-      `SELECT action_key, snapshot_value, is_dismissed, is_read, delegated_to, delegated_at,
+      `SELECT action_key, snapshot_value, is_dismissed, is_read, is_permanently_deleted, delegated_to, delegated_at,
               (SELECT CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,'')) FROM admin_users WHERE id = das.delegated_to) as delegated_to_name
        FROM dashboard_action_states das WHERE user_id = ?`,
       { replacements: [userId] }
@@ -1481,15 +1481,28 @@ router.post('/dashboard/actions/:actionKey/restore', adminAuth('reviewer'), asyn
 
 /**
  * DELETE /dashboard/actions/:actionKey - Permanently delete a dismissed action state
+ * Sets is_permanently_deleted=1 so the action never reappears (even if underlying data changes)
  */
 router.delete('/dashboard/actions/:actionKey', adminAuth('reviewer'), async (req, res) => {
   try {
     const userId = req.adminUser.id;
     const { actionKey } = req.params;
-    await mysqlSequelize.query(
-      'DELETE FROM admin_action_states WHERE user_id = ? AND action_key = ?',
+    // Upsert: if state row exists, mark permanently deleted; if not, create it
+    const [existing] = await mysqlSequelize.query(
+      'SELECT id FROM dashboard_action_states WHERE user_id = ? AND action_key = ?',
       { replacements: [userId, actionKey] }
     );
+    if (existing.length > 0) {
+      await mysqlSequelize.query(
+        'UPDATE dashboard_action_states SET is_dismissed = 1, is_permanently_deleted = 1 WHERE user_id = ? AND action_key = ?',
+        { replacements: [userId, actionKey] }
+      );
+    } else {
+      await mysqlSequelize.query(
+        'INSERT INTO dashboard_action_states (user_id, action_key, is_dismissed, is_permanently_deleted) VALUES (?, ?, 1, 1)',
+        { replacements: [userId, actionKey] }
+      );
+    }
     res.json({ success: true });
   } catch (error) {
     logger.error('[AdminPortal] Permanent delete action error:', error);

@@ -385,6 +385,7 @@ export default function DashboardPage() {
   // Check if dismissed action has changed (show again if data changed)
   const isEffectivelyDismissed = (key) => {
     const state = getState(key);
+    if (state.is_permanently_deleted) return true;
     if (!state.is_dismissed) return false;
     const currentSnapshot = getSnapshotValue(key);
     if (state.snapshot_value && currentSnapshot && state.snapshot_value !== currentSnapshot) return false;
@@ -469,8 +470,11 @@ export default function DashboardPage() {
     });
   });
 
-  // Count dismissed items
-  const dismissedKeys = actionItems.filter(a => isEffectivelyDismissed(a.key)).map(a => a.key);
+  // Count dismissed items (exclude permanently deleted from the "hidden" list)
+  const dismissedKeys = actionItems.filter(a => {
+    const state = getState(a.key);
+    return isEffectivelyDismissed(a.key) && !state.is_permanently_deleted;
+  }).map(a => a.key);
   const visibleActions = actionItems.filter(a => !isEffectivelyDismissed(a.key));
 
   return (
