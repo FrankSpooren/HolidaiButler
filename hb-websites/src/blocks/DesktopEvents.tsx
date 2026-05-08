@@ -63,6 +63,37 @@ function getLocationName(loc: any): string {
   return '';
 }
 
+
+
+const todayEventsStyles = `
+  .today-events-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  .today-events-grid > * {
+    scroll-snap-align: start;
+    flex: 0 0 280px;
+  }
+  @container (min-width: 600px) {
+    .today-events-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+    .today-events-grid > * {
+      flex: none;
+    }
+  }
+  @container (min-width: 900px) {
+    .today-events-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+`;
 export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel', limit = 6 }: DesktopEventsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [events, setEvents] = useState<any[]>([]);
@@ -90,9 +121,9 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
+      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events" style={{ containerType: 'inline-size' }}>
         <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="today-events-grid gap-4">
           {[1,2,3].map(i => (
             <div key={i} className="h-48 bg-gray-200 rounded-xl animate-pulse" />
           ))}
@@ -103,7 +134,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
 
   if (events.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
+      <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events" style={{ containerType: 'inline-size' }}>
         <h2 className="text-2xl font-heading font-bold text-gray-900 mb-4">
           {SECTION_LABELS.title[locale] || SECTION_LABELS.title.en} {destinationName}
         </h2>
@@ -113,7 +144,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events">
+    <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Events" style={{ containerType: 'inline-size' }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-heading font-bold text-gray-900">
           {SECTION_LABELS.title[locale] || SECTION_LABELS.title.en} {destinationName}
@@ -122,7 +153,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
           {SECTION_LABELS.more[locale] || SECTION_LABELS.more.en} →
         </a>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="today-events-grid gap-4">
         {events.slice(0, limit).map((event) => {
           const title = getLocalizedString(event.title, locale);
           const time = formatTime(event);
@@ -161,6 +192,7 @@ export default function DesktopEvents({ locale = 'nl', destinationName = 'Texel'
           );
         })}
       </div>
+      <style dangerouslySetInnerHTML={{ __html: todayEventsStyles }} />
     </div>
   );
 }
