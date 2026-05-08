@@ -158,6 +158,7 @@ import './services/agents/auditeur/skills/wcagComplianceFinding.js';
 import contactRoutes from './routes/contact.js';
 import newsletterRoutes from './routes/newsletter.js';
 import blogRoutes from './routes/blogs.js';
+import searchRoutes from './routes/search.js';
 import poiImagesRoutes from "./routes/poiImages.js";
 import monitoringRoutes from "./routes/monitoring.js";
 import { initializeCircuitBreakers } from './services/circuitBreakerInit.js';
@@ -302,6 +303,7 @@ await import('./a2a/enterpriseSkills.js'); // Fase 20.B: 46 enterprise skills wi
 app.use('/api/v1/contact', contactRoutes); // Contact Form (Fase V.6)
 app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V.6)
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
+app.use('/api/v1/search', searchRoutes); // Unified Search (VII-E2 A1)
 app.use("/api/v1/public/media-collections", createPublicCollectionRouter()); // Public collection sharing (ML-1.4)
 
 // OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)

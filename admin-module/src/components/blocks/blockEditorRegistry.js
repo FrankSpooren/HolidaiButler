@@ -28,6 +28,7 @@ const MobileEventsEditor = lazy(() => import('./editors/MobileEventsEditor.jsx')
 const MobileMapEditor = lazy(() => import('./editors/MobileMapEditor.jsx'));
 const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
 const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
+const SearchEditor = lazy(() => import('./editors/SearchEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -57,6 +58,7 @@ const THUMBNAILS = {
   mobile_program: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="30" y="15" width="240" height="170" rx="12" fill="#fff"/><rect x="42" y="28" width="120" height="10" rx="2" fill="#5E8B7E"/><rect x="42" y="50" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="50" width="140" height="10" rx="2" fill="#334155"/><rect x="60" y="64" width="80" height="6" rx="2" fill="#5E8B7E"/><line x1="48" y1="80" x2="48" y2="92" stroke="#d5e8df" stroke-width="2"/><rect x="42" y="96" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="96" width="120" height="10" rx="2" fill="#334155"/><rect x="60" y="110" width="70" height="6" rx="2" fill="#5E8B7E"/><line x1="48" y1="126" x2="48" y2="138" stroke="#d5e8df" stroke-width="2"/><rect x="42" y="142" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="142" width="100" height="10" rx="2" fill="#334155"/><rect x="60" y="156" width="90" height="6" rx="2" fill="#5E8B7E"/></svg>`,
   mobile_tip: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="30" y="30" width="240" height="140" rx="12" fill="linear-gradient(135deg, #fef3c7, #fde68a)"/><rect x="30" y="30" width="240" height="140" rx="12" fill="#fef3c7"/><rect x="50" y="50" width="80" height="10" rx="2" fill="#92400e"/><rect x="50" y="68" width="200" height="8" rx="2" fill="#78350f"/><rect x="50" y="82" width="160" height="8" rx="2" fill="#78350f"/><rect x="50" y="100" width="60" height="50" rx="8" fill="#e2e8f0"/><rect x="120" y="105" width="130" height="8" rx="2" fill="#92400e"/><rect x="120" y="120" width="100" height="6" rx="2" fill="#a16207"/></svg>`,
   mobile_events: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="15" y="30" width="10" height="10" rx="2" fill="#94a3b8"/><rect x="30" y="30" width="100" height="10" rx="2" fill="#334155"/><rect x="15" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="15" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0"/><rect x="23" y="122" width="64" height="8" rx="2" fill="#334155"/><rect x="23" y="136" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="105" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0"/><rect x="113" y="122" width="64" height="8" rx="2" fill="#334155"/><rect x="113" y="136" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="195" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1" opacity="0.6"/><rect x="195" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0" opacity="0.6"/></svg>`,
+  search: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="40" y="70" width="220" height="44" rx="22" fill="#fff" stroke="#e2e8f0" stroke-width="2"/><circle cx="72" cy="92" r="10" fill="none" stroke="#94a3b8" stroke-width="2"/><line x1="79" y1="99" x2="86" y2="106" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/><rect x="96" y="86" width="100" height="10" rx="2" fill="#cbd5e1"/><rect x="50" y="125" width="200" height="8" rx="2" fill="#e2e8f0"/><rect x="50" y="140" width="160" height="8" rx="2" fill="#e2e8f0"/><rect x="50" y="155" width="120" height="8" rx="2" fill="#e2e8f0"/></svg>`,
   mobile_map: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="15" y="15" width="270" height="170" rx="12" fill="#e8f4e8"/><path d="M15,120 Q90,80 165,105 T285,90 L285,185 L15,185 Z" fill="#d4edda" opacity="0.5"/><g transform="translate(80,55)"><circle r="8" fill="#ef4444"/><circle r="4" fill="#fff"/></g><g transform="translate(170,85)"><circle r="8" fill="#3b82f6"/><circle r="4" fill="#fff"/></g><g transform="translate(220,50)"><circle r="6" fill="#f59e0b"/><circle r="3" fill="#fff"/></g><rect x="30" y="145" width="60" height="24" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="38" y="153" width="44" height="8" rx="2" fill="#94a3b8"/><rect x="100" y="145" width="60" height="24" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="108" y="153" width="44" height="8" rx="2" fill="#94a3b8"/></svg>`
 };
 
@@ -105,6 +107,16 @@ const blockEditorRegistry = {
     description: 'Operationele melding: sluiting, weersalarm, capaciteit',
     category: 'Page Structure',
     thumbnail: THUMBNAILS.banner
+  },
+  search: {
+    editor: SearchEditor,
+    icon: 'Search',
+    label: 'Search',
+    description: 'Full-site search across POIs, events, and articles with typeahead',
+    category: 'Discovery',
+    featureFlag: 'hasSearchBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: THUMBNAILS.search
   },
   faq: {
     editor: FaqEditor,

@@ -29,6 +29,7 @@ import CategoryGrid from './CategoryGrid';
 import TipOfTheDayBlock from './MobileTip';
 import MobileMap from './MobileMap';
 import AlertStatus from './AlertStatus';
+import Search from './Search';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -73,6 +74,7 @@ export const blockRegistry: Record<string, AnyComponent> = {
   mobile_tip: TipOfTheDayBlock, // alias -> TipOfTheDay (E1.6)
   mobile_events: DesktopEvents, // alias -> TodayEvents (E1.4 consolidation)
   mobile_map: MobileMap,
+  search: Search,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,
