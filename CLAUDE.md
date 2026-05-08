@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.82.0
-> **Laatst bijgewerkt**: 6 mei 2026
+> **Versie**: 4.83.0
+> **Laatst bijgewerkt**: 8 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -188,46 +188,52 @@ Na evaluatie van Directus (database-first CMS), Payload CMS 3.0 (Next.js-native 
 
 **Technische blauwdruk**: `HolidaiButler_Technische_Blauwdruk_v3_Definitief_NextJS_HB_API.docx`
 
-### 🚨 ### Page Builder Block Registry (Fase VII-A Audit — 24 april 2026)
+### Page Builder Block Registry (VII-E1 Update — 8 mei 2026)
 
-| # | Registry Key | Type | Editor | Status |
-|---|-------------|------|--------|--------|
-| 1 | hero | Core | HeroEditor | live |
-| 2 | poi_grid | Core | PoiGridEditor | live (VII-B1 enterprise: tier-badges, container queries, schema.org, fine-dine sort) |
-| 3 | poi_grid_filtered | Variant | (via PoiGridEditor) | live |
-| 4 | event_calendar | Core | EventCalendarEditor | live (VII-B2: schema.org Event, @container, time display) |
-| 5 | event_calendar_filtered | Variant | (via EventCalendarEditor) | live |
-| 6 | rich_text | Core | RichTextEditor | live (VII-B4: auto POI-link naammatch, @container typography) |
-| 7 | card_group | Core | CardGroupEditor | live |
-| 8 | map | Core | MapEditor | live (VII-B2: tier rings, markerLimit, ARIA) |
-| 9 | testimonials | Core | TestimonialsEditor | live (VII-C: schema.org AggregateRating+Review, @container, title i18n, eigen SVG) |
-| 10 | cta | Core | CtaEditor | live (VII-B3: @container, backgroundImage, dark/light, ARIA) |
-| 11 | gallery | Core | GalleryEditor | live |
-| 12 | faq | Core | FaqEditor | live (VII-C: schema.org FAQPage, ARIA accordion, @container) |
-| 13 | ticket_shop | Commerce | TicketShopEditor | live (VII-C: @container grid, ARIA) |
-| 14 | reservation_widget | Commerce | ReservationWidgetEditor | live (VII-C: ARIA) |
-| 15 | video | Content | VideoEditor | live |
-| 16 | social_feed | Content | SocialFeedEditor | live |
-| 17 | contact_form | Conversie | ContactFormEditor | live (VII-C: ARIA, GDPR privacy link, @container) |
-| 18 | newsletter | Conversie | NewsletterEditor | live (VII-C: ARIA, GDPR privacy link) |
-| 19 | weather_widget | Utility | WeatherWidgetEditor | live |
-| 20 | banner | Content | BannerEditor | live |
-| 21 | partners | Content | PartnersEditor | live (VII-C: ARIA, @container) |
-| 22 | downloads | Content | DownloadsEditor | live |
-| 23 | desktop_hero | Desktop | (via HeroEditor) | live |
-| 24 | desktop_program_tip | Desktop | — | live |
-| 25 | desktop_events | Desktop | — | live |
-| 26 | category_grid | Desktop | — | live |
-| 27 | mobile_program | Mobile | MobileProgramEditor | live |
-| 28 | mobile_tip | Mobile | MobileTipEditor | live |
-| 29 | mobile_events | Mobile | MobileEventsEditor | live |
-| 30 | mobile_map | Mobile | MobileMapEditor | live |
+**Tellingen**: 44 frontend registry entries (31 uniek + 13 aliassen), 41 admin registry entries, 8 picker-categorieën
 
-**Aliassen**: hero_chatbot→DesktopHero, program_card→DesktopProgramTip, today_events→DesktopEvents, popular_pois→PoiGrid, map_preview→MapWrapper
+| # | Registry Key | Categorie (E1.10) | Editor | Status |
+|---|-------------|-------------------|--------|--------|
+| 1 | hero | Page Structure | HeroEditor | live |
+| 2 | poi_grid | Discovery | PoiGridEditor | live (VII-B1: tier-badges, @container, schema.org) |
+| 3 | poi_grid_filtered | Discovery | (via PoiGridEditor) | live (variant) |
+| 4 | event_calendar | Events & Programme | EventCalendarEditor | live (VII-B2: schema.org Event, @container) |
+| 5 | event_calendar_filtered | Events & Programme | (via EventCalendarEditor) | live (variant) |
+| 6 | rich_text | Page Structure | RichTextEditor | live (VII-B4: auto POI-link, @container) |
+| 7 | curated_cards | Recommendations | CardGroupEditor | live (E1.3: variant curated/offer/related, badge, price) |
+| 8 | map | Discovery | MapEditor | live (VII-B2: tier rings, ARIA) |
+| 9 | testimonials | Recommendations | TestimonialsEditor | live (VII-C: schema.org AggregateRating) |
+| 10 | cta | Page Structure | CtaEditor | live (VII-B3: @container, ARIA) |
+| 11 | gallery | Media & Proof | GalleryEditor | live |
+| 12 | faq | Page Structure | FaqEditor | live (VII-C: schema.org FAQPage) |
+| 13 | ticket_shop | Commerce & Conversion | TicketShopEditor | live |
+| 14 | reservation_widget | Commerce & Conversion | ReservationWidgetEditor | live |
+| 15 | video | Media & Proof | VideoEditor | live (schema.org VideoObject) |
+| 16 | social_feed | Media & Proof | SocialFeedEditor | live |
+| 17 | contact_form | Forms & Assistance | ContactFormEditor | live |
+| 18 | newsletter | Forms & Assistance | NewsletterEditor | live |
+| 19 | weather_widget | Utility & Practical | WeatherWidgetEditor | live |
+| 20 | banner | Page Structure | BannerEditor | live (E1.2: promo only, warning verwijderd) |
+| 21 | alert_status | Page Structure | AlertStatusEditor | live (E1.2: NIEUW, 3 severities, ARIA role=alert, auto-expiry) |
+| 22 | partners | Media & Proof | PartnersEditor | live |
+| 23 | downloads | Media & Proof | DownloadsEditor | live |
+| 24 | desktop_hero | Page Structure | (via HeroEditor) | live (chatbot homepage variant) |
+| 25 | today_events | Events & Programme | MobileEventsEditor | live (E1.4: responsive, @container scroll/grid) |
+| 26 | programme | Events & Programme | MobileProgramEditor | live (E1.5: responsive 3fr/2fr @container) |
+| 27 | tip_of_the_day | Recommendations | MobileTipEditor | live (E1.6: universal) |
+| 28 | category_grid | Discovery | MobileMapEditor | live (E1.8: @container scroll/2/3/4col) |
+| 29 | mobile_map | Discovery | MobileMapEditor | live (E1.7: universal compact kaart) |
+| 30 | chatbot_widget | Forms & Assistance | ChatbotWidgetEditor | live (admin-only) |
+| 31 | blog_grid | Utility & Practical | BlogGridEditor | live (admin-only) |
+
+**Aliassen (hidden in picker)**: card_group→CuratedCards, hero_chatbot→DesktopHero, program_card→Programme, desktop_program_tip→Programme, desktop_events→TodayEvents, mobile_events→TodayEvents, mobile_program→Programme, mobile_tip→TipOfTheDay, popular_pois→PoiGrid, map_preview→MapWrapper
+**PascalCase aliassen** (WarreWijzer/Alicante compat): Hero, RichText, PoiGridFiltered, ContactForm, EventCalendarFiltered
+
+**8 Picker-categorieën** (E1.10): Page Structure, Discovery, Events & Programme, Recommendations & Planning, Media & Proof, Commerce & Conversion, Forms & Assistance, Utility & Practical Info
 
 **Schema.org**: Page-level in layout.tsx (5 schemas). Per-block injection via `src/lib/schema.ts` (SchemaInjector, VII-B1.C): 6 generators + 2 auto-schema blocks. Image Resize Proxy geintegreerd via src/lib/image.ts (srcset 400/600/800/1200w webp) (Faq→FAQPage, Testimonials→AggregateRating+Review). PoiGrid + EventCalendar + Footer + Faq + Testimonials renderen inline JSON-LD. 5+ schema's per pagina.
 
-**Design Tokens**: 40 CSS custom properties (--hb-*), alle tenant-overridable via destinations.branding.
+**Design Tokens**: 49 CSS custom properties (--hb-*, incl. 9 alert tokens E1.2), alle tenant-overridable via destinations.branding.
 
 CalpeTrip.com — Hybride Architectuur (KRITIEK)
 
@@ -425,7 +431,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 314 |
 | adminPortal.js | v3.51.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.82.0 |
+| CLAUDE.md | v4.83.0 |
 | Master Strategie | v8.30 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
@@ -895,6 +901,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.83.0** | **2026-05-08** | **Fase VII-E1 COMPLEET: Page Builder Restructuring & Cleanup**. Banner split (Banner promo + AlertStatus operationeel, 3 severities, ARIA role=alert, 9 design tokens). CardGroup renamed CuratedCards (variant curated/offer/related, badge, price). Mobile/Desktop consolidatie: today_events (mobile_events+desktop_events, @container responsive), programme (mobile_program+desktop_program_tip, @container 3fr/2fr), tip_of_the_day (mobile_tip universal), mobile_map universal. category_grid @container promotion. Hero+Map verified no-op. Block picker 6→8 categorieen + hidden alias filter + i18n 4 talen. PascalCase aliassen WarreWijzer+Alicante. 44 frontend / 41 admin registry entries, 31 unieke blocks. DB: 5 blocks page 7 gemigreerd. 19 bestanden, +421/-99 LOC. Commit 24a18af. |
 | **4.82.0** | **2026-05-06** | **OSM Discovery Full Platform Integration + Bug Fixes**. **13 gaps gefixed**: G1-G6 scrapeApproved() herschreven met volledige pipeline (Apify searchPlaces via apifyIntegration.js -> POI.create -> poiSyncService bronze/silver/gold -> poiClassification 3-level -> extractReviews -> downloadNewImages -> prospect.poi_id linkback). G7 Dashboard /dashboard/actions +pendingProspects count. G8 DashboardPage.jsx pendingProspects ActionRow. G9-G10 De Verkenner #39 in agentRegistry.js (virtual agent). G11 Worker case handler OSM-first i.p.v. Apify-first. G12 i18n 5 talen. G13 Agent metadata OSM-first. **2 pre-bestaande bugs gefixt**: adminPortal.js:1490 lege SQL query (SyntaxError blokkeerde alle admin endpoints), DashboardPage.jsx dismissedMenuAnchor useState ontbrak (React crash). 6 commits, 16 bestanden. |
 | **4.81.0** | **2026-05-06** | **OSM-First Discovery Pipeline Restore + CI/CD Deploy Safety**. Root cause: Fase 20.B-2 backend code (osmDiscoveryService.js, 6 prospect endpoints) was deployed maar niet gecommit; rsync --delete in CI/CD wiste het. 128 prospects intact in DB. **Hersteld**: DiscoveryProspect.js model, osmDiscoveryService.js (OSM Overpass + Dice fuzzy match + prospect CRUD), poiDiscovery.js +6 endpoints (osm-scan, prospects, approve, reject, scrape, summary), POIDiscoveryDashboard.jsx prospect review UI gecommit. **Preventie**: deploy-platform-core.yml pre-deploy safety check blokkeert deploy bij uncommitted server-side wijzigingen. 2 zombie discovery_runs gefixed. Admin build herbouwd. 5 bestanden, commit b37e0cc. |
 | **4.82.0** | **2026-05-06** | **Dashboard Acties & Snelkoppelingen Aanpasbaar**. **A. Acties vereist**: (1) Dismiss/verwijder per actie-item (snapshot-tracking: verschijnt opnieuw bij data-wijziging), permanent verwijderen via menu, (2) Delegeren naar andere gebruiker binnen bestemming (dialoog met gebruikerslijst), (3) Gelezen/ongelezen toggle (vetgedrukt + blauw bolletje voor ongelezen, envelop-iconen). Unread-badge naast sectietitel. Verborgen-menu met Alles herstellen + Permanent verwijderen (rood). **B. Snelkoppelingen**: Edit-icoon rechts naast sectietitel. Dialoog met 12 beschikbare snelkoppelingen (checkboxes), Standaard-reset knop. Per-user opslag in DB (persistent over sessies/apparaten). **Backend**: 2 nieuwe DB tabellen (dashboard_action_states, dashboard_user_shortcuts). 9 nieuwe endpoints: GET action-states, POST dismiss/restore/read/delegate, DELETE permanent, GET delegates, GET/PUT shortcuts. **Frontend**: DashboardPage.jsx uitgebreid met React Query mutations, ActionRow controls (3 iconen: gelezen/delegeren/verwijderen), delegate dialoog, shortcuts dialoog, snackbar feedback. 314 endpoints (+9). adminPortal.js v3.51.0. |
