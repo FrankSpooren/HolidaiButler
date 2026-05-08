@@ -14,8 +14,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * - Container queries for responsive layout
  */
 
-export interface SearchBlockData {
-  placeholder?: Record<string, string>;
+export interface SearchBlockProps {
+  placeholder?: string | Record<string, string>;
   searchTypes?: ('pois' | 'events' | 'articles')[];
   showSuggestions?: boolean;
   showRecentSearches?: boolean;
@@ -84,7 +84,17 @@ function ResultTypeLabel({ type }: { type: string }) {
   );
 }
 
-export default function Search({ data, blockId }: { data: SearchBlockData; blockId: string }) {
+export default function Search(props: SearchBlockProps) {
+  const {
+    placeholder: placeholderProp,
+    searchTypes = ['pois', 'events', 'articles'],
+    showSuggestions: showSuggestionsProp,
+    showRecentSearches: showRecentProp,
+    resultPageHref,
+    variant = 'inline',
+    enableChatbotFallback: enableChatbotProp,
+  } = props;
+
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<SearchResponse | null>(null);
@@ -96,14 +106,19 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  const blockId = 'search-block';
   const locale = typeof document !== 'undefined'
     ? document.documentElement.lang || 'en'
     : 'en';
 
-  const placeholder = data.placeholder?.[locale] || data.placeholder?.en || 'Search POIs, events, articles...';
-  const types = (data.searchTypes ?? ['pois', 'events', 'articles']).join(',');
-  const showSuggestions = data.showSuggestions !== false;
-  const enableChatbot = data.enableChatbotFallback !== false;
+  // Resolve placeholder: might be a string or i18n object (already resolved by resolveLocalizedProps)
+  const placeholder = typeof placeholderProp === 'string'
+    ? placeholderProp
+    : (placeholderProp as Record<string, string>)?.[locale] || (placeholderProp as Record<string, string>)?.en || 'Search POIs, events, articles...';
+
+  const types = (Array.isArray(searchTypes) ? searchTypes : ['pois', 'events', 'articles']).join(',');
+  const showSuggestions = showSuggestionsProp !== false;
+  const enableChatbot = enableChatbotProp !== false;
 
   // Debounce
   useEffect(() => {
@@ -132,7 +147,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
         setResults(json);
         setIsLoading(false);
         setActiveIndex(-1);
-        // Analytics
         if (typeof window !== 'undefined' && (window as any).sa_event) {
           (window as any).sa_event('search_used', { query: debouncedQuery, total: json.total });
         }
@@ -146,11 +160,11 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
 
   // Load recent searches on focus
   const handleFocus = useCallback(() => {
-    if (data.showRecentSearches !== false) {
+    if (showRecentProp !== false) {
       setRecentSearches(getRecentSearches());
     }
     setShowDropdown(true);
-  }, [data.showRecentSearches]);
+  }, [showRecentProp]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -197,20 +211,19 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
     e.preventDefault();
     if (query.trim().length >= 2) {
       saveRecentSearch(query);
-      if (data.resultPageHref) {
-        window.location.href = `${data.resultPageHref}?q=${encodeURIComponent(query)}`;
+      if (resultPageHref) {
+        window.location.href = `${resultPageHref}?q=${encodeURIComponent(query)}`;
       }
     }
   };
 
   const openChatbot = () => {
-    // Dispatch custom event to open chatbot (from VII-B command v7.1)
     window.dispatchEvent(new CustomEvent('hb:chatbot:open', {
       detail: { prompt: query },
     }));
   };
 
-  const variantClasses = {
+  const variantClasses: Record<string, string> = {
     header: 'max-w-xl mx-auto',
     hero: 'max-w-2xl mx-auto',
     inline: 'w-full',
@@ -236,7 +249,7 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
       />
 
       <section
-        className={`@container search-block ${variantClasses[data.variant || 'inline']}`}
+        className={`@container search-block ${variantClasses[variant]}`}
         role="search"
         aria-label="Site search"
       >
@@ -246,7 +259,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
           </label>
 
           <div className="relative">
-            {/* Search icon */}
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--hb-text-muted,#94a3b8)] pointer-events-none"
               fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -278,7 +290,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
                          transition-shadow duration-200"
             />
 
-            {/* Loading spinner */}
             {isLoading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2" aria-hidden="true">
                 <div className="w-5 h-5 border-2 border-[var(--hb-color-primary,#3b82f6)] border-t-transparent rounded-full animate-spin" />
@@ -286,7 +297,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
             )}
           </div>
 
-          {/* Dropdown */}
           {showDropdown && showSuggestions && (
             <div
               ref={dropdownRef}
@@ -297,7 +307,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
                          border border-[var(--hb-border-default,#e2e8f0)]
                          max-h-[60vh] overflow-y-auto"
             >
-              {/* Recent searches (when no query) */}
               {query.length < 2 && recentSearches.length > 0 && (
                 <div className="p-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-[var(--hb-text-muted,#94a3b8)] mb-2">
@@ -318,7 +327,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
                 </div>
               )}
 
-              {/* Results */}
               {results && results.merged.length > 0 && (
                 <div className="p-2">
                   {results.merged.map((item, i) => (
@@ -350,7 +358,7 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
                         )}
                         {item.result_type === 'poi' && item.rating && (
                           <span className="text-xs text-[var(--hb-text-muted,#94a3b8)]">
-                            {'★'.repeat(Math.round(item.rating))} {item.rating.toFixed(1)}
+                            {'\u2605'.repeat(Math.round(item.rating))} {item.rating.toFixed(1)}
                           </span>
                         )}
                         {item.result_type === 'event' && item.date && (
@@ -364,7 +372,6 @@ export default function Search({ data, blockId }: { data: SearchBlockData; block
                 </div>
               )}
 
-              {/* No results + chatbot fallback */}
               {results && results.total === 0 && debouncedQuery.length >= 2 && (
                 <div className="p-4 text-center">
                   <p className="text-sm text-[var(--hb-text-muted,#64748b)] mb-3">

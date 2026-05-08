@@ -22,6 +22,7 @@ export type BlockType =
   | 'weather_widget'
   | 'banner'
   | 'alert_status'
+  | 'search'
   | 'blog_grid'
   | 'partners'
   | 'downloads'
