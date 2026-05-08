@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
-const apiUrl = API_BASE || 'https://api.holidaibutler.com';
+const IMAGE_BASE = 'https://test.holidaibutler.com';
 
 function getAuthHeaders() {
   try {
@@ -135,7 +135,7 @@ export default function POIImageReviewQueue() {
               <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
                 <Box sx={{ position: 'relative', aspectRatio: '4/3', bgcolor: 'action.hover' }}>
                   <img
-                    src={img.image_url || img.local_path ? `${apiUrl}${img.local_path || img.image_url}` : ''}
+                    src={img.local_path ? `${IMAGE_BASE}${img.local_path}` : img.image_url || ''}
                     alt={img.alt_text || img.filename || 'POI Image'}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => { e.target.style.display = 'none'; }}
