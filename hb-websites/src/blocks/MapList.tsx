@@ -98,7 +98,7 @@ export default function MapList(props: MapListProps) {
     params.set('sort', 'rating:desc');
     if (categories?.length) params.set('categories', categories.join(','));
 
-    const endpoint = source === 'events' ? '/api/v1/agenda/events' : '/api/pois';
+    const endpoint = source === 'events' ? '/api/v1/agenda/events' : '/api/v1/pois';
 
     fetch(`${endpoint}?${params.toString()}`, {
       headers: { 'X-Destination-ID': typeof window !== 'undefined' ? (window as any).__HB_DESTINATION_ID__ || '' : '' },
