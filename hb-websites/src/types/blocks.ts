@@ -24,6 +24,7 @@ export type BlockType =
   | 'alert_status'
   | 'search'
   | 'filter_bar'
+  | 'map_list'
   | 'blog_grid'
   | 'partners'
   | 'downloads'

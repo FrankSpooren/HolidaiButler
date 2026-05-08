@@ -30,6 +30,7 @@ const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
 const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
 const SearchEditor = lazy(() => import('./editors/SearchEditor.jsx'));
 const FilterBarEditor = lazy(() => import('./editors/FilterBarEditor.jsx'));
+const MapListEditor = lazy(() => import('./editors/MapListEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -128,6 +129,16 @@ const blockEditorRegistry = {
     featureFlag: 'hasFilterBarBlock',
     addedIn: 'VII-E2 Batch A',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="70" width="260" height="60" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="86" width="50" height="28" rx="14" fill="#3b82f6"/><rect x="40" y="95" width="34" height="10" rx="2" fill="#fff"/><rect x="90" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="98" y="95" width="39" height="10" rx="2" fill="#94a3b8"/><rect x="153" y="86" width="50" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="161" y="95" width="34" height="10" rx="2" fill="#94a3b8"/><rect x="211" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="219" y="95" width="39" height="10" rx="2" fill="#94a3b8"/></svg>`
+  },
+  map_list: {
+    editor: MapListEditor,
+    icon: 'SplitscreenOutlined',
+    label: 'Map + List',
+    description: 'Synchronized map and list with bidirectional interaction',
+    category: 'Discovery',
+    featureFlag: 'hasMapListBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="170" height="180" rx="8" fill="#e8f4e8"/><circle cx="60" cy="70" r="6" fill="#ef4444"/><circle cx="60" cy="70" r="3" fill="#fff"/><circle cx="120" cy="100" r="6" fill="#3b82f6"/><circle cx="120" cy="100" r="3" fill="#fff"/><circle cx="90" cy="140" r="5" fill="#f59e0b"/><circle cx="90" cy="140" r="2.5" fill="#fff"/><rect x="190" y="10" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="22" width="60" height="6" rx="2" fill="#334155"/><rect x="198" y="34" width="40" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="58" width="100" height="40" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/><rect x="198" y="70" width="60" height="6" rx="2" fill="#1e40af"/><rect x="198" y="82" width="40" height="4" rx="2" fill="#64748b"/><rect x="190" y="106" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="118" width="55" height="6" rx="2" fill="#334155"/><rect x="198" y="130" width="35" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="154" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1" opacity="0.5"/></svg>`
   },
   faq: {
     editor: FaqEditor,

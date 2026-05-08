@@ -31,6 +31,7 @@ import MobileMap from './MobileMap';
 import AlertStatus from './AlertStatus';
 import Search from './Search';
 import FilterBar from './FilterBar';
+import MapList from './MapList';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -77,6 +78,7 @@ export const blockRegistry: Record<string, AnyComponent> = {
   mobile_map: MobileMap,
   search: Search,
   filter_bar: FilterBar,
+  map_list: MapList,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,
