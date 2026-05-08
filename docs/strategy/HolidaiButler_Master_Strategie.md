@@ -2,7 +2,7 @@
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
 **Datum**: 6 mei 2026
-**Versie**: 8.30
+**Versie**: 8.31
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1330,7 +1330,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D+E+F) |
 | **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder + Stabilisatie** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
 | **VI** | **UX Revolution + WarreWijzer** | **Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant** | **6-8 wkn** | **MIDDEL** | **🟡 IN PROGRESS (VI-A COMPLEET)** |
-| **VII** | **Page Builder Enterprise Upgrade + Scale & Launch** | **Block-level UX upgrade (35 blocks), schema.org, container queries, E2E testing, load testing** | **8-12 wkn** | **HOOG** | **🟡 IN PROGRESS (VII-A t/m VII-D COMPLEET, VII-E GEPLAND)** |
+| **VII** | **Page Builder Enterprise Upgrade + Scale & Launch** | **Block-level UX upgrade (35 blocks), schema.org, container queries, E2E testing, load testing** | **8-12 wkn** | **HOOG** | **🟡 IN PROGRESS (VII-A t/m VII-D COMPLEET, VII-E1 COMPLEET, VII-E2 GEPLAND)** |
 | CM | AI Content Generatie Module (Trending, Content Engine, Publishing, Analytics) | 🟡 IN PROGRESS (Fase A+B COMPLEET) | 12 wkn |
 | CUX | Corporate UX Upgrade (Sidebar, Kalender, Analytics, Dashboard, Onboarding, Performance, WCAG) | ✅ COMPLEET (v4.52-v4.54) | apr 2026 |
 
@@ -1467,7 +1467,17 @@ Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-up
 - Video: schema.org VideoObject, ARIA, container queries
 - P0 Enterprise Fixes: Image srcset 3 blocks, ARIA 22/24, touch >=44px 7 blocks
 - P1 Fixes: i18n ContactForm+Newsletter 7 strings NL/EN
-**VII-E: Cluster D — 5-7 nieuwe USP-blokken** — GEPLAND (feature-flag staged rollout)
+**VII-E1: Page Builder Restructuring & Cleanup** — ✅ COMPLEET (08-05-2026)
+- Banner split (Banner promo + AlertStatus operationeel, ARIA role=alert, 9 design tokens)
+- CardGroup → CuratedCards (variant curated/offer/related, badge/price)
+- Mobile/Desktop consolidatie: today_events, programme, tip_of_the_day, mobile_map universal
+- category_grid @container responsive promotion
+- Block picker 6→8 categorieen (Page Structure, Discovery, Events & Programme, Recommendations, Media & Proof, Commerce, Forms, Utility)
+- PascalCase aliassen WarreWijzer+Alicante compatibility
+- 44 frontend / 41 admin registry entries, 31 unieke blocks, 19 bestanden, commit 24a18af
+- CLAUDE.md v4.83.0. MS v8.31.
+
+**VII-E2: 14 nieuwe USP-blokken** — GEPLAND (3 batches: Discovery, Events & Planning, Page Structure & Commerce)
 
 Oorspronkelijke "Scale & Launch" scope (E2E testing, load testing, CDN, DR) is geïntegreerd in VII-E/post-VII.
 
