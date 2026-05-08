@@ -23,6 +23,7 @@ export type BlockType =
   | 'banner'
   | 'alert_status'
   | 'search'
+  | 'filter_bar'
   | 'blog_grid'
   | 'partners'
   | 'downloads'

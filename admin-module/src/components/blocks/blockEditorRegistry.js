@@ -29,6 +29,7 @@ const MobileMapEditor = lazy(() => import('./editors/MobileMapEditor.jsx'));
 const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
 const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
 const SearchEditor = lazy(() => import('./editors/SearchEditor.jsx'));
+const FilterBarEditor = lazy(() => import('./editors/FilterBarEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -117,6 +118,16 @@ const blockEditorRegistry = {
     featureFlag: 'hasSearchBlock',
     addedIn: 'VII-E2 Batch A',
     thumbnail: THUMBNAILS.search
+  },
+  filter_bar: {
+    editor: FilterBarEditor,
+    icon: 'FilterList',
+    label: 'Filter Bar',
+    description: 'Reusable filter bar for POIs, events, and more. Place above content blocks.',
+    category: 'Discovery',
+    featureFlag: 'hasFilterBarBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="70" width="260" height="60" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="86" width="50" height="28" rx="14" fill="#3b82f6"/><rect x="40" y="95" width="34" height="10" rx="2" fill="#fff"/><rect x="90" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="98" y="95" width="39" height="10" rx="2" fill="#94a3b8"/><rect x="153" y="86" width="50" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="161" y="95" width="34" height="10" rx="2" fill="#94a3b8"/><rect x="211" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="219" y="95" width="39" height="10" rx="2" fill="#94a3b8"/></svg>`
   },
   faq: {
     editor: FaqEditor,
