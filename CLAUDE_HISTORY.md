@@ -8422,3 +8422,44 @@ CLAUDE.md v4.75.0, MS v8.24
 - `admin-module/src/i18n/{nl,en,de,es,fr}.json` — +dashboard.pendingProspects
 - CLAUDE.md v4.80.0 -> v4.82.0
 - Master Strategie v8.28 -> v8.30
+
+
+---
+
+## Sessie 2026-05-08 — EU-First Stack v3: Interactieve Kaart op Corporate Landing
+
+**CLAUDE.md v4.82.0 → v4.83.0 | MS v8.30 → v8.31**
+
+### EU-Stack Visual v3 — Standalone
+- North target: Stockholm-breedte → Örebro (x:546, y:306)
+- Benelux target: boven Eindhoven → Brussel (x:438, y:441)
+- Legenda: "EU — één markt zonder grenzen" verwijderd
+- Legenda volgorde: Hub → EU Provider → Bereik → Buurland
+- "Detail per provider" → "Details per provider"
+- Deployed als `eu-stack.html` op holidaibutler.com
+
+### Integratie in Corporate Landing Page (index.html)
+- Statische EU-stack lijst (8 rijen met vlaggen) vervangen door interactieve SVG kaart
+- hybrid-shell layout: kaart links (1.6fr) + provider details rechts (1fr)
+- JS SyntaxError fix: themeToggle code kapot door regex-cleaning → verwijderd
+- CSS scoping fix: `.stats-bar` / `.stat-num` / `.stat-label` hadden geen `.eu-stack` scope → overschreven globale statistieken-balk
+- Map-pane: flexbox + `flex:1` voor volledige vulling (geen witruimte onder legenda)
+- Sectie-header aangepast naar landing page stijl (section-label + section-title + section-subtitle)
+- eu-footer tagline: DM Serif Display 28px, `<em>Punt.</em>` in teal, gecentreerd
+
+### i18n Updates
+- `eu_sub` tekst bijgewerkt in 5 talen (NL/EN/DE/ES/FR): "Vrij verkeer van goederen, diensten..."
+- 6 nieuwe keys × 5 talen: eu_map_eyebrow, eu_map_title, eu_map_sub, eu_detail_eyebrow, eu_detail_title, eu_detail_sub
+- Cache-buster i18n.js vernieuwd (v=1778292000)
+
+### Light-mode overrides
+- EU-stack sectie blijft altijd donker (background: #0F172A in light mode)
+- CSS variabelen voor light: --panel-3, --eu-fill, --noneu-fill, --noneu-stroke, --grid-line, --eu-flag-stars
+
+### Bestanden
+- `holidaibutler.com/index.html` — EU-stack v3 geïntegreerd
+- `holidaibutler.com/i18n.js` — +6 keys × 5 talen + eu_sub update
+- `holidaibutler.com/eu-stack.html` — standalone visual (backup/referentie)
+- Backup: `index.html.bak-before-eustack-v3`
+- CLAUDE.md v4.82.0 → v4.83.0
+- Master Strategie v8.30 → v8.31
