@@ -194,47 +194,68 @@ router.post('/:id/approve', async (req, res) => {
 
     const image = images[0];
 
-    if (setPrimary) {
-      // Use stored procedure to set primary
-      await mysqlSequelize.query(
-        `CALL SetPrimaryImage(:image_id, :moderator_id)`,
-        {
-          replacements: {
-            image_id: id,
-            moderator_id: moderatorId || null
-          }
+    // Mark as approved in poi_images
+    await mysqlSequelize.query(
+      `UPDATE poi_images SET
+        status = :status,
+        verified_by = :moderator_id,
+        verified_at = NOW()
+       WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          status: setPrimary ? 'primary' : 'approved',
+          moderator_id: moderatorId || null
         }
-      );
-    } else {
-      // Just approve
-      await mysqlSequelize.query(
-        `UPDATE poi_images SET
-          status = 'approved',
-          verified_by = :moderator_id,
-          verified_at = NOW()
-         WHERE id = :id`,
-        {
-          replacements: {
-            id,
-            moderator_id: moderatorId || null
-          }
-        }
-      );
+      }
+    );
 
-      // Log moderation
-      await aggregationService.logModeration(
-        id,
-        image.poi_id,
-        'approve',
-        moderatorId,
-        false,
-        image.quality_score
+    // Copy approved image to imageurls (live) if not already there
+    const [existingLive] = await mysqlSequelize.query(
+      'SELECT id FROM imageurls WHERE poi_id = :poi_id AND image_url = :url LIMIT 1',
+      { replacements: { poi_id: image.poi_id, url: image.image_url } }
+    );
+
+    if (existingLive.length === 0) {
+      // Get next image_id and display_order for this POI
+      const [maxes] = await mysqlSequelize.query(
+        'SELECT COALESCE(MAX(image_id), 0) as max_id, COUNT(*) as cnt FROM imageurls WHERE poi_id = :poi_id',
+        { replacements: { poi_id: image.poi_id } }
+      );
+      const nextId = (maxes[0]?.max_id || 0) + 1;
+      const nextOrder = (maxes[0]?.cnt || 0) + 1;
+
+      await mysqlSequelize.query(`
+        INSERT INTO imageurls (poi_id, image_id, image_url, local_path, source, file_size, display_order, downloaded_at, keywords_verified)
+        VALUES (:poi_id, :image_id, :url, :local_path, 'apify_refresh', :file_size, :display_order, NOW(), :keywords)
+      `, {
+        replacements: {
+          poi_id: image.poi_id,
+          image_id: nextId,
+          url: image.image_url,
+          local_path: image.local_path,
+          file_size: image.file_size || null,
+          display_order: nextOrder,
+          keywords: image.tags || null
+        }
+      });
+    }
+
+    if (setPrimary) {
+      // Set as primary in imageurls too
+      await mysqlSequelize.query(
+        'UPDATE imageurls SET is_primary = 0 WHERE poi_id = :poi_id',
+        { replacements: { poi_id: image.poi_id } }
+      );
+      await mysqlSequelize.query(
+        'UPDATE imageurls SET is_primary = 1 WHERE poi_id = :poi_id AND image_url = :url',
+        { replacements: { poi_id: image.poi_id, url: image.image_url } }
       );
     }
 
     res.json({
       success: true,
-      message: 'Image approved successfully'
+      message: setPrimary ? 'Image approved + set as primary' : 'Image approved and live'
     });
 
   } catch (error) {

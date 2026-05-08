@@ -208,26 +208,32 @@ class POISyncService {
       const existingUrls = new Set(existing.map(r => r.image_url));
       const maxImageId = existing.reduce((max, r) => Math.max(max, r.image_id || 0), 0);
 
+      // Also check poi_images (pending review queue) to avoid duplicates
+      const [existingPending] = await this.sequelize.query(
+        'SELECT image_url FROM poi_images WHERE poi_id = ?',
+        { replacements: [poiId] }
+      );
+      const pendingUrls = new Set(existingPending.map(r => r.image_url));
+
       let downloaded = 0;
       const maxDisplay = Math.min(imageUrls.length, 10); // Max 10 per POI
 
       for (let i = 0; i < maxDisplay; i++) {
         const url = imageUrls[i];
-        if (existingUrls.has(url)) continue;
+        if (existingUrls.has(url) || pendingUrls.has(url)) continue;
 
         try {
           const result = await imageDownloaderService.downloadImage(url, poiId);
           if (result && result.local_path) {
-            const displayOrder = existing.length + downloaded + 1;
-            const imageId = maxImageId + downloaded + 1;
+            // Insert into poi_images with status 'pending' for admin review
             await this.sequelize.query(`
-              INSERT INTO imageurls (poi_id, image_id, image_url, local_path, source, google_place_id, file_size, file_hash, display_order, downloaded_at, keywords_verified)
-              VALUES (?, ?, ?, ?, 'apify_refresh', ?, ?, ?, ?, NOW(), ?)
+              INSERT INTO poi_images (poi_id, image_url, local_path, filename, source, source_url, status, quality_score, file_size, alt_text, tags)
+              VALUES (?, ?, ?, ?, 'apify', ?, 'pending', 0, ?, ?, ?)
             `, {
               replacements: [
-                poiId, imageId, url, result.local_path, googlePlaceid || null,
-                result.file_size || null, result.file_hash || null, displayOrder,
-                keywordsStr || null
+                poiId, url, result.local_path, result.local_path?.split('/').pop() || null,
+                url, result.file_size || null,
+                keywordsStr || null, keywordsStr || null
               ]
             });
             downloaded++;
