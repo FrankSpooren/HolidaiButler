@@ -37,6 +37,36 @@ function t(obj: Record<string, string>, locale: string): string {
   return obj[locale] || obj.en || obj.nl || '';
 }
 
+
+const categoryGridStyles = `
+  .category-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+  .category-grid > * {
+    scroll-snap-align: start;
+    flex: 0 0 160px;
+  }
+  @container (min-width: 400px) {
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+    .category-grid > * { flex: none; }
+  }
+  @container (min-width: 700px) {
+    .category-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @container (min-width: 900px) {
+    .category-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+`;
+
 export default function CategoryGrid({ locale = 'nl', destinationSlug }: CategoryGridProps) {
   const categories = destinationSlug === 'calpe' ? CALPE_CATEGORIES : TEXEL_CATEGORIES;
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -60,11 +90,11 @@ export default function CategoryGrid({ locale = 'nl', destinationSlug }: Categor
   }, []);
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8" role="navigation" aria-label="Categories">
+    <div className="max-w-6xl mx-auto px-6 py-8" role="navigation" aria-label="Categories" style={{ containerType: 'inline-size' }}>
       <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">
         {t(SECTION_LABELS.title, locale)}
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="category-grid gap-4">
         {categories.map((cat) => (
           <a
             key={cat.key}
@@ -82,6 +112,7 @@ export default function CategoryGrid({ locale = 'nl', destinationSlug }: Categor
           </a>
         ))}
       </div>
+      <style dangerouslySetInnerHTML={{ __html: categoryGridStyles }} />
     </div>
   );
 }

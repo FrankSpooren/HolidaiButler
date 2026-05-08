@@ -2,7 +2,6 @@ import { TranslatableField, SelectField, SwitchField, TextField } from '../field
 
 const TYPE_OPTIONS = [
   { value: 'info', label: 'Info' },
-  { value: 'warning', label: 'Warning' },
   { value: 'success', label: 'Success' },
   { value: 'promo', label: 'Promo' }
 ];

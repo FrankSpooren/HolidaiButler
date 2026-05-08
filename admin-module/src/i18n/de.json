@@ -2050,5 +2050,15 @@
       "noContentDay": "Kein Content für diesen Tag geplant.",
       "noContentWeek": "Keine Einträge"
     }
+  },
+  "blockCategories": {
+    "page_structure": "Seitenstruktur",
+    "discovery": "Entdecken",
+    "events_programme": "Events & Programm",
+    "recommendations_planning": "Empfehlungen & Planung",
+    "media_proof": "Medien & Beweis",
+    "commerce_conversion": "Commerce & Konversion",
+    "forms_assistance": "Formulare & Hilfe",
+    "utility_practical": "Praktische Infos"
   }
 }

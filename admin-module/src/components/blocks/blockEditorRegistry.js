@@ -27,6 +27,7 @@ const MobileTipEditor = lazy(() => import('./editors/MobileTipEditor.jsx'));
 const MobileEventsEditor = lazy(() => import('./editors/MobileEventsEditor.jsx'));
 const MobileMapEditor = lazy(() => import('./editors/MobileMapEditor.jsx'));
 const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
+const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -70,7 +71,7 @@ const blockEditorRegistry = {
     icon: 'Panorama',
     label: 'Hero',
     description: 'Full-width header with image, video, or gradient background',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.hero
   },
   rich_text: {
@@ -78,7 +79,7 @@ const blockEditorRegistry = {
     icon: 'Article',
     label: 'Rich Text',
     description: 'WYSIWYG text editor with formatting',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.rich_text
   },
   cta: {
@@ -86,7 +87,7 @@ const blockEditorRegistry = {
     icon: 'TouchApp',
     label: 'Call to Action',
     description: 'Highlighted section with buttons',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.cta
   },
   banner: {
@@ -94,7 +95,15 @@ const blockEditorRegistry = {
     icon: 'Campaign',
     label: 'Banner',
     description: 'Dismissible notification or promo bar',
-    category: 'Content',
+    category: 'Page Structure',
+    thumbnail: THUMBNAILS.banner
+  },
+  alert_status: {
+    editor: AlertStatusEditor,
+    icon: 'Campaign',
+    label: 'Alert / Status',
+    description: 'Operationele melding: sluiting, weersalarm, capaciteit',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.banner
   },
   faq: {
@@ -102,7 +111,7 @@ const blockEditorRegistry = {
     icon: 'QuestionAnswer',
     label: 'FAQ',
     description: 'Expandable question & answer list',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.faq
   },
   gallery: {
@@ -110,7 +119,7 @@ const blockEditorRegistry = {
     icon: 'Collections',
     label: 'Gallery',
     description: 'Image and video gallery with lightbox',
-    category: 'Media',
+    category: 'Media & Proof',
     thumbnail: THUMBNAILS.gallery
   },
   video: {
@@ -118,7 +127,7 @@ const blockEditorRegistry = {
     icon: 'PlayCircle',
     label: 'Video',
     description: 'YouTube, Vimeo, or self-hosted video',
-    category: 'Media',
+    category: 'Media & Proof',
     thumbnail: THUMBNAILS.video
   },
   partners: {
@@ -126,7 +135,7 @@ const blockEditorRegistry = {
     icon: 'Handshake',
     label: 'Partners',
     description: 'Logo grid with links',
-    category: 'Media',
+    category: 'Media & Proof',
     thumbnail: THUMBNAILS.partners
   },
   downloads: {
@@ -134,7 +143,7 @@ const blockEditorRegistry = {
     icon: 'FileDownload',
     label: 'Downloads',
     description: 'File list with type icons',
-    category: 'Media',
+    category: 'Media & Proof',
     thumbnail: THUMBNAILS.downloads
   },
   poi_grid: {
@@ -142,7 +151,7 @@ const blockEditorRegistry = {
     icon: 'GridView',
     label: 'POI Grid',
     description: 'Grid of points of interest',
-    category: 'Data',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.poi_grid
   },
   poi_grid_filtered: {
@@ -150,7 +159,7 @@ const blockEditorRegistry = {
     icon: 'FilterList',
     label: 'POI Grid (Filtered)',
     description: 'Grid of POIs with category/rating filter bar',
-    category: 'Data',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.poi_grid
   },
   event_calendar: {
@@ -158,7 +167,7 @@ const blockEditorRegistry = {
     icon: 'Event',
     label: 'Events',
     description: 'Event listing from agenda',
-    category: 'Data',
+    category: 'Events & Programme',
     thumbnail: THUMBNAILS.event_calendar
   },
   event_calendar_filtered: {
@@ -166,7 +175,7 @@ const blockEditorRegistry = {
     icon: 'EventNote',
     label: 'Events (Filtered)',
     description: 'Event listing with date/category filter bar',
-    category: 'Data',
+    category: 'Events & Programme',
     thumbnail: THUMBNAILS.event_calendar
   },
   map: {
@@ -174,7 +183,7 @@ const blockEditorRegistry = {
     icon: 'Map',
     label: 'Map',
     description: 'Interactive map with POI markers',
-    category: 'Data',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.map
   },
   weather_widget: {
@@ -182,7 +191,7 @@ const blockEditorRegistry = {
     icon: 'WbSunny',
     label: 'Weather',
     description: 'Current weather and forecast',
-    category: 'Data',
+    category: 'Utility & Practical Info',
     thumbnail: THUMBNAILS.weather_widget
   },
   social_feed: {
@@ -190,7 +199,7 @@ const blockEditorRegistry = {
     icon: 'Share',
     label: 'Social Feed',
     description: 'Social media embed (privacy-first)',
-    category: 'Data',
+    category: 'Media & Proof',
     thumbnail: THUMBNAILS.social_feed
   },
   contact_form: {
@@ -198,7 +207,7 @@ const blockEditorRegistry = {
     icon: 'ContactMail',
     label: 'Contact Form',
     description: 'Configurable contact form with GDPR',
-    category: 'Interactie',
+    category: 'Forms & Assistance',
     thumbnail: THUMBNAILS.contact_form
   },
   newsletter: {
@@ -206,7 +215,7 @@ const blockEditorRegistry = {
     icon: 'Email',
     label: 'Newsletter',
     description: 'Email signup via MailerLite',
-    category: 'Interactie',
+    category: 'Forms & Assistance',
     thumbnail: THUMBNAILS.newsletter
   },
   chatbot_widget: {
@@ -214,7 +223,7 @@ const blockEditorRegistry = {
     icon: 'SmartToy',
     label: 'Chatbot',
     description: 'AI chatbot widget',
-    category: 'Interactie',
+    category: 'Forms & Assistance',
     thumbnail: THUMBNAILS.chatbot_widget
   },
   ticket_shop: {
@@ -222,7 +231,7 @@ const blockEditorRegistry = {
     icon: 'ConfirmationNumber',
     label: 'Ticket Shop',
     description: 'Ticket listing and booking',
-    category: 'Commerce',
+    category: 'Commerce & Conversion',
     thumbnail: THUMBNAILS.ticket_shop
   },
   reservation_widget: {
@@ -230,23 +239,32 @@ const blockEditorRegistry = {
     icon: 'BookOnline',
     label: 'Reservations',
     description: 'Reservation booking widget',
-    category: 'Commerce',
+    category: 'Commerce & Conversion',
     thumbnail: THUMBNAILS.reservation_widget
+  },
+  curated_cards: {
+    editor: CardGroupEditor,
+    icon: 'ViewModule',
+    label: 'Curated Cards',
+    description: 'Content cards met variant (curated/aanbieding/gerelateerd)',
+    category: 'Recommendations & Planning',
+    thumbnail: THUMBNAILS.card_group
   },
   card_group: {
     editor: CardGroupEditor,
     icon: 'ViewModule',
-    label: 'Card Group',
-    description: 'Grid of content cards with images',
-    category: 'Commerce',
-    thumbnail: THUMBNAILS.card_group
+    label: 'Card Group (alias)',
+    description: 'Alias voor Curated Cards',
+    category: 'Recommendations & Planning',
+    thumbnail: THUMBNAILS.card_group,
+    hidden: true
   },
   testimonials: {
     editor: TestimonialsEditor,
     icon: 'FormatQuote',
     label: 'Recensies / Testimonials',
     description: 'Reviews van bezoekers met sterren en citaten',
-    category: 'Data',
+    category: 'Recommendations & Planning',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="25" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="22" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="65" width="55" height="6" rx="2" fill="#94a3b8"/><circle cx="30" cy="86" r="6" fill="#e2e8f0"/><rect x="40" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="22" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="34" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="46" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="58" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="70" y="98" width="10" height="4" rx="1" fill="#e2e8f0"/><rect x="110" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="120" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="117" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="117" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="125" cy="86" r="6" fill="#e2e8f0"/><rect x="135" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="205" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="215" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="212" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="212" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="220" cy="86" r="6" fill="#e2e8f0"/><rect x="230" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="55" y="130" width="190" height="12" rx="2" fill="#334155"/><rect x="80" y="155" width="140" height="8" rx="2" fill="#94a3b8"/></svg>`
   },
   // Desktop homepage blocks (primary names used in templates + DB)
@@ -255,31 +273,41 @@ const blockEditorRegistry = {
     icon: 'Chat',
     label: 'Hero + Chatbot',
     description: 'Hero met chatbot-input en quick actions',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.hero
+  },
+  programme: {
+    editor: MobileProgramEditor,
+    icon: 'ViewTimeline',
+    label: 'Dagprogramma + Tip',
+    description: 'Responsive dagprogramma met tip van de dag',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_program
   },
   desktop_program_tip: {
     editor: MobileProgramEditor,
     icon: 'ViewTimeline',
-    label: 'Programma + Tip (2-kolom)',
-    description: 'Dagprogramma links + Tip van de Dag rechts',
-    category: 'Content',
-    thumbnail: THUMBNAILS.mobile_program
+    label: 'Programma + Tip (alias)',
+    description: 'Alias voor Dagprogramma + Tip',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_program,
+    hidden: true
   },
   desktop_events: {
     editor: MobileEventsEditor,
     icon: 'EventNote',
-    label: 'Vandaag Events (grid)',
-    description: 'Responsive events grid (3-kolom desktop)',
-    category: 'Data',
-    thumbnail: THUMBNAILS.mobile_events
+    label: 'Vandaag Events (alias)',
+    description: 'Alias voor Today Events',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_events,
+    hidden: true
   },
   category_grid: {
     editor: MobileMapEditor,
     icon: 'Category',
     label: 'Categorie Grid',
-    description: 'Ontdek op categorie (4-kolom grid)',
-    category: 'Data',
+    description: 'Responsive categorie browser: scroll op mobiel, 4-kolom grid op desktop',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.mobile_events
   },
   // Desktop homepage block aliases (backward compat)
@@ -288,23 +316,24 @@ const blockEditorRegistry = {
     icon: 'Chat',
     label: 'Hero + Chatbot',
     description: 'Hero met chatbot-input en quick actions',
-    category: 'Content',
+    category: 'Page Structure',
     thumbnail: THUMBNAILS.hero
   },
   program_card: {
     editor: MobileProgramEditor,
     icon: 'ViewTimeline',
-    label: 'Programma + Tip (2-kolom)',
-    description: 'Dagprogramma links + Tip van de Dag rechts',
-    category: 'Content',
-    thumbnail: THUMBNAILS.mobile_program
+    label: 'Programma + Tip (alias)',
+    description: 'Alias voor Dagprogramma + Tip',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_program,
+    hidden: true
   },
   today_events: {
     editor: MobileEventsEditor,
     icon: 'EventNote',
-    label: 'Vandaag Events (grid)',
-    description: 'Responsive events grid (3-kolom desktop)',
-    category: 'Data',
+    label: 'Vandaag Events',
+    description: 'Responsive events: scroll op mobiel, grid op desktop',
+    category: 'Events & Programme',
     thumbnail: THUMBNAILS.mobile_events
   },
   popular_pois: {
@@ -312,7 +341,7 @@ const blockEditorRegistry = {
     icon: 'Stars',
     label: 'Populaire POIs',
     description: 'Top POIs grid met titel',
-    category: 'Data',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.poi_grid
   },
   map_preview: {
@@ -320,39 +349,50 @@ const blockEditorRegistry = {
     icon: 'PinDrop',
     label: 'Kaart met overlay',
     description: 'Interactieve kaart met overlay label',
-    category: 'Data',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.map
   },
   mobile_program: {
     editor: MobileProgramEditor,
     icon: 'ViewTimeline',
-    label: 'Dagprogramma',
-    description: 'Mobiel dagprogramma (ochtend/middag/avond)',
-    category: 'Mobiel',
-    thumbnail: THUMBNAILS.mobile_program
+    label: 'Dagprogramma (alias)',
+    description: 'Alias voor Dagprogramma + Tip',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_program,
+    hidden: true
   },
-  mobile_tip: {
+  tip_of_the_day: {
     editor: MobileTipEditor,
     icon: 'TipsAndUpdates',
     label: 'Tip van de Dag',
     description: 'Dagelijkse aanbeveling op basis van interesses',
-    category: 'Mobiel',
+    category: 'Recommendations & Planning',
     thumbnail: THUMBNAILS.mobile_tip
+  },
+  mobile_tip: {
+    editor: MobileTipEditor,
+    icon: 'TipsAndUpdates',
+    label: 'Tip van de Dag (alias)',
+    description: 'Alias voor Tip van de Dag',
+    category: 'Recommendations & Planning',
+    thumbnail: THUMBNAILS.mobile_tip,
+    hidden: true
   },
   mobile_events: {
     editor: MobileEventsEditor,
     icon: 'EventNote',
-    label: 'Vandaag Events',
-    description: 'Horizontale scrolllijst van vandaag\'s evenementen',
-    category: 'Mobiel',
-    thumbnail: THUMBNAILS.mobile_events
+    label: 'Vandaag Events (alias)',
+    description: 'Alias voor Today Events (responsive)',
+    category: 'Events & Programme',
+    thumbnail: THUMBNAILS.mobile_events,
+    hidden: true
   },
   mobile_map: {
     editor: MobileMapEditor,
     icon: 'PinDrop',
-    label: 'Kaart Preview',
-    description: 'Interactieve kaart met top POIs',
-    category: 'Mobiel',
+    label: 'Kaart Preview (compact)',
+    description: 'Compacte kaart met top POIs per categorie (verschilt van volledige Map)',
+    category: 'Discovery',
     thumbnail: THUMBNAILS.mobile_map
   },
   blog_grid: {
@@ -360,16 +400,16 @@ const blockEditorRegistry = {
     icon: 'Article',
     label: 'Blog Grid',
     description: 'Overzicht van gepubliceerde blog artikelen uit Content Studio',
-    category: 'Content',
+    category: 'Utility & Practical Info',
     thumbnail: THUMBNAILS.rich_text
   }
 };
 
-export const CATEGORIES = ['Content', 'Media', 'Data', 'Interactie', 'Commerce', 'Mobiel'];
+export const CATEGORIES = ["Page Structure", "Discovery", "Events & Programme", "Recommendations & Planning", "Media & Proof", "Commerce & Conversion", "Forms & Assistance", "Utility & Practical Info"];
 
 export function getBlocksByCategory(category) {
   return Object.entries(blockEditorRegistry)
-    .filter(([, meta]) => meta.category === category)
+    .filter(([, meta]) => meta.category === category && !meta.hidden)
     .map(([type, meta]) => ({ type, ...meta }));
 }
 

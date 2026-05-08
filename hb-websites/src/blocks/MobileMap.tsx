@@ -10,7 +10,7 @@ interface MobileMapBlockProps {
 
 export default function MobileMap({ poiLimit, mapLabel, locale = 'nl' }: MobileMapBlockProps) {
   return (
-    <div className="md:hidden" style={{ backgroundColor: '#F5F2EC' }}>
+    <div className="max-w-6xl mx-auto px-6 py-8" role="region" aria-label="Kaart preview" style={{ containerType: 'inline-size' }}>
       <MapPreview locale={locale} poiLimit={poiLimit} mapLabel={mapLabel} />
     </div>
   );
