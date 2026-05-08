@@ -26,10 +26,9 @@ import DesktopHero from './DesktopHero';
 import DesktopProgramTip from './DesktopProgramTip';
 import DesktopEvents from './DesktopEvents';
 import CategoryGrid from './CategoryGrid';
-import MobileProgram from './MobileProgram';
-import MobileTip from './MobileTip';
-import MobileEvents from './MobileEvents';
+import TipOfTheDayBlock from './MobileTip';
 import MobileMap from './MobileMap';
+import AlertStatus from './AlertStatus';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -41,7 +40,8 @@ export const blockRegistry: Record<string, AnyComponent> = {
   event_calendar: EventCalendar,
   event_calendar_filtered: EventCalendarFiltered,
   rich_text: RichText,
-  card_group: CardGroup,
+  curated_cards: CardGroup,
+  card_group: CardGroup, // alias -> CuratedCards (backwards-compat)
   map: MapWrapper,
   testimonials: Testimonials,
   cta: Cta,
@@ -55,21 +55,30 @@ export const blockRegistry: Record<string, AnyComponent> = {
   newsletter: Newsletter,
   weather_widget: WeatherWidget,
   banner: Banner,
+  alert_status: AlertStatus,
   partners: Partners,
   downloads: Downloads,
   desktop_hero: DesktopHero,
   hero_chatbot: DesktopHero,
-  desktop_program_tip: DesktopProgramTip,
+  programme: DesktopProgramTip,
+  desktop_program_tip: DesktopProgramTip, // alias -> Programme (E1.5)
   program_card: DesktopProgramTip,
   desktop_events: DesktopEvents,
   today_events: DesktopEvents,
   category_grid: CategoryGrid,
   popular_pois: PoiGrid,
   map_preview: MapWrapper,
-  mobile_program: MobileProgram,
-  mobile_tip: MobileTip,
-  mobile_events: MobileEvents,
+  mobile_program: DesktopProgramTip, // alias -> Programme (E1.5 consolidation)
+  tip_of_the_day: TipOfTheDayBlock,
+  mobile_tip: TipOfTheDayBlock, // alias -> TipOfTheDay (E1.6)
+  mobile_events: DesktopEvents, // alias -> TodayEvents (E1.4 consolidation)
   mobile_map: MobileMap,
+  // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
+  Hero: Hero,
+  RichText: RichText,
+  PoiGridFiltered: PoiGridFiltered,
+  ContactForm: ContactForm,
+  EventCalendarFiltered: EventCalendarFiltered,
 };
 
 export function getBlock(type: BlockType): AnyComponent | null {

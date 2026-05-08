@@ -2050,5 +2050,15 @@
       "noContentDay": "Sin contenido programado para este día.",
       "noContentWeek": "Sin elementos"
     }
+  },
+  "blockCategories": {
+    "page_structure": "Estructura de Pagina",
+    "discovery": "Descubrir",
+    "events_programme": "Eventos y Programa",
+    "recommendations_planning": "Recomendaciones y Planificacion",
+    "media_proof": "Media y Pruebas",
+    "commerce_conversion": "Comercio y Conversion",
+    "forms_assistance": "Formularios y Ayuda",
+    "utility_practical": "Info Practica"
   }
 }

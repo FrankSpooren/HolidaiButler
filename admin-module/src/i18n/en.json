@@ -2074,5 +2074,15 @@
       "noContentDay": "No content scheduled for this day.",
       "noContentWeek": "No items"
     }
+  },
+  "blockCategories": {
+    "page_structure": "Page Structure",
+    "discovery": "Discovery",
+    "events_programme": "Events & Programme",
+    "recommendations_planning": "Recommendations & Planning",
+    "media_proof": "Media & Proof",
+    "commerce_conversion": "Commerce & Conversion",
+    "forms_assistance": "Forms & Assistance",
+    "utility_practical": "Utility & Practical Info"
   }
 }

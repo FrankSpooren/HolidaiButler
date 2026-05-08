@@ -2089,5 +2089,15 @@
       "noContentDay": "Geen content gepland voor deze dag.",
       "noContentWeek": "Geen items"
     }
+  },
+  "blockCategories": {
+    "page_structure": "Pagina-structuur",
+    "discovery": "Ontdekken",
+    "events_programme": "Evenementen & Programma",
+    "recommendations_planning": "Aanbevelingen & Planning",
+    "media_proof": "Media & Bewijs",
+    "commerce_conversion": "Commerce & Conversie",
+    "forms_assistance": "Formulieren & Hulp",
+    "utility_practical": "Praktische Info"
   }
 }

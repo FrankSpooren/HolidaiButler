@@ -35,6 +35,19 @@
   --radius-tenant: var(--hb-radius);
 }
 
+/* Alert Status design tokens — tenant overridable via destinations.branding */
+:root {
+  --hb-alert-info-bg: #DBEAFE;
+  --hb-alert-info-text: #1E3A8A;
+  --hb-alert-info-border: #3B82F6;
+  --hb-alert-warning-bg: #FEF3C7;
+  --hb-alert-warning-text: #78350F;
+  --hb-alert-warning-border: #F59E0B;
+  --hb-alert-error-bg: #FEE2E2;
+  --hb-alert-error-text: #7F1D1D;
+  --hb-alert-error-border: #EF4444;
+}
+
 body {
   font-family: var(--hb-font-body);
   color: var(--hb-text);

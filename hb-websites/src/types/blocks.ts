@@ -6,6 +6,7 @@ export type BlockType =
   | 'event_calendar_filtered'
   | 'rich_text'
   | 'card_group'
+  | 'curated_cards'
   | 'map'
   | 'gallery'
   | 'testimonials'
@@ -20,11 +21,14 @@ export type BlockType =
   | 'newsletter'
   | 'weather_widget'
   | 'banner'
+  | 'alert_status'
+  | 'blog_grid'
   | 'partners'
   | 'downloads'
   | 'desktop_hero'
   | 'hero_chatbot'
   | 'desktop_program_tip'
+  | 'programme'
   | 'program_card'
   | 'desktop_events'
   | 'today_events'
@@ -33,6 +37,7 @@ export type BlockType =
   | 'map_preview'
   | 'mobile_program'
   | 'mobile_tip'
+  | 'tip_of_the_day'
   | 'mobile_events'
   | 'mobile_map';
 
@@ -124,15 +129,23 @@ export interface RichTextProps {
   enablePoiLinks?: boolean;
 }
 
+export type CuratedCardsVariant = 'curated' | 'offer' | 'related';
+
 export interface CardGroupProps {
+  variant?: CuratedCardsVariant;
   cards: Array<{
     title: string;
     description?: string;
     image?: string;
     href?: string;
+    badge?: string;
+    price?: string;
+    priceCurrency?: string;
     buttons?: HeroButton[];
   }>;
   columns?: 2 | 3 | 4;
+  layout?: 'grid' | 'carousel';
+  headline?: string;
 }
 
 export interface MapMarker {
@@ -245,7 +258,7 @@ export interface WeatherWidgetProps {
 
 export interface BannerProps {
   message: string;
-  type?: 'info' | 'warning' | 'success' | 'promo';
+  type?: 'info' | 'success' | 'promo';
   dismissible?: boolean;
   link?: { label: string; href: string; variant?: 'chatbot'; chatbotAction?: string };
 }
