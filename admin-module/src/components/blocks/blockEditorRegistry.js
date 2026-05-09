@@ -31,6 +31,8 @@ const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
 const SearchEditor = lazy(() => import('./editors/SearchEditor.jsx'));
 const FilterBarEditor = lazy(() => import('./editors/FilterBarEditor.jsx'));
 const MapListEditor = lazy(() => import('./editors/MapListEditor.jsx'));
+const RelatedItemsEditor = lazy(() => import('./editors/RelatedItemsEditor.jsx'));
+const FeaturedItemEditor = lazy(() => import('./editors/FeaturedItemEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -139,6 +141,26 @@ const blockEditorRegistry = {
     featureFlag: 'hasMapListBlock',
     addedIn: 'VII-E2 Batch A',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="170" height="180" rx="8" fill="#e8f4e8"/><circle cx="60" cy="70" r="6" fill="#ef4444"/><circle cx="60" cy="70" r="3" fill="#fff"/><circle cx="120" cy="100" r="6" fill="#3b82f6"/><circle cx="120" cy="100" r="3" fill="#fff"/><circle cx="90" cy="140" r="5" fill="#f59e0b"/><circle cx="90" cy="140" r="2.5" fill="#fff"/><rect x="190" y="10" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="22" width="60" height="6" rx="2" fill="#334155"/><rect x="198" y="34" width="40" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="58" width="100" height="40" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/><rect x="198" y="70" width="60" height="6" rx="2" fill="#1e40af"/><rect x="198" y="82" width="40" height="4" rx="2" fill="#64748b"/><rect x="190" y="106" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="118" width="55" height="6" rx="2" fill="#334155"/><rect x="198" y="130" width="35" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="154" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1" opacity="0.5"/></svg>`
+  },
+  related_items: {
+    editor: RelatedItemsEditor,
+    icon: 'Recommend',
+    label: 'Related Items',
+    description: 'Show related POIs or events based on category or proximity',
+    category: 'Discovery',
+    featureFlag: 'hasRelatedItemsBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="80" y="10" width="140" height="10" rx="2" fill="#334155"/><rect x="15" y="35" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="25" y="45" width="80" height="6" rx="2" fill="#334155"/><rect x="25" y="56" width="100" height="4" rx="2" fill="#94a3b8"/><rect x="25" y="66" width="60" height="4" rx="2" fill="#94a3b8"/><rect x="160" y="35" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="170" y="45" width="70" height="6" rx="2" fill="#334155"/><rect x="170" y="56" width="90" height="4" rx="2" fill="#94a3b8"/><rect x="15" y="115" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="25" y="125" width="75" height="6" rx="2" fill="#334155"/><rect x="160" y="115" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="170" y="125" width="85" height="6" rx="2" fill="#334155"/></svg>`
+  },
+  featured_item: {
+    editor: FeaturedItemEditor,
+    icon: 'Star',
+    label: 'Featured Item',
+    description: 'Highlight a single POI, event, or article with rich presentation',
+    category: 'Discovery',
+    featureFlag: 'hasFeaturedItemBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="260" height="170" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="260" height="90" rx="10 10 0 0" fill="#e2e8f0"/><polygon points="80,70 120,40 160,60 180,35 260,80 20,80" fill="#cbd5e1"/><circle cx="240" cy="40" r="12" fill="#fbbf24"/><rect x="32" y="28" width="50" height="16" rx="8" fill="#f59e0b"/><rect x="38" y="33" width="38" height="6" rx="2" fill="#fff"/><rect x="35" y="115" width="160" height="12" rx="2" fill="#334155"/><rect x="35" y="135" width="220" height="6" rx="2" fill="#94a3b8"/><rect x="35" y="147" width="180" height="6" rx="2" fill="#94a3b8"/><rect x="35" y="163" width="80" height="24" rx="12" fill="#3b82f6"/><rect x="50" y="170" width="50" height="10" rx="2" fill="#fff"/></svg>`
   },
   faq: {
     editor: FaqEditor,

@@ -25,6 +25,8 @@ export type BlockType =
   | 'search'
   | 'filter_bar'
   | 'map_list'
+  | 'related_items'
+  | 'featured_item'
   | 'blog_grid'
   | 'partners'
   | 'downloads'

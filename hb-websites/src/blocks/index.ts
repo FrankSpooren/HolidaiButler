@@ -32,6 +32,8 @@ import AlertStatus from './AlertStatus';
 import Search from './Search';
 import FilterBar from './FilterBar';
 import MapList from './MapList';
+import RelatedItems from './RelatedItems';
+import FeaturedItem from './FeaturedItem';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -79,6 +81,8 @@ export const blockRegistry: Record<string, AnyComponent> = {
   search: Search,
   filter_bar: FilterBar,
   map_list: MapList,
+  related_items: RelatedItems,
+  featured_item: FeaturedItem,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,
