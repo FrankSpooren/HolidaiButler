@@ -34,6 +34,9 @@ import FilterBar from './FilterBar';
 import MapList from './MapList';
 import RelatedItems from './RelatedItems';
 import FeaturedItem from './FeaturedItem';
+import AddToCalendar from './AddToCalendar';
+import OpeningHours from './OpeningHours';
+import LocationDetails from './LocationDetails';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -83,6 +86,9 @@ export const blockRegistry: Record<string, AnyComponent> = {
   map_list: MapList,
   related_items: RelatedItems,
   featured_item: FeaturedItem,
+  add_to_calendar: AddToCalendar,
+  opening_hours: OpeningHours,
+  location_details: LocationDetails,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,
