@@ -28,6 +28,21 @@ const MobileEventsEditor = lazy(() => import('./editors/MobileEventsEditor.jsx')
 const MobileMapEditor = lazy(() => import('./editors/MobileMapEditor.jsx'));
 const BlogGridEditor = lazy(() => import('./editors/BlogGridEditor.jsx'));
 const AlertStatusEditor = lazy(() => import('./editors/AlertStatusEditor.jsx'));
+const SearchEditor = lazy(() => import('./editors/SearchEditor.jsx'));
+const FilterBarEditor = lazy(() => import('./editors/FilterBarEditor.jsx'));
+const MapListEditor = lazy(() => import('./editors/MapListEditor.jsx'));
+const RelatedItemsEditor = lazy(() => import('./editors/RelatedItemsEditor.jsx'));
+const FeaturedItemEditor = lazy(() => import('./editors/FeaturedItemEditor.jsx'));
+const AddToCalendarEditor = lazy(() => import('./editors/AddToCalendarEditor.jsx'));
+const OpeningHoursEditor = lazy(() => import('./editors/OpeningHoursEditor.jsx'));
+const LocationDetailsEditor = lazy(() => import('./editors/LocationDetailsEditor.jsx'));
+const ItineraryEditor = lazy(() => import('./editors/ItineraryEditor.jsx'));
+const SaveToTripEditor = lazy(() => import('./editors/SaveToTripEditor.jsx'));
+const CalendarViewEditor = lazy(() => import('./editors/CalendarViewEditor.jsx'));
+const BreadcrumbsEditor = lazy(() => import('./editors/BreadcrumbsEditor.jsx'));
+const AnchorNavEditor = lazy(() => import('./editors/AnchorNavEditor.jsx'));
+const OfferEditor = lazy(() => import('./editors/OfferEditor.jsx'));
+const ConsentEmbedEditor = lazy(() => import('./editors/ConsentEmbedEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -57,6 +72,7 @@ const THUMBNAILS = {
   mobile_program: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="30" y="15" width="240" height="170" rx="12" fill="#fff"/><rect x="42" y="28" width="120" height="10" rx="2" fill="#5E8B7E"/><rect x="42" y="50" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="50" width="140" height="10" rx="2" fill="#334155"/><rect x="60" y="64" width="80" height="6" rx="2" fill="#5E8B7E"/><line x1="48" y1="80" x2="48" y2="92" stroke="#d5e8df" stroke-width="2"/><rect x="42" y="96" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="96" width="120" height="10" rx="2" fill="#334155"/><rect x="60" y="110" width="70" height="6" rx="2" fill="#5E8B7E"/><line x1="48" y1="126" x2="48" y2="138" stroke="#d5e8df" stroke-width="2"/><rect x="42" y="142" width="12" height="12" rx="6" fill="#e2e8f0"/><rect x="60" y="142" width="100" height="10" rx="2" fill="#334155"/><rect x="60" y="156" width="90" height="6" rx="2" fill="#5E8B7E"/></svg>`,
   mobile_tip: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="30" y="30" width="240" height="140" rx="12" fill="linear-gradient(135deg, #fef3c7, #fde68a)"/><rect x="30" y="30" width="240" height="140" rx="12" fill="#fef3c7"/><rect x="50" y="50" width="80" height="10" rx="2" fill="#92400e"/><rect x="50" y="68" width="200" height="8" rx="2" fill="#78350f"/><rect x="50" y="82" width="160" height="8" rx="2" fill="#78350f"/><rect x="50" y="100" width="60" height="50" rx="8" fill="#e2e8f0"/><rect x="120" y="105" width="130" height="8" rx="2" fill="#92400e"/><rect x="120" y="120" width="100" height="6" rx="2" fill="#a16207"/></svg>`,
   mobile_events: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="15" y="30" width="10" height="10" rx="2" fill="#94a3b8"/><rect x="30" y="30" width="100" height="10" rx="2" fill="#334155"/><rect x="15" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="15" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0"/><rect x="23" y="122" width="64" height="8" rx="2" fill="#334155"/><rect x="23" y="136" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="105" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0"/><rect x="113" y="122" width="64" height="8" rx="2" fill="#334155"/><rect x="113" y="136" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="195" y="55" width="80" height="120" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1" opacity="0.6"/><rect x="195" y="55" width="80" height="60" rx="10 10 0 0" fill="#e2e8f0" opacity="0.6"/></svg>`,
+  search: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="40" y="70" width="220" height="44" rx="22" fill="#fff" stroke="#e2e8f0" stroke-width="2"/><circle cx="72" cy="92" r="10" fill="none" stroke="#94a3b8" stroke-width="2"/><line x1="79" y1="99" x2="86" y2="106" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/><rect x="96" y="86" width="100" height="10" rx="2" fill="#cbd5e1"/><rect x="50" y="125" width="200" height="8" rx="2" fill="#e2e8f0"/><rect x="50" y="140" width="160" height="8" rx="2" fill="#e2e8f0"/><rect x="50" y="155" width="120" height="8" rx="2" fill="#e2e8f0"/></svg>`,
   mobile_map: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#F5F2EC"/><rect x="15" y="15" width="270" height="170" rx="12" fill="#e8f4e8"/><path d="M15,120 Q90,80 165,105 T285,90 L285,185 L15,185 Z" fill="#d4edda" opacity="0.5"/><g transform="translate(80,55)"><circle r="8" fill="#ef4444"/><circle r="4" fill="#fff"/></g><g transform="translate(170,85)"><circle r="8" fill="#3b82f6"/><circle r="4" fill="#fff"/></g><g transform="translate(220,50)"><circle r="6" fill="#f59e0b"/><circle r="3" fill="#fff"/></g><rect x="30" y="145" width="60" height="24" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="38" y="153" width="44" height="8" rx="2" fill="#94a3b8"/><rect x="100" y="145" width="60" height="24" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="108" y="153" width="44" height="8" rx="2" fill="#94a3b8"/></svg>`
 };
 
@@ -105,6 +121,140 @@ const blockEditorRegistry = {
     description: 'Operationele melding: sluiting, weersalarm, capaciteit',
     category: 'Page Structure',
     thumbnail: THUMBNAILS.banner
+  },
+  search: {
+    editor: SearchEditor,
+    icon: 'Search',
+    label: 'Search',
+    description: 'Full-site search across POIs, events, and articles with typeahead',
+    category: 'Discovery',
+    featureFlag: 'hasSearchBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: THUMBNAILS.search
+  },
+  filter_bar: {
+    editor: FilterBarEditor,
+    icon: 'FilterList',
+    label: 'Filter Bar',
+    description: 'Reusable filter bar for POIs, events, and more. Place above content blocks.',
+    category: 'Discovery',
+    featureFlag: 'hasFilterBarBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="70" width="260" height="60" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="86" width="50" height="28" rx="14" fill="#3b82f6"/><rect x="40" y="95" width="34" height="10" rx="2" fill="#fff"/><rect x="90" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="98" y="95" width="39" height="10" rx="2" fill="#94a3b8"/><rect x="153" y="86" width="50" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="161" y="95" width="34" height="10" rx="2" fill="#94a3b8"/><rect x="211" y="86" width="55" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="219" y="95" width="39" height="10" rx="2" fill="#94a3b8"/></svg>`
+  },
+  map_list: {
+    editor: MapListEditor,
+    icon: 'SplitscreenOutlined',
+    label: 'Map + List',
+    description: 'Synchronized map and list with bidirectional interaction',
+    category: 'Discovery',
+    featureFlag: 'hasMapListBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="170" height="180" rx="8" fill="#e8f4e8"/><circle cx="60" cy="70" r="6" fill="#ef4444"/><circle cx="60" cy="70" r="3" fill="#fff"/><circle cx="120" cy="100" r="6" fill="#3b82f6"/><circle cx="120" cy="100" r="3" fill="#fff"/><circle cx="90" cy="140" r="5" fill="#f59e0b"/><circle cx="90" cy="140" r="2.5" fill="#fff"/><rect x="190" y="10" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="22" width="60" height="6" rx="2" fill="#334155"/><rect x="198" y="34" width="40" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="58" width="100" height="40" rx="6" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/><rect x="198" y="70" width="60" height="6" rx="2" fill="#1e40af"/><rect x="198" y="82" width="40" height="4" rx="2" fill="#64748b"/><rect x="190" y="106" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="198" y="118" width="55" height="6" rx="2" fill="#334155"/><rect x="198" y="130" width="35" height="4" rx="2" fill="#94a3b8"/><rect x="190" y="154" width="100" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1" opacity="0.5"/></svg>`
+  },
+  related_items: {
+    editor: RelatedItemsEditor,
+    icon: 'Recommend',
+    label: 'Related Items',
+    description: 'Show related POIs or events based on category or proximity',
+    category: 'Discovery',
+    featureFlag: 'hasRelatedItemsBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="80" y="10" width="140" height="10" rx="2" fill="#334155"/><rect x="15" y="35" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="25" y="45" width="80" height="6" rx="2" fill="#334155"/><rect x="25" y="56" width="100" height="4" rx="2" fill="#94a3b8"/><rect x="25" y="66" width="60" height="4" rx="2" fill="#94a3b8"/><rect x="160" y="35" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="170" y="45" width="70" height="6" rx="2" fill="#334155"/><rect x="170" y="56" width="90" height="4" rx="2" fill="#94a3b8"/><rect x="15" y="115" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="25" y="125" width="75" height="6" rx="2" fill="#334155"/><rect x="160" y="115" width="125" height="70" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="170" y="125" width="85" height="6" rx="2" fill="#334155"/></svg>`
+  },
+  featured_item: {
+    editor: FeaturedItemEditor,
+    icon: 'Star',
+    label: 'Featured Item',
+    description: 'Highlight a single POI, event, or article with rich presentation',
+    category: 'Discovery',
+    featureFlag: 'hasFeaturedItemBlock',
+    addedIn: 'VII-E2 Batch A',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="260" height="170" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="260" height="90" rx="10 10 0 0" fill="#e2e8f0"/><polygon points="80,70 120,40 160,60 180,35 260,80 20,80" fill="#cbd5e1"/><circle cx="240" cy="40" r="12" fill="#fbbf24"/><rect x="32" y="28" width="50" height="16" rx="8" fill="#f59e0b"/><rect x="38" y="33" width="38" height="6" rx="2" fill="#fff"/><rect x="35" y="115" width="160" height="12" rx="2" fill="#334155"/><rect x="35" y="135" width="220" height="6" rx="2" fill="#94a3b8"/><rect x="35" y="147" width="180" height="6" rx="2" fill="#94a3b8"/><rect x="35" y="163" width="80" height="24" rx="12" fill="#3b82f6"/><rect x="50" y="170" width="50" height="10" rx="2" fill="#fff"/></svg>`
+  },
+  add_to_calendar: {
+    editor: AddToCalendarEditor,
+    icon: 'CalendarMonth',
+    label: 'Add to Calendar',
+    description: 'Calendar links for Google, Apple, Outlook, Yahoo',
+    category: 'Events & Planning',
+    featureFlag: 'hasAddToCalendarBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="60" y="50" width="180" height="100" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="60" y="50" width="180" height="30" rx="10 10 0 0" fill="#3b82f6"/><rect x="75" y="60" width="60" height="10" rx="2" fill="#fff"/><rect x="80" y="95" width="70" height="24" rx="12" fill="#4285F4"/><rect x="88" y="102" width="54" height="10" rx="2" fill="#fff"/><rect x="160" y="95" width="60" height="24" rx="12" fill="#333"/><rect x="168" y="102" width="44" height="10" rx="2" fill="#fff"/><rect x="80" y="125" width="65" height="24" rx="12" fill="#0078D4"/><rect x="88" y="132" width="49" height="10" rx="2" fill="#fff"/></svg>`
+  },
+  opening_hours: {
+    editor: OpeningHoursEditor,
+    icon: 'Schedule',
+    label: 'Opening Hours',
+    description: 'Show opening hours with live open/closed status',
+    category: 'Events & Planning',
+    featureFlag: 'hasOpeningHoursBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="40" y="20" width="220" height="160" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="55" y="35" width="60" height="16" rx="8" fill="#dcfce7"/><rect x="63" y="39" width="44" height="8" rx="2" fill="#16a34a"/><rect x="55" y="65" width="80" height="8" rx="2" fill="#334155"/><rect x="190" y="65" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="85" width="70" height="8" rx="2" fill="#334155"/><rect x="190" y="85" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="105" width="90" height="8" rx="2" fill="#1e40af" opacity="0.8"/><rect x="190" y="105" width="55" height="8" rx="2" fill="#1e40af"/><rect x="50" y="100" width="200" height="20" rx="4" fill="#eff6ff" opacity="0.5"/><rect x="55" y="125" width="75" height="8" rx="2" fill="#334155"/><rect x="190" y="125" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="145" width="65" height="8" rx="2" fill="#334155"/><rect x="190" y="145" width="40" height="8" rx="2" fill="#ef4444"/></svg>`
+  },
+  location_details: {
+    editor: LocationDetailsEditor,
+    icon: 'Place',
+    label: 'Location Details',
+    description: 'Address, directions, parking, and accessibility info',
+    category: 'Events & Planning',
+    featureFlag: 'hasLocationDetailsBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="20" width="240" height="160" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><g transform="translate(50,45)"><circle r="12" fill="#ef4444" opacity="0.2"/><circle r="6" fill="#ef4444"/></g><rect x="72" y="38" width="120" height="8" rx="2" fill="#334155"/><rect x="72" y="52" width="80" height="6" rx="2" fill="#94a3b8"/><rect x="50" y="75" width="100" height="28" rx="14" fill="#3b82f6"/><rect x="62" y="83" width="76" height="12" rx="2" fill="#fff"/><rect x="160" y="75" width="80" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="172" y="83" width="56" height="12" rx="2" fill="#94a3b8"/><line x1="50" y1="120" x2="250" y2="120" stroke="#e2e8f0"/><rect x="50" y="132" width="16" height="16" rx="4" fill="#f1f5f9"/><rect x="74" y="132" width="50" height="6" rx="2" fill="#64748b"/><rect x="74" y="144" width="120" height="6" rx="2" fill="#94a3b8"/></svg>`
+  },
+  itinerary: {
+    editor: ItineraryEditor,
+    icon: 'Route',
+    label: 'Itinerary / Route',
+    description: 'Multi-stop route planner with OSRM-powered routing',
+    category: 'Events & Planning',
+    featureFlag: 'hasItineraryBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><circle cx="60" cy="40" r="14" fill="#3b82f6"/><text x="60" y="45" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">1</text><line x1="60" y1="54" x2="60" y2="76" stroke="#93c5fd" stroke-width="2"/><circle cx="60" cy="90" r="14" fill="#3b82f6"/><text x="60" y="95" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">2</text><line x1="60" y1="104" x2="60" y2="126" stroke="#93c5fd" stroke-width="2"/><circle cx="60" cy="140" r="14" fill="#3b82f6"/><text x="60" y="145" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text><rect x="90" y="30" width="100" height="8" rx="2" fill="#334155"/><rect x="90" y="44" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="90" y="80" width="80" height="8" rx="2" fill="#334155"/><rect x="90" y="94" width="50" height="6" rx="2" fill="#94a3b8"/><rect x="90" y="130" width="90" height="8" rx="2" fill="#334155"/><rect x="200" y="20" width="80" height="160" rx="8" fill="#e8f4e8" stroke="#d1d5db" stroke-width="1"/></svg>`
+  },
+  save_to_trip: {
+    editor: SaveToTripEditor,
+    icon: 'BookmarkAdd',
+    label: 'Save to Trip',
+    description: 'Let visitors save POIs and events to a personal plan',
+    category: 'Events & Planning',
+    featureFlag: 'hasSaveToTripBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="60" y="30" width="180" height="140" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="75" y="45" width="100" height="10" rx="2" fill="#334155"/><rect x="75" y="60" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="75" y="80" width="150" height="30" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><circle cx="90" cy="95" r="8" fill="#eff6ff"/><text x="90" y="99" font-size="10" fill="#3b82f6" text-anchor="middle">1</text><rect x="105" y="89" width="80" height="6" rx="2" fill="#334155"/><rect x="105" y="99" width="40" height="4" rx="2" fill="#94a3b8"/><rect x="75" y="118" width="150" height="30" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><circle cx="90" cy="133" r="8" fill="#eff6ff"/><text x="90" y="137" font-size="10" fill="#3b82f6" text-anchor="middle">2</text><rect x="105" y="127" width="70" height="6" rx="2" fill="#334155"/><rect x="105" y="137" width="50" height="4" rx="2" fill="#94a3b8"/></svg>`
+  },
+  calendar_view: {
+    editor: CalendarViewEditor,
+    icon: 'CalendarViewMonth',
+    label: 'Calendar View',
+    description: 'Full calendar with month, week, and agenda views (FullCalendar)',
+    category: 'Events & Planning',
+    featureFlag: 'hasCalendarViewBlock',
+    addedIn: 'VII-E2 Batch B',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="260" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="260" height="30" rx="8 8 0 0" fill="#3b82f6"/><rect x="35" y="25" width="50" height="10" rx="2" fill="#fff"/><rect x="210" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><rect x="235" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><g fill="#94a3b8" font-size="8"><text x="45" y="58">Ma</text><text x="80" y="58">Di</text><text x="115" y="58">Wo</text><text x="150" y="58">Do</text><text x="185" y="58">Vr</text><text x="220" y="58">Za</text><text x="250" y="58">Zo</text></g><rect x="30" y="70" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="70" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="150" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="36" y="80" width="20" height="4" rx="1" fill="#3b82f6"/><rect x="30" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="70" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="116" y="115" width="20" height="4" rx="1" fill="#ef4444"/><rect x="150" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="190" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="196" y="115" width="18" height="4" rx="1" fill="#7c3aed"/></svg>`
+  },
+  breadcrumbs: {
+    editor: BreadcrumbsEditor, icon: 'NavigateNext', label: 'Breadcrumbs',
+    description: 'Page navigation breadcrumbs with Schema.org SEO',
+    category: 'Page Structure', featureFlag: 'hasBreadcrumbsBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="85" width="40" height="30" rx="4" fill="#eff6ff"/><rect x="35" y="95" width="30" height="10" rx="2" fill="#3b82f6"/><text x="82" y="105" font-size="16" fill="#cbd5e1">›</text><rect x="95" y="85" width="60" height="30" rx="4" fill="#f1f5f9"/><rect x="100" y="95" width="50" height="10" rx="2" fill="#94a3b8"/><text x="167" y="105" font-size="16" fill="#cbd5e1">›</text><rect x="180" y="85" width="80" height="30" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><rect x="185" y="95" width="70" height="10" rx="2" fill="#334155"/></svg>`
+  },
+  anchor_nav: {
+    editor: AnchorNavEditor, icon: 'Anchor', label: 'Anchor Navigation',
+    description: 'In-page section navigation with active highlighting',
+    category: 'Page Structure', featureFlag: 'hasAnchorNavBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="80" width="260" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="30" y="88" width="55" height="24" rx="12" fill="#3b82f6"/><rect x="38" y="95" width="39" height="10" rx="2" fill="#fff"/><rect x="95" y="88" width="50" height="24" rx="12" fill="#f1f5f9"/><rect x="103" y="95" width="34" height="10" rx="2" fill="#94a3b8"/><rect x="155" y="88" width="55" height="24" rx="12" fill="#f1f5f9"/><rect x="163" y="95" width="39" height="10" rx="2" fill="#94a3b8"/><rect x="220" y="88" width="48" height="24" rx="12" fill="#f1f5f9"/><rect x="228" y="95" width="32" height="10" rx="2" fill="#94a3b8"/></svg>`
+  },
+  offer: {
+    editor: OfferEditor, icon: 'LocalOffer', label: 'Offer / Package',
+    description: 'Deals, bundles, and promotions with pricing and CTA',
+    category: 'Commerce', featureFlag: 'hasOfferPackageBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/><rect x="30" y="25" width="40" height="14" rx="7" fill="#f59e0b"/><rect x="35" y="29" width="30" height="6" rx="2" fill="#fff"/><rect x="30" y="75" width="80" height="8" rx="2" fill="#334155"/><rect x="30" y="90" width="100" height="6" rx="2" fill="#94a3b8"/><rect x="30" y="110" width="50" height="14" rx="2" fill="#1e40af" font-weight="bold"/><rect x="85" y="112" width="35" height="10" rx="2" fill="#94a3b8" opacity="0.5"/><rect x="30" y="140" width="100" height="28" rx="8" fill="#3b82f6"/><rect x="50" y="148" width="60" height="12" rx="2" fill="#fff"/><rect x="160" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="160" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/></svg>`
+  },
+  consent_embed: {
+    editor: ConsentEmbedEditor, icon: 'PrivacyTip', label: 'Consent-aware Embed',
+    description: 'GDPR-compliant embed for YouTube, Maps, social (loads after consent)',
+    category: 'Page Structure', featureFlag: 'hasConsentEmbedBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#1e293b"/><rect x="40" y="30" width="220" height="140" rx="10" fill="#334155"/><circle cx="150" cy="85" r="24" fill="rgba(255,255,255,0.1)"/><text x="150" y="92" font-size="20" fill="rgba(255,255,255,0.4)" text-anchor="middle">▶</text><rect x="90" y="125" width="120" height="28" rx="14" fill="#fff"/><rect x="108" y="133" width="84" height="12" rx="2" fill="#334155"/><rect x="80" y="158" width="140" height="6" rx="2" fill="rgba(255,255,255,0.2)"/></svg>`
   },
   faq: {
     editor: FaqEditor,

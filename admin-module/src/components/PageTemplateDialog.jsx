@@ -32,6 +32,10 @@ import TouchApp from '@mui/icons-material/TouchApp';
 import ViewModule from '@mui/icons-material/ViewModule';
 import ViewTimeline from '@mui/icons-material/ViewTimeline';
 import WbSunny from '@mui/icons-material/WbSunny';
+import Explore from '@mui/icons-material/Explore';
+import Home from '@mui/icons-material/Home';
+import Info from '@mui/icons-material/Info';
+import InsertDriveFile from '@mui/icons-material/InsertDriveFile';
 
 // Icon map — only imports used icons (was: import * as MuiIcons — 3.8MB!)
 const MuiIcons = {
@@ -63,7 +67,11 @@ const MuiIcons = {
   TouchApp,
   ViewModule,
   ViewTimeline,
-  WbSunny
+  WbSunny,
+  Explore,
+  Home,
+  Info,
+  InsertDriveFile
 };
 import { useTranslation } from 'react-i18next';
 import pageTemplates from '../data/pageTemplates.js';

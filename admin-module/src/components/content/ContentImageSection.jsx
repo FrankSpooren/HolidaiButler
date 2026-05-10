@@ -2,12 +2,14 @@
  * ContentImageSection — Shared image management for content items
  * Extracted from ContentStudioPage for reuse in ConceptDialog + ContentItemDialog
  * Sources: Media Library, POI images, Pexels stock photos, Unsplash, Flickr
+ *
+ * v2.0 — Enterprise Media Picker: infinite scroll, search, category filter, counter
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box, Typography, Paper, Button, IconButton, Chip, TextField,
   Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab,
-  CircularProgress, Alert, Divider,
+  CircularProgress, Alert, Divider, Skeleton, Select, MenuItem, InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -18,6 +20,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useTranslation } from 'react-i18next';
 import contentService from '../../api/contentService.js';
 import client from '../../api/client.js';
+
+const PAGE_SIZE = 50;
+const POI_PAGE_SIZE = 40;
 
 export default function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false }) {
   const { t } = useTranslation();
@@ -36,48 +41,123 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   const [mediaTab, setMediaTab] = useState(0);
   const [mediaSearch, setMediaSearch] = useState('');
 
-  // Load images from all sources based on active tab + search
+  // Pagination state
+  const [mediaPage, setMediaPage] = useState(1);
+  const [mediaTotal, setMediaTotal] = useState(0);
+  const [mediaHasMore, setMediaHasMore] = useState(false);
+  const [mediaLoadingMore, setMediaLoadingMore] = useState(false);
+  const [mediaCategory, setMediaCategory] = useState('all');
+  const sentinelRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const searchTimerRef = useRef(null);
+
+  const apiBase = import.meta.env.VITE_API_URL || 'https://api.holidaibutler.com';
+  const destCode = String(item?.destination_id || 1);
+  const destId = item?.destination_id || 1;
+
+  // Fetch media page (append or replace)
+  const fetchMediaPage = useCallback(async (page, append = false) => {
+    if (!append) setMediaLoading(true);
+    else setMediaLoadingMore(true);
+
+    try {
+      if (mediaTab === 0) {
+        const params = { limit: PAGE_SIZE, page };
+        if (mediaSearch.trim()) params.search = mediaSearch.trim();
+        if (mediaCategory && mediaCategory !== 'all') params.category = mediaCategory;
+        const res = await client.get('/media', { params, headers: { 'X-Destination-ID': destCode } });
+        const files = res.data?.data?.files || res.data?.data || [];
+        const meta = res.data?.meta || {};
+        const mapped = files.map(f => ({
+          ...f, source: 'media',
+          url: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}`,
+          thumbnail: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}`,
+        }));
+        if (append) {
+          setMediaItems(prev => [...prev, ...mapped]);
+        } else {
+          setMediaItems(mapped);
+        }
+        setMediaTotal(meta.total || mapped.length);
+        setMediaHasMore(page < (meta.totalPages || 1));
+        setMediaPage(page);
+      } else if (mediaTab === 1) {
+        const searchParam = mediaSearch ? `&search=${encodeURIComponent(mediaSearch)}` : '';
+        const res = await client.get(`/content/images/browse?destination_id=${destId}&limit=${POI_PAGE_SIZE}&page=${page}${searchParam}`);
+        const data = res.data?.data || [];
+        const meta = res.data?.meta || {};
+        const mapped = data.map(img => ({ id: img.id, source: 'poi', url: img.url, thumbnail: img.url, poi_name: img.poi_name }));
+        if (append) {
+          setMediaItems(prev => [...prev, ...mapped]);
+        } else {
+          setMediaItems(mapped);
+        }
+        setMediaTotal(meta.total || mapped.length);
+        setMediaHasMore(mapped.length >= POI_PAGE_SIZE);
+        setMediaPage(page);
+      } else if (mediaTab === 2 && mediaSearch.trim().length > 1) {
+        const res = await contentService.searchPexels(mediaSearch.trim());
+        const photos = res.data || [];
+        setMediaItems(photos.map(p => ({
+          id: p.id, source: 'pexels',
+          url: p.urls?.regular || p.urls?.small,
+          thumbnail: p.urls?.thumb || p.urls?.small,
+          photographer: p.photographer || p.user?.name,
+          source_link: p.url || p.links?.html,
+        })));
+        setMediaTotal(photos.length);
+        setMediaHasMore(false);
+      }
+    } catch {
+      if (!append) setMediaItems([]);
+    } finally {
+      setMediaLoading(false);
+      setMediaLoadingMore(false);
+    }
+  }, [mediaTab, mediaSearch, mediaCategory, destCode, destId, apiBase]);
+
+  // Initial load when picker opens or tab/search/category changes
   useEffect(() => {
     if (!mediaPickerOpen) return;
-    const apiBase = import.meta.env.VITE_API_URL || 'https://api.holidaibutler.com';
-    const destCode = String(item?.destination_id || 1);
-    const destId = item?.destination_id || 1;
+    // Debounce search input
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setMediaPage(1);
+      fetchMediaPage(1, false);
+    }, mediaSearch ? 350 : 0);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [mediaPickerOpen, mediaTab, mediaSearch, mediaCategory]);
 
-    if (mediaTab === 0) {
-      setMediaLoading(true);
-      client.get('/media', { params: { limit: 50 }, headers: { 'X-Destination-ID': destCode } })
-        .then(res => {
-          const files = res.data?.data?.files || res.data?.data || [];
-          setMediaItems(files.map(f => ({ ...f, source: 'media', url: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}`, thumbnail: `${apiBase}/media-files/${f.destination_id || destId}/${f.filename}` })));
-        })
-        .catch(() => setMediaItems([]))
-        .finally(() => setMediaLoading(false));
-    } else if (mediaTab === 1) {
-      setMediaLoading(true);
-      const searchParam = mediaSearch ? `&search=${encodeURIComponent(mediaSearch)}` : '';
-      client.get(`/content/images/browse?destination_id=${destId}&limit=30${searchParam}`)
-        .then(res => setMediaItems((res.data?.data || []).map(img => ({ id: img.id, source: 'poi', url: img.url, thumbnail: img.url, poi_name: img.poi_name }))))
-        .catch(() => setMediaItems([]))
-        .finally(() => setMediaLoading(false));
-    } else if (mediaTab === 2 && mediaSearch.trim().length > 1) {
-      setMediaLoading(true);
-      contentService.searchPexels(mediaSearch.trim())
-        .then(res => {
-          const photos = res.data || [];
-          setMediaItems(photos.map(p => ({ id: p.id, source: 'pexels', url: p.urls?.regular || p.urls?.small, thumbnail: p.urls?.thumb || p.urls?.small, photographer: p.photographer || p.user?.name, source_link: p.url || p.links?.html })));
-        })
-        .catch(() => setMediaItems([]))
-        .finally(() => setMediaLoading(false));
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    if (!mediaPickerOpen || !mediaHasMore || mediaLoading || mediaLoadingMore) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && mediaHasMore && !mediaLoadingMore) {
+          fetchMediaPage(mediaPage + 1, true);
+        }
+      },
+      { root: scrollContainerRef.current, threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [mediaPickerOpen, mediaHasMore, mediaLoading, mediaLoadingMore, mediaPage, fetchMediaPage]);
+
+  // Reset state when picker closes
+  useEffect(() => {
+    if (!mediaPickerOpen) {
+      setMediaItems([]);
+      setMediaPage(1);
+      setMediaTotal(0);
+      setMediaHasMore(false);
+      setMediaSearch('');
+      setMediaCategory('all');
     }
-  }, [mediaPickerOpen, mediaTab, mediaSearch, itemId, item?.destination_id]);
+  }, [mediaPickerOpen]);
 
-  // Load current images — resolve raw IDs to URLs
-
-
-  // Suggestions loaded on-demand (user clicks button), not on mount — performance optimization
-  // useEffect removed: was loading suggestions for every item open, even when not needed
-
-  // Load images directly from server (not from item prop — avoids stale state)
+  // Load current images from server
   const loadImages = async () => {
     if (!itemId) return;
     try {
@@ -104,14 +184,12 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
     const newOrder = [...images];
     [newOrder[fromIdx], newOrder[toIdx]] = [newOrder[toIdx], newOrder[fromIdx]];
     setImages(newOrder);
-    // Persist to backend
     const updatedIds = newOrder.map(m => {
       if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
       return typeof m === 'object' ? m.id : m;
     });
     try {
       await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
-      // Reload images from server to confirm persistence
       await loadImages();
     } catch (err) {
       console.error('Image reorder failed:', err);
@@ -129,7 +207,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
         if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
         return typeof m === 'object' ? m.id : m;
       });
-      const patchRes = await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
+      await client.patch(`/content/items/${itemId}`, { media_ids: updatedIds });
       setImages(updatedImages);
       if (onUpdate) onUpdate();
     } catch (err) {
@@ -193,6 +271,18 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
   };
 
   const alternatives = suggestions.filter(img => !currentImageIds.has(img.id));
+
+  // Loading skeleton grid
+  const SkeletonGrid = () => (
+    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <Box key={i} sx={{ width: 150 }}>
+          <Skeleton variant="rounded" width={150} height={112} />
+          <Skeleton variant="text" width={100} sx={{ mt: 0.3 }} />
+        </Box>
+      ))}
+    </Box>
+  );
 
   return (
     <Paper variant="outlined" sx={{ p: 1.5 }}>
@@ -262,7 +352,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
                 onError={e => { e.target.style.display = 'none'; }}
               />
               <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3 }}>
-                {img.poi_name || img.source || '—'}
+                {img.poi_name || img.source || '\u2014'}
               </Typography>
             </Box>
           ))}
@@ -301,7 +391,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
                           alt={img.poi_name || img.alt_text || ''} sx={{ width: 140, height: 105, objectFit: 'cover', borderRadius: 1, border: isSelected ? '2px solid' : '2px solid transparent', borderColor: isSelected ? 'success.main' : 'transparent', '&:hover': { borderColor: isSelected ? 'success.main' : 'primary.main' } }}
                           onError={e => { e.target.style.display = 'none'; }}
                         />
-                        <Typography variant="caption" noWrap>{img.poi_name || img.source || '—'}</Typography>
+                        <Typography variant="caption" noWrap>{img.poi_name || img.source || '\u2014'}</Typography>
                         {isSelected && <Chip label={t('contentStudio.images.active', 'Actief')} size="small" color="success" sx={{ height: 16, fontSize: 10 }} />}
                       </Box>
                     );
@@ -344,69 +434,113 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
         </DialogActions>
       </Dialog>
 
-      {/* Unified Image Picker Dialog — All Sources */}
+      {/* Unified Image Picker Dialog — All Sources — Enterprise v2.0 */}
       <Dialog open={mediaPickerOpen} onClose={() => setMediaPickerOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{t('contentStudio.images.selectFromLibrary', 'Selecteer afbeelding')}</DialogTitle>
-        <DialogContent>
-          <Tabs value={mediaTab} onChange={(_, v) => { setMediaTab(v); setMediaSearch(''); setMediaItems([]); }} sx={{ mb: 2 }}>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+          <span>{t('contentStudio.images.selectFromLibrary', 'Selecteer afbeelding')}</span>
+          {mediaTotal > 0 && (
+            <Chip label={`${mediaItems.length} van ${mediaTotal}`} size="small" variant="outlined"
+              sx={{ fontSize: 11, height: 22 }} />
+          )}
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
+          <Tabs value={mediaTab} onChange={(_, v) => { setMediaTab(v); setMediaSearch(''); setMediaItems([]); setMediaPage(1); setMediaTotal(0); setMediaCategory('all'); }} sx={{ mb: 1.5 }}>
             <Tab label="Media" />
             <Tab label="POI" />
             <Tab label="Pexels" />
           </Tabs>
 
-          <TextField size="small" fullWidth
-            placeholder={mediaTab === 1 ? 'Zoek op naam, categorie, sfeer (bijv. "terrace", "romantic", "beach")...' : mediaTab === 2 ? 'Zoek stock foto\'s (Engels)...' : 'Zoek...'}
-            value={mediaSearch}
-            onChange={e => setMediaSearch(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && (mediaTab === 2 || mediaTab === 3)) { setMediaItems([]); }}}
-            helperText={mediaTab === 1 ? 'Zoekt op POI-naam, Google categorie, review tags, sfeer en visuele AI-tags' : undefined}
-            sx={{ mb: 2 }} />
+          {/* Search + Category filter bar */}
+          <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+            <TextField size="small" fullWidth
+              placeholder={mediaTab === 1 ? 'Zoek op naam, categorie, sfeer...' : mediaTab === 2 ? 'Zoek stock foto\'s (Engels)...' : 'Zoek in mediabibliotheek...'}
+              value={mediaSearch}
+              onChange={e => setMediaSearch(e.target.value)}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }}
+            />
+            {mediaTab === 0 && (
+              <Select size="small" value={mediaCategory}
+                onChange={e => setMediaCategory(e.target.value)}
+                sx={{ minWidth: 120, fontSize: 13 }}>
+                <MenuItem value="all">Alle</MenuItem>
+                <MenuItem value="branding">Branding</MenuItem>
+                <MenuItem value="pois">POIs</MenuItem>
+                <MenuItem value="video">Video</MenuItem>
+                <MenuItem value="other">Overig</MenuItem>
+              </Select>
+            )}
+          </Box>
 
+          {/* Image grid with infinite scroll */}
           {mediaLoading ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}><CircularProgress /></Box>
+            <SkeletonGrid />
           ) : mediaItems.length > 0 ? (
-            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', maxHeight: 400, overflowY: 'auto' }}>
-              {mediaItems.map((m, idx) => (
-                <Box key={m.id || idx} sx={{ cursor: 'pointer', width: 150, textAlign: 'center' }}
-                  onClick={async () => {
-                    if (m.source === 'unsplash' || m.source === 'pexels') {
-                      try {
-                        const res = await client.post('/content/images/download-external', {
-                          url: m.url, source: m.source, destination_id: item?.destination_id || 1,
-                          photographer: m.photographer || '', source_link: m.source_link || '',
-                        });
-                        const savedId = res.data?.data?.id;
-                        if (savedId) await handleAttachImage(savedId);
-                      } catch { await handleAttachImage(m.url); }
-                    } else {
-                      const attachId = m.source === 'poi' ? `poi:${m.id}` : m.id;
-                      await handleAttachImage(attachId);
-                    }
-                    setMediaPickerOpen(false);
-                  }}>
-                  <Box component="img" src={m.thumbnail || m.url} alt={m.alt_text || m.poi_name || ''}
-                    sx={{ width: 150, height: 112, objectFit: 'cover', borderRadius: 1,
-                      border: '2px solid transparent', '&:hover': { borderColor: 'primary.main', transform: 'scale(1.03)' },
-                      transition: 'all 0.2s' }}
-                    onError={e => { e.target.style.display = 'none'; }} />
-                  <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3, fontWeight: 500 }}>
-                    {m.poi_name || m.original_name || m.photographer || m.filename || '—'}
-                  </Typography>
-                  {m.poi_category && (
-                    <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 10, color: 'text.secondary' }}>{m.poi_category}</Typography>
-                  )}
-                  {m.visual_description && (
-                    <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 9, color: 'text.disabled', fontStyle: 'italic' }}>{m.visual_description}</Typography>
-                  )}
-                  {(m.source === 'unsplash' || m.source === 'pexels') && (
-                    <Typography variant="caption" sx={{ fontSize: 9, color: 'text.disabled' }}>{m.source}</Typography>
+            <Box ref={scrollContainerRef}
+              sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', maxHeight: 480, overflowY: 'auto', alignContent: 'flex-start', p: 0.5 }}>
+              {mediaItems.map((m, idx) => {
+                const isAlreadySelected = currentImageIds.has(m.id) || currentImageIds.has(`poi:${m.id}`);
+                return (
+                  <Box key={`${m.id}-${idx}`}
+                    sx={{ cursor: isAlreadySelected ? 'default' : 'pointer', width: 150, textAlign: 'center', opacity: isAlreadySelected ? 0.45 : 1, position: 'relative' }}
+                    onClick={async () => {
+                      if (isAlreadySelected) return;
+                      if (m.source === 'unsplash' || m.source === 'pexels') {
+                        try {
+                          const res = await client.post('/content/images/download-external', {
+                            url: m.url, source: m.source, destination_id: destId,
+                            photographer: m.photographer || '', source_link: m.source_link || '',
+                          });
+                          const savedId = res.data?.data?.id;
+                          if (savedId) await handleAttachImage(savedId);
+                        } catch { await handleAttachImage(m.url); }
+                      } else {
+                        const attachId = m.source === 'poi' ? `poi:${m.id}` : m.id;
+                        await handleAttachImage(attachId);
+                      }
+                      setMediaPickerOpen(false);
+                    }}>
+                    <Box component="img" src={m.thumbnail || m.url} alt={m.alt_text || m.poi_name || ''}
+                      sx={{ width: 150, height: 112, objectFit: 'cover', borderRadius: 1,
+                        border: isAlreadySelected ? '2px solid' : '2px solid transparent',
+                        borderColor: isAlreadySelected ? 'success.main' : 'transparent',
+                        '&:hover': { borderColor: isAlreadySelected ? 'success.main' : 'primary.main', transform: isAlreadySelected ? 'none' : 'scale(1.03)' },
+                        transition: 'all 0.2s' }}
+                      onError={e => { e.target.style.display = 'none'; }} />
+                    {isAlreadySelected && (
+                      <Chip label="Actief" size="small" color="success"
+                        sx={{ position: 'absolute', top: 4, right: 4, height: 18, fontSize: 9 }} />
+                    )}
+                    <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3, fontWeight: 500 }}>
+                      {m.poi_name || m.original_name || m.photographer || m.filename || '\u2014'}
+                    </Typography>
+                    {m.poi_category && (
+                      <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 10, color: 'text.secondary' }}>{m.poi_category}</Typography>
+                    )}
+                    {m.visual_description && (
+                      <Typography variant="caption" noWrap sx={{ display: 'block', fontSize: 9, color: 'text.disabled', fontStyle: 'italic' }}>{m.visual_description}</Typography>
+                    )}
+                    {(m.source === 'unsplash' || m.source === 'pexels') && (
+                      <Typography variant="caption" sx={{ fontSize: 9, color: 'text.disabled' }}>{m.source}</Typography>
+                    )}
+                  </Box>
+                );
+              })}
+              {/* Sentinel for infinite scroll */}
+              {mediaHasMore && (
+                <Box ref={sentinelRef} sx={{ width: '100%', py: 2, textAlign: 'center' }}>
+                  {mediaLoadingMore && (
+                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} variant="rounded" width={150} height={112} />
+                      ))}
+                    </Box>
                   )}
                 </Box>
-              ))}
+              )}
             </Box>
           ) : (
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-              {mediaTab === 2 && !mediaSearch ? 'Typ een zoekterm en druk Enter voor Pexels stock foto\'s.' : 'Geen resultaten gevonden.'}
+              {mediaTab === 2 && !mediaSearch ? 'Typ een zoekterm voor Pexels stock foto\'s.' : 'Geen resultaten gevonden.'}
             </Typography>
           )}
         </DialogContent>

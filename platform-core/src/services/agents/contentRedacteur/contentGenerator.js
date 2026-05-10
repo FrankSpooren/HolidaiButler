@@ -16,7 +16,7 @@ import { mysqlSequelize } from '../../../config/database.js';
 import { buildBrandContext } from './brandContext.js';
 import logger from '../../../utils/logger.js';
 
-const SEO_MINIMUM_SCORE = 50; // Lowered from 80 — auto-improve adds 25-90s per round but rarely improves score. Blogs score 55-75 naturally.
+const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
 
 // Domain mapping for deep links per destination
 const DESTINATION_DOMAINS = {
@@ -877,7 +877,7 @@ async function translateContent(title, body, targetLangs) {
  */
 async function improveContent(content, seoResult, options = {}) {
   const { destinationId, contentType, keywords = [], targetPlatform } = options;
-  const MAX_ROUNDS = 1; // Single improvement round — stop early if score doesn't improve (was 3, caused HTTP timeouts on blogs)
+  const MAX_ROUNDS = 2; // Two improvement rounds — balance between quality and response time
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
   // Platform character limits — enforce during improvement

@@ -36,6 +36,7 @@ import TouchApp from '@mui/icons-material/TouchApp';
 import ViewModule from '@mui/icons-material/ViewModule';
 import ViewTimeline from '@mui/icons-material/ViewTimeline';
 import WbSunny from '@mui/icons-material/WbSunny';
+import Extension from '@mui/icons-material/Extension';
 
 // Icon map — only imports used icons (was: import * as MuiIcons — 3.8MB!)
 const MuiIcons = {
@@ -67,7 +68,8 @@ const MuiIcons = {
   TouchApp,
   ViewModule,
   ViewTimeline,
-  WbSunny
+  WbSunny,
+  Extension
 };
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
