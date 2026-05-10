@@ -2979,8 +2979,13 @@ export default function ContentStudioPage() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
   const toggleSelectAll = () => {
-    if (selectedIds.length === items.length) setSelectedIds([]);
-    else setSelectedIds(items.map(i => i.id));
+    // Use concepts (what the table displays), not items
+    const selectableIds = concepts
+      .filter(c => c.approval_status !== 'deleted')
+      .map(c => (c.platform_versions || []).filter(v => v.status !== 'deleted')[0]?.id)
+      .filter(Boolean);
+    if (selectedIds.length === selectableIds.length) setSelectedIds([]);
+    else setSelectedIds(selectableIds);
   };
   const handleBulkAction = async (action) => {
     if (selectedIds.length === 0) return;
@@ -2990,7 +2995,14 @@ export default function ContentStudioPage() {
       else if (action === 'reject') await contentService.bulkReject(selectedIds);
       else if (action === 'delete') {
         if (!window.confirm(t('contentStudio.confirmBulkDelete', '{{count}} items verwijderen?', { count: selectedIds.length }))) { setBulkLoading(false); return; }
-        await contentService.bulkDelete(selectedIds);
+        // Separate real item IDs from concept-only IDs (empty concepts)
+        const itemIds = selectedIds.filter(id => typeof id === 'number' || (typeof id === 'string' && !id.startsWith('concept:')));
+        const conceptOnlyIds = selectedIds.filter(id => typeof id === 'string' && id.startsWith('concept:')).map(id => parseInt(id.replace('concept:', '')));
+        if (itemIds.length > 0) await contentService.bulkDelete(itemIds);
+        // Delete empty concepts directly
+        for (const cid of conceptOnlyIds) {
+          try { await contentService.deleteConcept(cid); } catch { /* already deleted */ }
+        }
       }
       setSelectedIds([]);
       loadItems();
@@ -3860,8 +3872,11 @@ export default function ContentStudioPage() {
               <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
                   <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
-                    <TableCell padding="checkbox" sx={{ width: 40 }}>
-                      <Checkbox size="small" checked={items.length > 0 && selectedIds.length === items.length} indeterminate={selectedIds.length > 0 && selectedIds.length < items.length} onChange={toggleSelectAll} />
+                    <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, px: 0.5 }}>
+                      <Checkbox size="small"
+                        checked={concepts.length > 0 && selectedIds.length > 0 && selectedIds.length === concepts.filter(c => c.approval_status !== 'deleted').length}
+                        indeterminate={selectedIds.length > 0 && selectedIds.length < concepts.filter(c => c.approval_status !== 'deleted').length}
+                        onChange={toggleSelectAll} />
                     </TableCell>
                     {activeColumns.includes('title') && (
                       <TableCell sx={{ cursor: 'pointer' }} onClick={() => setItemSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>
@@ -3970,7 +3985,7 @@ export default function ContentStudioPage() {
                     })
                     .map((concept, rowIdx) => {
                       const activeVersions = (concept.platform_versions || []).filter(v => v.status !== 'deleted');
-                      const firstItemId = activeVersions[0]?.id;
+                      const firstItemId = activeVersions[0]?.id || `concept:${concept.id}`;
                       const isFocused = rowIdx === focusedRow;
                       return (
                       <TableRow key={concept.id} hover
