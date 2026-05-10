@@ -39,6 +39,10 @@ const LocationDetailsEditor = lazy(() => import('./editors/LocationDetailsEditor
 const ItineraryEditor = lazy(() => import('./editors/ItineraryEditor.jsx'));
 const SaveToTripEditor = lazy(() => import('./editors/SaveToTripEditor.jsx'));
 const CalendarViewEditor = lazy(() => import('./editors/CalendarViewEditor.jsx'));
+const BreadcrumbsEditor = lazy(() => import('./editors/BreadcrumbsEditor.jsx'));
+const AnchorNavEditor = lazy(() => import('./editors/AnchorNavEditor.jsx'));
+const OfferEditor = lazy(() => import('./editors/OfferEditor.jsx'));
+const ConsentEmbedEditor = lazy(() => import('./editors/ConsentEmbedEditor.jsx'));
 
 /**
  * Inline SVG wireframe thumbnails (300×200) per block type.
@@ -227,6 +231,30 @@ const blockEditorRegistry = {
     featureFlag: 'hasCalendarViewBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="260" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="260" height="30" rx="8 8 0 0" fill="#3b82f6"/><rect x="35" y="25" width="50" height="10" rx="2" fill="#fff"/><rect x="210" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><rect x="235" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><g fill="#94a3b8" font-size="8"><text x="45" y="58">Ma</text><text x="80" y="58">Di</text><text x="115" y="58">Wo</text><text x="150" y="58">Do</text><text x="185" y="58">Vr</text><text x="220" y="58">Za</text><text x="250" y="58">Zo</text></g><rect x="30" y="70" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="70" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="150" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="36" y="80" width="20" height="4" rx="1" fill="#3b82f6"/><rect x="30" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="70" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="116" y="115" width="20" height="4" rx="1" fill="#ef4444"/><rect x="150" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="190" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="196" y="115" width="18" height="4" rx="1" fill="#7c3aed"/></svg>`
+  },
+  breadcrumbs: {
+    editor: BreadcrumbsEditor, icon: 'NavigateNext', label: 'Breadcrumbs',
+    description: 'Page navigation breadcrumbs with Schema.org SEO',
+    category: 'Page Structure', featureFlag: 'hasBreadcrumbsBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="85" width="40" height="30" rx="4" fill="#eff6ff"/><rect x="35" y="95" width="30" height="10" rx="2" fill="#3b82f6"/><text x="82" y="105" font-size="16" fill="#cbd5e1">›</text><rect x="95" y="85" width="60" height="30" rx="4" fill="#f1f5f9"/><rect x="100" y="95" width="50" height="10" rx="2" fill="#94a3b8"/><text x="167" y="105" font-size="16" fill="#cbd5e1">›</text><rect x="180" y="85" width="80" height="30" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><rect x="185" y="95" width="70" height="10" rx="2" fill="#334155"/></svg>`
+  },
+  anchor_nav: {
+    editor: AnchorNavEditor, icon: 'Anchor', label: 'Anchor Navigation',
+    description: 'In-page section navigation with active highlighting',
+    category: 'Page Structure', featureFlag: 'hasAnchorNavBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="80" width="260" height="40" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="30" y="88" width="55" height="24" rx="12" fill="#3b82f6"/><rect x="38" y="95" width="39" height="10" rx="2" fill="#fff"/><rect x="95" y="88" width="50" height="24" rx="12" fill="#f1f5f9"/><rect x="103" y="95" width="34" height="10" rx="2" fill="#94a3b8"/><rect x="155" y="88" width="55" height="24" rx="12" fill="#f1f5f9"/><rect x="163" y="95" width="39" height="10" rx="2" fill="#94a3b8"/><rect x="220" y="88" width="48" height="24" rx="12" fill="#f1f5f9"/><rect x="228" y="95" width="32" height="10" rx="2" fill="#94a3b8"/></svg>`
+  },
+  offer: {
+    editor: OfferEditor, icon: 'LocalOffer', label: 'Offer / Package',
+    description: 'Deals, bundles, and promotions with pricing and CTA',
+    category: 'Commerce', featureFlag: 'hasOfferPackageBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/><rect x="30" y="25" width="40" height="14" rx="7" fill="#f59e0b"/><rect x="35" y="29" width="30" height="6" rx="2" fill="#fff"/><rect x="30" y="75" width="80" height="8" rx="2" fill="#334155"/><rect x="30" y="90" width="100" height="6" rx="2" fill="#94a3b8"/><rect x="30" y="110" width="50" height="14" rx="2" fill="#1e40af" font-weight="bold"/><rect x="85" y="112" width="35" height="10" rx="2" fill="#94a3b8" opacity="0.5"/><rect x="30" y="140" width="100" height="28" rx="8" fill="#3b82f6"/><rect x="50" y="148" width="60" height="12" rx="2" fill="#fff"/><rect x="160" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="160" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/></svg>`
+  },
+  consent_embed: {
+    editor: ConsentEmbedEditor, icon: 'PrivacyTip', label: 'Consent-aware Embed',
+    description: 'GDPR-compliant embed for YouTube, Maps, social (loads after consent)',
+    category: 'Page Structure', featureFlag: 'hasConsentEmbedBlock', addedIn: 'VII-E2 Batch C',
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#1e293b"/><rect x="40" y="30" width="220" height="140" rx="10" fill="#334155"/><circle cx="150" cy="85" r="24" fill="rgba(255,255,255,0.1)"/><text x="150" y="92" font-size="20" fill="rgba(255,255,255,0.4)" text-anchor="middle">▶</text><rect x="90" y="125" width="120" height="28" rx="14" fill="#fff"/><rect x="108" y="133" width="84" height="12" rx="2" fill="#334155"/><rect x="80" y="158" width="140" height="6" rx="2" fill="rgba(255,255,255,0.2)"/></svg>`
   },
   faq: {
     editor: FaqEditor,

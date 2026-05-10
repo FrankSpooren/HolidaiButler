@@ -40,6 +40,10 @@ import LocationDetails from './LocationDetails';
 import Itinerary from './Itinerary';
 import SaveToTrip from './SaveToTrip';
 import CalendarView from './CalendarView';
+import Breadcrumbs from './Breadcrumbs';
+import AnchorNav from './AnchorNav';
+import Offer from './Offer';
+import ConsentEmbed from './ConsentEmbed';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -95,6 +99,10 @@ export const blockRegistry: Record<string, AnyComponent> = {
   itinerary: Itinerary,
   save_to_trip: SaveToTrip,
   calendar_view: CalendarView,
+  breadcrumbs: Breadcrumbs,
+  anchor_nav: AnchorNav,
+  offer: Offer,
+  consent_embed: ConsentEmbed,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,
