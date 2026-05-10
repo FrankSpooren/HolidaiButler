@@ -13285,7 +13285,9 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
     const whereClause = conditions.join(' AND ');
 
     const [[{ total }]] = await mysqlSequelize.query(
-      `SELECT COUNT(DISTINCT c.id) as total FROM content_concepts c WHERE ${whereClause}`,
+      `SELECT COUNT(DISTINCT c.id) as total FROM content_concepts c
+       WHERE ${whereClause}
+         AND EXISTS (SELECT 1 FROM content_items ci3 WHERE ci3.concept_id = c.id AND ci3.approval_status != 'deleted')`,
       { replacements: params }
     );
 
@@ -13300,6 +13302,7 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
        FROM content_concepts c
        LEFT JOIN content_pillars cp ON cp.id = c.pillar_id
        WHERE ${whereClause}
+         AND EXISTS (SELECT 1 FROM content_items ci3 WHERE ci3.concept_id = c.id AND ci3.approval_status != 'deleted')
        ORDER BY c.updated_at DESC
        LIMIT ? OFFSET ?`,
       { replacements: [...params, Number(limit), Number(offset)] }
