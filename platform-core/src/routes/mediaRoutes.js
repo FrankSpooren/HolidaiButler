@@ -693,6 +693,20 @@ router.post('/pexels/import/:pexels_id', adminAuth('editor'), async (req, res) =
         }
       }
 
+      // Auto-upscale: if crop resulted in image < 1080px wide, resize up
+      // Social media platforms require minimum dimensions (FB: 1200x630, IG: 1080x1080)
+      // Without this, crops from small originals produce unusable thumbnails (incident 10-05-2026)
+      const hasCrop = operations.some(o => o.type === 'crop');
+      const hasExplicitResize = operations.some(o => o.type === 'resize');
+      if (hasCrop && !hasExplicitResize) {
+        // Get intermediate dimensions after crop
+        const interMeta = await pipeline.clone().metadata();
+        // Removed: metadata() on cloned pipeline not reliable after extract()
+        // Instead, use target_width from body if provided, or default to 1080
+        const targetWidth = req.body.target_width || 1080;
+        pipeline = pipeline.resize({ width: targetWidth, fit: 'inside', withoutEnlargement: false });
+      }
+
       // Generate new filename — always based on timestamp, never on original name
       const ext = path.extname(original.filename);
       const newFilename = Date.now() + "-edited" + ext;

@@ -219,7 +219,7 @@ function getRedis() {
 /** Resolve destination filter value to numeric ID. Accepts 'calpe', 'texel', 1, 2, '1', '2'. */
 function resolveDestinationId(val) {
   if (!val) return null;
-  const codeMap = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4 };
+  const codeMap = { calpe: 1, texel: 2, alicante: 3, warrewijzer: 4, bute: 10 };
   const lower = String(val).toLowerCase();
   if (codeMap[lower]) return codeMap[lower];
   const parsed = parseInt(val);
