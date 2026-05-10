@@ -1027,9 +1027,14 @@ export async function improveExistingContent(contentItem) {
   const contentType = contentItem.content_type || 'blog';
   const destinationId = contentItem.destination_id;
 
-  // Run current SEO analysis
+  // Detect primary language — NL-only destinations may have empty body_en
+  const primaryLang = contentItem.target_language || contentItem.language
+    || (contentItem.body_nl && !contentItem.body_en ? 'nl' : 'en');
+  const primaryBody = contentItem[`body_${primaryLang}`] || contentItem.body_en || contentItem.body_nl || '';
+
+  // Run current SEO analysis with correct language body
   const currentSeo = await analyzeContent(
-    { title: contentItem.title, body_en: contentItem.body_en, seo_data: seoData, content_type: contentType, keyword_cluster: keywords },
+    { title: contentItem.title, body_en: primaryBody, [`body_${primaryLang}`]: primaryBody, target_language: primaryLang, seo_data: seoData, content_type: contentType, keyword_cluster: keywords },
     destinationId
   );
 
@@ -1045,10 +1050,11 @@ export async function improveExistingContent(contentItem) {
 
   const content = {
     title: contentItem.title,
-    body_en: contentItem.body_en,
+    body_en: primaryBody,
     meta_description: seoData.meta_description || '',
     content_type: contentType,
     keyword_cluster: keywords,
+    target_language: primaryLang,
   };
 
   const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords, targetPlatform: contentItem.target_platform });

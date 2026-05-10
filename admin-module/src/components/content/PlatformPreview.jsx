@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Tabs, Tab, Paper, Chip, LinearProgress, Tooltip, Divider, Alert,
+  Button,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -149,7 +150,7 @@ function ValidationItem({ label, value, status, detail }) {
   );
 }
 
-function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType, images, socialMetadata }) {
+function PlatformMockup({ platform, content, rules, isTargetPlatform, contentType, images, socialMetadata, destinationName, onRepurpose }) {
   // For blogs on social platforms: show "use Repurpose" message instead of truncated preview
   const isBlogOnSocial = contentType === 'blog' && platform !== 'website' && rules.maxChars < 50000;
   const isOverLimit = rules.maxChars && content.length > rules.maxChars;
@@ -164,6 +165,11 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
           <Typography variant="body2">
             Klik &quot;Repurpose&quot; om een {platform}-versie te genereren met de juiste lengte, stijl en tone-of-voice.
           </Typography>
+          {onRepurpose && (
+            <Button size="small" variant="outlined" onClick={onRepurpose} sx={{ mt: 1, textTransform: 'none', fontSize: 12 }}>
+              Repurpose naar {platform}
+            </Button>
+          )}
         </Alert>
         <Paper variant="outlined" sx={{ p: 2, maxHeight: 120, overflow: 'hidden', opacity: 0.5 }}>
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
@@ -218,8 +224,12 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
         <Alert severity="warning" sx={{ mb: 1.5, py: 0, '& .MuiAlert-message': { py: 0.5 } }}>
           <Typography variant="caption">
             Originele tekst ({content.length} tekens) overschrijdt {platform} limiet ({rules.maxChars}).
-            Gebruik Repurpose om een platform-specifieke versie te genereren.
           </Typography>
+          {onRepurpose && (
+            <Button size="small" variant="text" onClick={onRepurpose} sx={{ mt: 0.5, textTransform: 'none', fontSize: 11, p: 0 }}>
+              Repurpose naar {platform}
+            </Button>
+          )}
         </Alert>
       )}
 
@@ -228,7 +238,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
         {/* Header */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: rules.color, opacity: 0.2 }} />
-          <Typography variant="body2" fontWeight={600}>destination_name</Typography>
+          <Typography variant="body2" fontWeight={600}>{destinationName || 'Destination'}</Typography>
         </Box>
 
         {/* Content image or placeholder with correct aspect ratio */}
@@ -374,7 +384,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
   );
 }
 
-export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en', onPlatformChange, availablePlatforms }) {
+export default function PlatformPreview({ content, targetPlatform, selectedLanguage = 'en', onPlatformChange, availablePlatforms, destinationName, onRepurpose }) {
   const PLATFORMS = availablePlatforms && availablePlatforms.length > 0 ? availablePlatforms : ALL_PLATFORMS;
   const { t } = useTranslation();
   const [activePlatform, setActivePlatform] = useState(targetPlatform || 'instagram');
@@ -448,6 +458,8 @@ export default function PlatformPreview({ content, targetPlatform, selectedLangu
         contentType={content?.content_type}
         images={content?.resolved_images}
         socialMetadata={content?.social_metadata}
+        destinationName={destinationName}
+        onRepurpose={onRepurpose}
       />
     </Box>
   );

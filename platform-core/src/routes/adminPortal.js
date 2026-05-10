@@ -13275,10 +13275,12 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
     // Enrich with destination language config for frontend LANGS filtering
     try {
       const [[destLangInfo]] = await mysqlSequelize.query(
-        'SELECT default_language, supported_languages FROM destinations WHERE id = ?',
+        'SELECT name, code, default_language, supported_languages FROM destinations WHERE id = ?',
         { replacements: [concept.destination_id] }
       );
       if (destLangInfo) {
+        concept.destination_name = destLangInfo.name || destLangInfo.code || '';
+        concept.destination_code = destLangInfo.code || '';
         concept.default_language = destLangInfo.default_language || 'en';
         try { concept.supported_languages = typeof destLangInfo.supported_languages === 'string' ? JSON.parse(destLangInfo.supported_languages) : (destLangInfo.supported_languages || []); } catch { concept.supported_languages = []; }
       }
@@ -13560,6 +13562,13 @@ router.get('/content/items/:id/seo', adminAuth('editor'), async (req, res) => {
     if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
 
     const platform = req.query.platform || item.target_platform || null;
+    // Ensure language context for resolveBody() in seoAnalyzer
+    if (!item.target_language && !item.language) {
+      // Detect primary language: if body_nl exists but body_en is empty, content is NL-primary
+      if (item.body_nl && !item.body_en) item.target_language = 'nl';
+      else if (item.body_es && !item.body_en) item.target_language = 'es';
+      else if (item.body_de && !item.body_en) item.target_language = 'de';
+    }
     const seoMeester = (await import('../services/agents/seoMeester/index.js')).default;
     const analysis = await seoMeester.analyzeItem(item, item.destination_id, platform);
 
@@ -13614,16 +13623,21 @@ router.post('/content/items/:id/improve', adminAuth('editor'), writeAccess(['pla
     const result = await redacteur.improveContentItem(item);
 
     if (result.improved) {
-      // Save improved content back to DB
+      // Detect primary language to save to correct body field
+      const improveLang = item.target_language || item.language
+        || (item.body_nl && !item.body_en ? 'nl' : 'en');
+      const bodyCol = `body_${improveLang}`;
+
+      // Save improved content back to DB — correct language column
       await mysqlSequelize.query(
         `UPDATE content_items
-         SET title = :title, body_en = :bodyEn,
+         SET title = :title, ${bodyCol} = :bodyContent,
              seo_data = :seoData, updated_at = NOW()
          WHERE id = :id`,
         {
           replacements: {
             title: result.title,
-            bodyEn: result.body_en,
+            bodyContent: result.body_en,
             seoData: JSON.stringify({
               meta_description: result.meta_description,
               overallScore: result.seo_score,

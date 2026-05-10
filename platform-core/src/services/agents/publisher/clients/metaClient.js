@@ -69,20 +69,27 @@ class MetaClient {
 
       if (photoIds.length > 0) {
         // Step 2: Create feed post with attached_media
-        const feedBody = { message, access_token: accessToken };
-        if (metadata.link) feedBody.link = metadata.link;
-        photoIds.forEach((pid, idx) => { feedBody[`attached_media[${idx}]`] = JSON.stringify({ media_fbid: pid }); });
+        // KRITIEK: Facebook Graph API negeert attached_media in JSON body.
+        // MOET form-urlencoded zijn — bewezen met A/B test 10-05-2026.
+        // NOOIT link parameter meesturen — genereert OG preview die photos overschrijft.
+        const feedParams = new URLSearchParams();
+        feedParams.append('message', message);
+        feedParams.append('access_token', accessToken);
+        photoIds.forEach((pid, idx) => {
+          feedParams.append(`attached_media[${idx}]`, JSON.stringify({ media_fbid: pid }));
+        });
 
         const feedRes = await fetch(`${META_API_BASE}/${pageId}/feed`, {
           signal: AbortSignal.timeout(30000),
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(feedBody),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: feedParams.toString(),
         });
         const feedData = await feedRes.json();
         if (feedData.error) {
           throw new Error(`Facebook multi-photo publish failed: ${feedData.error.message}`);
         }
+        logger.info(`[MetaClient] Facebook multi-photo published: ${photoIds.length} photos, post ${feedData.id}`);
         return { postId: feedData.id, url: `https://facebook.com/${feedData.id}`, platform: 'facebook' };
       }
     }
@@ -91,15 +98,16 @@ class MetaClient {
     let endpoint = `${META_API_BASE}/${pageId}/feed`;
     const body = { message, access_token: accessToken };
 
-    if (metadata.link) {
-      body.link = metadata.link;
-    }
-
     if (imageUrls.length === 1 || metadata.image_url) {
+      // Photo post: NOOIT link parameter — photo IS de attachment
+      // link zou OG preview card genereren die de foto overschrijft
       endpoint = `${META_API_BASE}/${pageId}/photos`;
       body.url = imageUrls[0] || metadata.image_url;
       body.caption = message;
       delete body.message;
+    } else if (metadata.link) {
+      // Text-only post: link is gewenst als OG preview card (geen images om te tonen)
+      body.link = metadata.link;
     }
 
     const response = await fetch(endpoint, {
