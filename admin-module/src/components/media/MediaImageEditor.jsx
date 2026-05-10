@@ -157,6 +157,11 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
         width: Math.round(cropRegion.w / 100 * media.width),
         height: Math.round(cropRegion.h / 100 * media.height),
       });
+      // Auto-resize after crop: if resizeWidth is set (from social preset), add resize op
+      // This ensures cropped images meet platform minimum dimensions
+      if (resizeWidth && !operations.some(o => o.type === 'resize')) {
+        ops.push({ type: 'resize', width: parseInt(resizeWidth), height: parseInt(resizeHeight) || undefined });
+      }
     }
     ops.push(...operations);
     if (activeFilter !== 'none') {
@@ -173,6 +178,7 @@ export default function MediaImageEditor({ open, media, destId, apiBase, onClose
       operations: ops,
       save_as_version: true,
       version_description: versionDesc || 'Image edited',
+      target_width: resizeWidth ? parseInt(resizeWidth) : undefined,
     }, { params: { destinationId: destId } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
