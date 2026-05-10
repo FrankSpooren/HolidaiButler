@@ -9,6 +9,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import ExploreIcon from "@mui/icons-material/Explore";
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import NoteAddIcon from '@mui/icons-material/NoteAdd';
@@ -457,6 +458,22 @@ export default function DashboardPage() {
       key: 'trending_topic',
       icon: <TrendingUpIcon fontSize="small" color="primary" />,
       text: `${t('dashboard.trending', 'Trending')}: ${actions.trendingTopic.keyword}`,
+    });
+  }
+  if (actions.pendingProspects > 0) {
+    actionItems.push({
+      key: 'pending_prospects',
+      icon: <ExploreIcon fontSize="small" color="info" />,
+      text: `${actions.pendingProspects} ${t('dashboard.pendingProspects', 'nieuwe POIs wachten op beoordeling (OSM Discovery)')}`,
+      onClick: () => navigate('/pois'),
+    });
+  }
+  if (actions.stalePois > 0) {
+    actionItems.push({
+      key: 'stale_pois',
+      icon: <WarningAmberIcon fontSize="small" color="warning" />,
+      text: `${actions.stalePois} ${t('dashboard.stalePois', 'POIs met verouderde content (freshness < 50)')}`,
+      onClick: () => navigate('/pois'),
     });
   }
 

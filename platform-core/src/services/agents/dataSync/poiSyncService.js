@@ -383,7 +383,7 @@ class POISyncService {
         is_active = ?,
         last_updated = NOW(),
         content_updated_at = NOW(),
-        last_apify_sync = NOW()
+        last_apify_sync = NOW(), content_modified_at = NOW()
       WHERE id = ?
     `, {
       replacements: [
