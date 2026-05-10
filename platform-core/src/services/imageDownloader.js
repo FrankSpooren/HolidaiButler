@@ -19,6 +19,7 @@ import https from 'https';
 import http from 'http';
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
+import storageService from './storageService.js';
 
 class ImageDownloaderService {
   constructor() {
@@ -66,18 +67,15 @@ class ImageDownloaderService {
       // Determine file extension from content or URL
       const ext = this.getExtension(imageUrl, imageData);
 
-      // Create directory structure
-      const poiDir = path.join(this.storagePath, String(poiId));
-      await fs.mkdir(poiDir, { recursive: true });
-
       // Save file
       const filename = `${hash}${ext}`;
-      const filePath = path.join(poiDir, filename);
-      await fs.writeFile(filePath, imageData);
 
-      // Generate public URL
+      // Upload to S3 (primary storage)
+      const s3Key = `poi-images/${poiId}/${filename}`;
+      const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+      const publicUrl = await storageService.upload(s3Key, imageData, contentType);
+
       const localPath = `/poi-images/${poiId}/${filename}`;
-      const publicUrl = `${this.baseUrl}/${poiId}/${filename}`;
 
       logger.info('Image downloaded successfully', {
         poi_id: poiId,

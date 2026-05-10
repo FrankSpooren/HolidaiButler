@@ -184,10 +184,11 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
     [content, platform, rules]
   );
 
-  const charCount = adapted.length;
-  const emojiCount = countEmoji(adapted);
-  const hashtagCount = countHashtags(adapted);
-  const hasUtm = hasUtmParams(adapted) || hasUtmParams(socialMetadata?.link || '');
+  // Stats: altijd op de ORIGINELE tekst (= wat de gebruiker ziet in de editor)
+  const charCount = content.length;
+  const emojiCount = countEmoji(content);
+  const hashtagCount = countHashtags(content);
+  const hasUtm = hasUtmParams(content) || hasUtmParams(socialMetadata?.link || '');
   const isInOptimalRange = rules.optimalRange
     ? charCount >= rules.optimalRange[0] && charCount <= rules.optimalRange[1]
     : null;
@@ -203,13 +204,12 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
         <Chip label="Doelplatform" size="small" color="primary" sx={{ mb: 1 }} />
       )}
 
-      {/* Adaptation warnings */}
-      {changes.length > 0 && (
-        <Alert severity="info" sx={{ mb: 1.5, py: 0, '& .MuiAlert-message': { py: 0.5 } }}>
-          <Typography variant="caption" fontWeight={600}>Auto-aanpassingen voor {platform}:</Typography>
-          {changes.map((c, i) => (
-            <Typography key={i} variant="caption" display="block" sx={{ pl: 1 }}>- {c}</Typography>
-          ))}
+      {/* Platform limit warnings */}
+      {hashtagCount > rules.hashtagMax && rules.hashtagMax > 0 && (
+        <Alert severity="warning" sx={{ mb: 1.5, py: 0, '& .MuiAlert-message': { py: 0.5 } }}>
+          <Typography variant="caption">
+            {hashtagCount} hashtags overschrijdt {platform} limiet (max {rules.hashtagMax}). Overtollige worden bij publicatie verwijderd.
+          </Typography>
         </Alert>
       )}
 
@@ -341,7 +341,7 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
             label="Hashtags"
             value={`${hashtagCount}/${rules.hashtagMax}`}
             status={hashtagCount === 0 ? 'warning' : hashtagCount <= rules.hashtagMax ? 'success' : 'error'}
-            detail={rules.hashtagPos === 'inline' ? 'in tekst' : rules.hashtagPos === 'end_separated' ? 'aparte regel' : 'aan einde'}
+            detail={hashtagCount > rules.hashtagMax ? `${hashtagCount - rules.hashtagMax} te veel` : rules.hashtagPos === 'inline' ? 'in tekst' : rules.hashtagPos === 'end_separated' ? 'aparte regel' : 'aan einde'}
           />
         )}
         <ValidationItem
