@@ -13,6 +13,22 @@ import { findLinkSuggestions, analyzeLinkDensity } from './internalLinker.js';
 import logger from '../../../utils/logger.js';
 
 // ============================================================
+// Body Language Resolution — use active language, not hardcoded body_en
+// ============================================================
+function resolveBody(contentItem) {
+  // Priority: target_language body > body_nl > body_en (fallback)
+  const lang = contentItem.target_language || contentItem.language || '';
+  if (lang && lang !== 'en' && contentItem[`body_${lang}`]) {
+    return contentItem[`body_${lang}`];
+  }
+  // For NL-only destinations, body_nl is often the primary content
+  if (contentItem.body_nl && !contentItem.body_en) {
+    return contentItem.body_nl;
+  }
+  return contentItem.body_en || contentItem.body_nl || '';
+}
+
+// ============================================================
 // PLATFORM-SPECIFIEKE SOCIAL SCORE CHECKS (Opdracht 3)
 // ============================================================
 
@@ -85,7 +101,7 @@ const PLATFORM_CHECKS = {
 // ============================================================
 
 export async function analyzeBlogSEO(contentItem, destinationId) {
-  const body = contentItem.body_en || '';
+  const body = resolveBody(contentItem);
   const title = contentItem.title || '';
   const seoData = contentItem.seo_data || {};
   const keywords = contentItem.keyword_cluster || [];
@@ -174,7 +190,7 @@ export async function analyzeBlogSEO(contentItem, destinationId) {
 // ============================================================
 
 export function analyzeSocialScore(contentItem, platform) {
-  const body = contentItem.body_en || '';
+  const body = resolveBody(contentItem);
   const keywords = contentItem.keyword_cluster || [];
   const platformKey = (platform || contentItem.target_platform || 'instagram').toLowerCase();
   const platformChecks = PLATFORM_CHECKS[platformKey] || PLATFORM_CHECKS.instagram;
@@ -208,7 +224,7 @@ export function analyzeSocialScore(contentItem, platform) {
 // ============================================================
 
 export function analyzeVideoScore(contentItem) {
-  const body = contentItem.body_en || '';
+  const body = resolveBody(contentItem);
   const keywords = contentItem.keyword_cluster || [];
   const checks = [];
 
@@ -261,7 +277,7 @@ export async function analyzeContent(contentItem, destinationId, platform) {
 
 function generateSEOSuggestions(contentItem, destinationId) {
   const title = contentItem.title || '';
-  const body = contentItem.body_en || '';
+  const body = resolveBody(contentItem);
 
   // Meta title suggestion — volledig, NIET afkorten
   let metaTitle = contentItem.seo_meta_title || '';
@@ -350,7 +366,7 @@ function evaluateSocialCheck(check, body, contentItem, keywords) {
       break;
     }
     case 'emoji': {
-      const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/gu;
+      const emojiRegex = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu;
       const emojis = body.match(emojiRegex) || [];
       const count = emojis.length;
       const opt = check.optimal;
