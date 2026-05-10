@@ -992,7 +992,7 @@ function SuggestionDetailDialog({ open, onClose, suggestion, onAction, onGenerat
 // ============================================================
 // MANUAL CONTENT ITEM DIALOG (TO DO 4g)
 // ============================================================
-function ManualContentDialog({ open, onClose, destinationId, onCreated }) {
+function ManualContentDialog({ open, onClose, destinationId, onCreated, defaultLanguage }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState('blog');
@@ -4199,6 +4199,7 @@ export default function ContentStudioPage() {
         onClose={() => setManualDialogOpen(false)}
         destinationId={destinationId}
         onCreated={loadItems}
+        defaultLanguage={currentDest?.defaultLanguage || 'en'}
       />
 
       {/* Opdracht 6: Bulk schedule dialog */}

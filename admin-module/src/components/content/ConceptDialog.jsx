@@ -534,7 +534,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
   const handleImageUpdate = async () => {
     // Reload concept + fetch fresh item data for preview image sync
+    const savedTab = activeTab; // Preserve current channel tab
     await loadConcept();
+    setActiveTab(savedTab); // Restore channel tab after reload
     if (activeItem) {
       try {
         const r = await contentService.getItem(activeItem.id);
@@ -715,12 +717,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
-  const handleRepublishItem = async (itemId, platform) => {
+  const handleRepublishItem = async (itemId, platform, forcePublish = false) => {
     setPublishing(true);
     setPublishStatus({ platform, step: 'Opnieuw publiceren...', detail: 'Status wordt gereset' });
     try {
-      // Reset to draft, then publish
-      await contentService.updateItem(itemId, { approval_status: 'approved' });
+      // Reset to draft, then publish (force_publish bypasses SEO check)
+      await contentService.updateItem(itemId, { approval_status: 'approved', force_publish: forcePublish });
       setPublishStatus({ platform, step: 'Verbinden met platform...', detail: null });
       const statusTimer = setTimeout(() => {
         setPublishStatus(prev => prev ? { ...prev, step: 'Afbeeldingen verwerken...', detail: t('contentStudio.publish.pleaseWait', 'Even geduld a.u.b.') } : prev);
@@ -732,6 +734,15 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg({ severity: 'success', text: `${platform} opnieuw gepubliceerd` });
     } catch (err) {
+      const errCode = err.response?.data?.error?.code;
+      if (errCode === 'SEO_SCORE_TOO_LOW' && !forcePublish) {
+        const seoScore = err.response?.data?.error?.seo_score || '?';
+        if (window.confirm(`SEO-score is ${seoScore}/100 (minimum 70). Toch publiceren?`)) {
+          setPublishing(false);
+          setPublishStatus(null);
+          return handleRepublishItem(itemId, platform, true);
+        }
+      }
       setSnackMsg({ severity: 'error', text: `Republish ${platform} mislukt: ${err.response?.data?.error?.message || err.message}` });
     } finally {
       setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
@@ -1061,7 +1072,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
                         <AnimatedScoreChip score={score} label={`SEO ${score}/100`} size="small"
-                          color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'} />
+                          color={score >= 70 ? 'success' : score >= 50 ? 'warning' : 'error'} />
                       ) : null;
                     })()}
                     {dirty && <Chip label="Niet opgeslagen" size="small" sx={{ height: 20, fontSize: 10, bgcolor: '#FFB74D', color: '#5D4037' }} />}
@@ -1203,7 +1214,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
                         <AnimatedScoreChip score={score} label={`SEO ${score}/100`} size="small"
-                          color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'} />
+                          color={score >= 70 ? 'success' : score >= 50 ? 'warning' : 'error'} />
                       ) : null;
                     })()}
                     {(dirty || wasEdited) && (
@@ -1508,7 +1519,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                         <Typography variant="h4" sx={{ fontWeight: 700,
-                          color: (seoData.overallScore || 0) >= 80 ? 'success.main' : (seoData.overallScore || 0) >= 60 ? 'warning.main' : 'error.main' }}>
+                          color: (seoData.overallScore || 0) >= 70 ? 'success.main' : (seoData.overallScore || 0) >= 50 ? 'warning.main' : 'error.main' }}>
                           {seoData.overallScore || 0}
                         </Typography>
                         <Box>
@@ -1519,9 +1530,19 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         </Box>
                       </Box>
 
-                      {(seoData.overallScore || 0) < 80 && (
-                        <Alert severity="warning" sx={{ mb: 1, py: 0, '& .MuiAlert-message': { fontSize: 11 } }}>
-                          SEO-score te laag ({seoData.overallScore}/100) — Minimum is 80.
+                      {(seoData.overallScore || 0) < 70 && (
+                        <Alert severity="warning" sx={{ mb: 1, py: 0, '& .MuiAlert-message': { fontSize: 11, width: '100%' } }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <span>SEO-score {seoData.overallScore}/100 (min. 70)</span>
+                            {activeItem && (
+                              <Button size="small" variant="text" color="warning"
+                                sx={{ fontSize: 10, minWidth: 'auto', py: 0, px: 0.5, ml: 1, textTransform: 'none' }}
+                                onClick={() => handlePublishItem(activeItem.id, activeItem.target_platform)}
+                                disabled={publishing}>
+                                Toch publiceren
+                              </Button>
+                            )}
+                          </Box>
                         </Alert>
                       )}
 

@@ -38,7 +38,7 @@ const PLATFORM_CHECKS = {
   linkedin: [
     { name: 'char_limit', weight: 15, limit: 3000, desc: 'Tekst ≤ 3000 tekens' },
     { name: 'hashtags', weight: 10, optimal: { min: 3, max: 5 }, desc: 'Hashtags 3-5' },
-    { name: 'emoji', weight: 5, optimal: { min: 0, max: 2 }, desc: 'Emoji 0-2 (professioneel)' },
+    { name: 'emoji', weight: 8, optimal: { min: 0, max: 2 }, desc: 'Emoji 0-2 (professioneel)' },
     { name: 'cta', weight: 15, desc: 'Call-to-action aanwezig' },
     { name: 'hook', weight: 20, desc: 'Opening biedt inzicht of waarde' },
     { name: 'professional_tone', weight: 20, desc: 'Professionele toon' },
@@ -47,7 +47,8 @@ const PLATFORM_CHECKS = {
   x: [
     { name: 'char_limit', weight: 25, limit: 280, desc: 'Tekst ≤ 280 tekens (strikt)' },
     { name: 'hashtags', weight: 10, optimal: { min: 1, max: 2 }, desc: 'Hashtags 1-2 (inline)' },
-    { name: 'hook', weight: 25, desc: 'Eerste woorden pakken direct aandacht' },
+    { name: 'emoji', weight: 5, optimal: { min: 0, max: 1 }, desc: 'Emoji 0-1 (professioneel)' },
+    { name: 'hook', weight: 20, desc: 'Eerste woorden pakken direct aandacht' },
     { name: 'cta', weight: 15, desc: 'Actie-element aanwezig' },
     { name: 'conciseness', weight: 15, desc: 'Puntig en direct' },
     { name: 'image', weight: 10, desc: 'Afbeelding optioneel maar aanbevolen' },
@@ -61,7 +62,8 @@ const PLATFORM_CHECKS = {
   ],
   pinterest: [
     { name: 'char_limit', weight: 15, limit: 500, desc: 'Tekst ≤ 500 tekens' },
-    { name: 'keywords', weight: 25, desc: 'Zoek-keywords in tekst' },
+    { name: 'keywords', weight: 20, desc: 'Zoek-keywords in tekst' },
+    { name: 'emoji', weight: 5, optimal: { min: 1, max: 3 }, desc: 'Emoji 1-3 (visueel)' },
     { name: 'cta', weight: 15, desc: 'Link/CTA aanwezig' },
     { name: 'image', weight: 25, desc: 'Afbeelding verplicht' },
     { name: 'descriptive', weight: 20, desc: 'Beschrijvend en aspirerend' },
@@ -69,7 +71,8 @@ const PLATFORM_CHECKS = {
   youtube: [
     { name: 'char_limit', weight: 10, limit: 5000, desc: 'Beschrijving ≤ 5000 tekens' },
     { name: 'hashtags', weight: 10, optimal: { min: 5, max: 15 }, desc: 'Hashtags 5-15' },
-    { name: 'keywords', weight: 20, desc: 'SEO-keywords in beschrijving' },
+    { name: 'emoji', weight: 5, optimal: { min: 1, max: 4 }, desc: 'Emoji 1-4' },
+    { name: 'keywords', weight: 15, desc: 'SEO-keywords in beschrijving' },
     { name: 'timestamps', weight: 15, desc: 'Timestamps aanwezig' },
     { name: 'cta', weight: 15, desc: 'Subscribe/CTA aanwezig' },
     { name: 'links', weight: 15, desc: 'Relevante links in beschrijving' },
@@ -325,13 +328,25 @@ function evaluateSocialCheck(check, body, contentItem, keywords) {
       break;
     }
     case 'hashtags': {
-      const hashtags = body.match(/#\w+/g) || [];
+      const hashtags = body.match(/#[\w\u00C0-\u024F\u0400-\u04FF]+/gu) || [];
       const count = hashtags.length;
       const opt = check.optimal;
       const good = count >= opt.min && count <= opt.max;
-      score = good ? weight : count > 0 ? Math.round(weight * 0.6) : 0;
-      status = good ? 'pass' : count > 0 ? 'warning' : 'fail';
-      details = `${count} hashtags (optimal: ${opt.min}-${opt.max}). ${good ? 'Good!' : count === 0 ? 'Add hashtags.' : count > opt.max ? 'Too many.' : 'Add more.'}`;
+      if (good) {
+        score = weight;
+        status = 'pass';
+      } else if (count === 0) {
+        score = 0;
+        status = 'fail';
+      } else if (count > opt.max) {
+        const overRatio = Math.min((count - opt.max) / opt.max, 1);
+        score = Math.round(weight * (0.7 - overRatio * 0.4));
+        status = 'warning';
+      } else {
+        score = Math.round(weight * (count / opt.min) * 0.8);
+        status = 'warning';
+      }
+      details = `${count} hashtags (optimal: ${opt.min}-${opt.max}). ${good ? 'Good!' : count === 0 ? 'Add hashtags.' : count > opt.max ? 'Too many hashtags.' : 'Add more hashtags.'}`;
       break;
     }
     case 'emoji': {

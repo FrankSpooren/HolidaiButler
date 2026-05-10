@@ -29,6 +29,21 @@ import CategoryGrid from './CategoryGrid';
 import TipOfTheDayBlock from './MobileTip';
 import MobileMap from './MobileMap';
 import AlertStatus from './AlertStatus';
+import Search from './Search';
+import FilterBar from './FilterBar';
+import MapList from './MapList';
+import RelatedItems from './RelatedItems';
+import FeaturedItem from './FeaturedItem';
+import AddToCalendar from './AddToCalendar';
+import OpeningHours from './OpeningHours';
+import LocationDetails from './LocationDetails';
+import Itinerary from './Itinerary';
+import SaveToTrip from './SaveToTrip';
+import CalendarView from './CalendarView';
+import Breadcrumbs from './Breadcrumbs';
+import AnchorNav from './AnchorNav';
+import Offer from './Offer';
+import ConsentEmbed from './ConsentEmbed';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyComponent = ComponentType<any>;
@@ -73,6 +88,21 @@ export const blockRegistry: Record<string, AnyComponent> = {
   mobile_tip: TipOfTheDayBlock, // alias -> TipOfTheDay (E1.6)
   mobile_events: DesktopEvents, // alias -> TodayEvents (E1.4 consolidation)
   mobile_map: MobileMap,
+  search: Search,
+  filter_bar: FilterBar,
+  map_list: MapList,
+  related_items: RelatedItems,
+  featured_item: FeaturedItem,
+  add_to_calendar: AddToCalendar,
+  opening_hours: OpeningHours,
+  location_details: LocationDetails,
+  itinerary: Itinerary,
+  save_to_trip: SaveToTrip,
+  calendar_view: CalendarView,
+  breadcrumbs: Breadcrumbs,
+  anchor_nav: AnchorNav,
+  offer: Offer,
+  consent_embed: ConsentEmbed,
   // PascalCase aliases (WarreWijzer + Alicante DB compatibility)
   Hero: Hero,
   RichText: RichText,

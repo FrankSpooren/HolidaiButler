@@ -21,6 +21,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
+import storageService from '../services/storageService.js';
 
 const router = express.Router();
 
@@ -88,9 +89,15 @@ router.get('/*', async (req, res) => {
     // Source file path
     const sourcePath = path.join(IMAGES_DIR, normalizedPath);
 
-    // Check source exists
+    // Check source exists (local first, then S3)
+    let sourceBuffer = null;
+    const s3Key = `poi-images/${normalizedPath}`;
     if (!fs.existsSync(sourcePath)) {
-      return res.status(404).json({ error: 'Image not found' });
+      try {
+        sourceBuffer = await storageService.download(s3Key);
+      } catch {
+        return res.status(404).json({ error: 'Image not found' });
+      }
     }
 
     // If no resize needed, serve original with cache headers
@@ -99,6 +106,9 @@ router.get('/*', async (req, res) => {
         'Cache-Control': 'public, max-age=2592000, immutable', // 30 days
         'Content-Type': `image/${ext === '.png' ? 'png' : 'jpeg'}`,
       });
+      if (sourceBuffer) {
+        return res.send(sourceBuffer);
+      }
       return res.sendFile(sourcePath);
     }
 
@@ -121,7 +131,7 @@ router.get('/*', async (req, res) => {
     const cacheDir = path.dirname(cachePath);
     fs.mkdirSync(cacheDir, { recursive: true });
 
-    let pipeline = sharp(sourcePath)
+    let pipeline = sharp(sourceBuffer || sourcePath)
       .resize(targetWidth, null, { // null height = maintain aspect ratio
         withoutEnlargement: true, // Don't upscale small images
         fit: 'inside',

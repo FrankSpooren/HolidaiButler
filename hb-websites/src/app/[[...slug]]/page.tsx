@@ -6,6 +6,7 @@ import { fetchTenantConfig, fetchPage } from '@/lib/api';
 import { generatePageMetadata, generateWebSiteJsonLd, generateBreadcrumbJsonLd } from '@/lib/seo';
 import { resolveLocalizedProps } from '@/lib/i18n';
 import { getBlock } from '@/blocks/index';
+import { FilterProvider } from '@/components/filters/FilterContext';
 import BlockRenderer from '@/components/ui/BlockRenderer';
 import { SkeletonGrid } from '@/components/ui/Skeleton';
 import type { BlockConfig, BlockStyle, BlockVisibility } from '@/types/blocks';
@@ -168,6 +169,7 @@ export default async function Page({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       ))}
+      <FilterProvider>
       {blocks.map((block: BlockConfig) => {
         if (!shouldRenderBlock(block, tenant.featureFlags)) return null;
 
@@ -209,6 +211,7 @@ export default async function Page({ params }: PageProps) {
           </BlockRenderer>
         );
       })}
+      </FilterProvider>
     </>
   );
 }

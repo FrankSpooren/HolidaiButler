@@ -13106,12 +13106,14 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
               seoScore = seoResult.overallScore || 0;
             } catch { /* analysis error */ }
           }
-          if (seoScore > 0 && seoScore < 80) {
+          if (seoScore > 0 && seoScore < 70 && !req.body.force_publish) {
             return res.status(400).json({
               success: false,
               error: {
                 code: 'SEO_SCORE_TOO_LOW',
-                message: `SEO-score ${seoScore}/100 is onder het minimum van 80. Verbeter de content met "AI Verbeter" voordat je goedkeurt.`
+                message: `SEO-score ${seoScore}/100 is onder het minimum van 70. Verbeter de content met "AI Verbeter" of gebruik "Toch publiceren".`,
+                seo_score: seoScore,
+                allow_override: true
               }
             });
           }

@@ -1330,7 +1330,7 @@ Enterprise-level kwaliteit vereist dat het fundament foutloos functioneert voord
 | IV | Intermediair & Revenue | Data Pipeline + Intermediair module + Agent | 6-8 wkn | HOOG | ✅ COMPLEET (Blok A+B+C+D+E+F) |
 | **V** | **Multi-Tenant Configuratielaag** | **Next.js SSR + Component Library + Tenant-Theming + Page Builder + Stabilisatie** | **12 wkn** | **HOOG** | **🟡 IN PROGRESS** |
 | **VI** | **UX Revolution + WarreWijzer** | **Mobiele UX polish op Next.js + WarreWijzer uitrol als 3e tenant** | **6-8 wkn** | **MIDDEL** | **🟡 IN PROGRESS (VI-A COMPLEET)** |
-| **VII** | **Page Builder Enterprise Upgrade + Scale & Launch** | **Block-level UX upgrade (35 blocks), schema.org, container queries, E2E testing, load testing** | **8-12 wkn** | **HOOG** | **🟡 IN PROGRESS (VII-A t/m VII-D COMPLEET, VII-E1 COMPLEET, VII-E2 GEPLAND)** |
+| **VII** | **Page Builder Enterprise Upgrade + Scale & Launch** | **Block-level UX upgrade (35 blocks), schema.org, container queries, E2E testing, load testing** | **8-12 wkn** | **HOOG** | **🟡 IN PROGRESS (VII-A t/m VII-D COMPLEET, VII-E1 COMPLEET, VII-E2 COMPLEET, VII-E3 GEPLAND)** |
 | CM | AI Content Generatie Module (Trending, Content Engine, Publishing, Analytics) | 🟡 IN PROGRESS (Fase A+B COMPLEET) | 12 wkn |
 | CUX | Corporate UX Upgrade (Sidebar, Kalender, Analytics, Dashboard, Onboarding, Performance, WCAG) | ✅ COMPLEET (v4.52-v4.54) | apr 2026 |
 
@@ -1477,7 +1477,7 @@ Fase VII is herschreven van "Polish & Launch" naar een volwaardige enterprise-up
 - 44 frontend / 41 admin registry entries, 31 unieke blocks, 19 bestanden, commit 24a18af
 - CLAUDE.md v4.83.0. MS v8.31.
 
-**VII-E2: 14 nieuwe USP-blokken** — GEPLAND (3 batches: Discovery, Events & Planning, Page Structure & Commerce)
+**VII-E2: 15 nieuwe USP-blokken** — ✅ COMPLEET (10-05-2026) — 3 batches: Batch A Discovery (Search, Filter Bar, Map+List, Related Items, Featured Item), Batch B Events & Planning (Add to Calendar, Itinerary/OSRM, Save-to-Trip, Opening Hours, Location Details, Calendar View/FullCalendar), Batch C Page Structure & Commerce (Breadcrumbs, Anchor Nav, Offer/Package, Consent Embed). 15 feature flags staged rollout. Block registry 30→45 uniek. OSRM EU-first Docker op Hetzner. FullCalendar MIT.
 
 Oorspronkelijke "Scale & Launch" scope (E2E testing, load testing, CDN, DR) is geïntegreerd in VII-E/post-VII.
 
