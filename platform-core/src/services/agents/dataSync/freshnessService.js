@@ -32,9 +32,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 function calculateFreshnessScore(poi) {
   const now = Date.now();
 
+  // Has any enriched content at all?
+  const hasContent = !!(poi.enriched_detail_description && poi.enriched_detail_description.trim());
+  if (!hasContent) {
+    return { score: 0, status: 'unverified', sla: 'no_content' };
+  }
+
   // Primary: how old is the CONTENT? (not any DB touch)
-  // content_modified_at tracks actual content changes (Apify sync, manual edit, verification)
-  // last_updated changes on ANY field change (tier recalc, batch ops) — unreliable for freshness
   const contentModified = poi.content_modified_at ? new Date(poi.content_modified_at).getTime() : null;
   const lastUpdated = poi.last_updated ? new Date(poi.last_updated).getTime() : null;
   const contentAge = contentModified ? (now - contentModified) / DAY_MS
@@ -48,36 +52,33 @@ function calculateFreshnessScore(poi) {
   const scrapedAt = poi.website_scraped_at ? new Date(poi.website_scraped_at).getTime() : null;
   const scrapedAge = scrapedAt ? (now - scrapedAt) / DAY_MS : Infinity;
 
-  // Has any enriched content at all?
-  const hasContent = !!(poi.enriched_detail_description && poi.enriched_detail_description.trim());
+  // Tier-SLA thresholds (days)
+  const tier = poi.tier || 4;
+  const TIER_SLA = { 1: 2, 2: 10, 3: 35, 4: 100 };
+  const slaMax = TIER_SLA[tier] || 100;
 
-  if (!hasContent) {
-    return { score: 0, status: 'unverified' };
-  }
+  // Best age: use most recent signal
+  const bestAge = Math.min(contentAge, verifiedAge, scrapedAge);
 
   let score;
+  let sla;
 
-  // Recently verified externally = strong freshness signal
-  if (verifiedAge < 14) {
-    score = Math.min(100, 85 + Math.round((14 - verifiedAge) / 14 * 15));
-  }
-  // Recently scraped = moderate freshness signal
-  else if (scrapedAge < 14) {
-    score = Math.min(95, 80 + Math.round((14 - scrapedAge) / 14 * 15));
-  }
-  // Based on content age
-  else if (contentAge < 30) {
-    // Fresh: 80-100 based on how recent
-    score = Math.round(80 + (30 - contentAge) / 30 * 20);
-  } else if (contentAge < 90) {
-    // Aging: 50-79 based on position in range
-    score = Math.round(79 - (contentAge - 30) / 60 * 30);
-  } else if (contentAge < 180) {
-    // Stale: 20-49 based on position in range
-    score = Math.round(49 - (contentAge - 90) / 90 * 30);
+  // SLA compliance check
+  if (bestAge <= slaMax) {
+    // Within SLA: score 60-100 based on how fresh within the SLA window
+    const freshness = 1 - (bestAge / slaMax);
+    score = Math.round(60 + freshness * 40);
+    sla = 'within_sla';
+  } else if (bestAge <= slaMax * 2) {
+    // Overdue but not critical: score 30-59
+    const overdue = (bestAge - slaMax) / slaMax;
+    score = Math.round(59 - overdue * 30);
+    sla = 'overdue';
   } else {
-    // Very old: 0-19
-    score = Math.max(0, Math.round(19 - (contentAge - 180) / 365 * 19));
+    // Critical: score 0-29
+    const critical = Math.min((bestAge - slaMax * 2) / (slaMax * 2), 1);
+    score = Math.max(0, Math.round(29 - critical * 29));
+    sla = 'critical';
   }
 
   // Clamp
@@ -85,12 +86,11 @@ function calculateFreshnessScore(poi) {
 
   // Determine status
   let status;
-  if (score >= 80) status = 'fresh';
-  else if (score >= 50) status = 'aging';
-  else if (score >= 20) status = 'stale';
-  else status = 'unverified';
+  if (score >= 60) status = 'fresh';
+  else if (score >= 30) status = 'aging';
+  else status = 'stale';
 
-  return { score, status };
+  return { score, status, sla, contentAgeDays: Math.round(bestAge), tier };
 }
 
 /**
@@ -104,7 +104,7 @@ async function recalculateFreshness(destinationId) {
     const { QueryTypes } = await import('sequelize');
 
     const pois = await mysqlSequelize.query(`
-      SELECT id, last_updated, content_modified_at, content_verified_at, website_scraped_at,
+      SELECT id, tier, last_updated, content_modified_at, content_verified_at, website_scraped_at,
              enriched_detail_description
       FROM POI
       WHERE destination_id = ? AND is_active = 1

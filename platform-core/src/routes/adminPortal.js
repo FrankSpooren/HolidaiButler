@@ -3568,6 +3568,62 @@ router.get('/pois/freshness', adminAuth('reviewer'), destinationScope, async (re
       }
     }
 
+    // Age distribution buckets (< 7d, < 14d, < 30d, < 90d, > 90d)
+    const ageBuckets = await mysqlSequelize.query(
+      `SELECT destination_id,
+        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) < 7 THEN 1 ELSE 0 END) as under_7d,
+        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) BETWEEN 7 AND 13 THEN 1 ELSE 0 END) as d7_14,
+        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) BETWEEN 14 AND 30 THEN 1 ELSE 0 END) as d14_30,
+        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) BETWEEN 31 AND 90 THEN 1 ELSE 0 END) as d31_90,
+        SUM(CASE WHEN DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) > 90 THEN 1 ELSE 0 END) as over_90d,
+        COUNT(*) as total
+       FROM POI WHERE ${where.join(' AND ')}
+       GROUP BY destination_id`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+
+    // Tier-SLA compliance (within expected refresh window per tier)
+    const slaCompliance = await mysqlSequelize.query(
+      `SELECT destination_id, tier,
+        COUNT(*) as total,
+        SUM(CASE
+          WHEN tier = 1 AND DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) <= 2 THEN 1
+          WHEN tier = 2 AND DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) <= 10 THEN 1
+          WHEN tier = 3 AND DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) <= 35 THEN 1
+          WHEN tier = 4 AND DATEDIFF(NOW(), COALESCE(content_modified_at, last_updated)) <= 100 THEN 1
+          ELSE 0
+        END) as within_sla
+       FROM POI WHERE ${where.join(' AND ')}
+       GROUP BY destination_id, tier
+       ORDER BY destination_id, tier`,
+      { replacements: params, type: QueryTypes.SELECT }
+    );
+
+    // Build SLA summary per destination
+    for (const dest of Object.keys(byDestination)) {
+      const destIdNum = dest === 'calpe' ? 1 : dest === 'texel' ? 2 : parseInt(dest.replace('dest_', ''));
+      const destSla = slaCompliance.filter(r => r.destination_id === destIdNum);
+      const destBuckets = ageBuckets.find(r => r.destination_id === destIdNum);
+
+      let totalSla = 0, totalWithin = 0;
+      const tierBreakdown = {};
+      for (const r of destSla) {
+        const t = r.tier || 4;
+        tierBreakdown[`T${t}`] = { total: parseInt(r.total), withinSla: parseInt(r.within_sla), pct: r.total > 0 ? Math.round(parseInt(r.within_sla) / parseInt(r.total) * 100) : 0 };
+        totalSla += parseInt(r.total);
+        totalWithin += parseInt(r.within_sla);
+      }
+      byDestination[dest].slaCompliance = totalSla > 0 ? Math.round(totalWithin / totalSla * 100) : 0;
+      byDestination[dest].tierSla = tierBreakdown;
+      byDestination[dest].ageBuckets = destBuckets ? {
+        under7d: parseInt(destBuckets.under_7d || 0),
+        d7_14: parseInt(destBuckets.d7_14 || 0),
+        d14_30: parseInt(destBuckets.d14_30 || 0),
+        d31_90: parseInt(destBuckets.d31_90 || 0),
+        over90d: parseInt(destBuckets.over_90d || 0),
+      } : {};
+    }
+
     // Top stale POIs (for quick action)
     const staleWhere = [...where, "content_freshness_status IN ('stale', 'unverified')"];
     const stalePois = await mysqlSequelize.query(
