@@ -3422,6 +3422,13 @@ export default function ContentStudioPage() {
                 <Box sx={{ flex: 1 }} />
                 <Button size="small" variant="contained" color="success" startIcon={<CheckIcon />} onClick={() => handleSugBulkStatus('approved')} disabled={sugBulkLoading}>{t('contentStudio.bulkApprove', 'Goedkeuren')}</Button>
                 <Button size="small" variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => handleSugBulkStatus('rejected')} disabled={sugBulkLoading}>{t('contentStudio.reject', 'Afwijzen')}</Button>
+                <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />}
+                  onClick={() => {
+                    if (window.confirm(t('contentStudio.confirmBulkDeleteSuggestions', '{{count}} suggesties verwijderen?', { count: selectedSugIds.length }))) {
+                      handleSugBulkStatus('deleted');
+                    }
+                  }}
+                  disabled={sugBulkLoading}>{t('contentStudio.actions.delete', 'Verwijderen')}</Button>
                 <Button size="small" onClick={() => setSelectedSugIds([])}>{t('contentStudio.clearSelection', 'Wis selectie')}</Button>
               </Box>
             )}
