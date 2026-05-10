@@ -32,9 +32,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 function calculateFreshnessScore(poi) {
   const now = Date.now();
 
-  // Primary: how old is the content?
+  // Primary: how old is the CONTENT? (not any DB touch)
+  // content_modified_at tracks actual content changes (Apify sync, manual edit, verification)
+  // last_updated changes on ANY field change (tier recalc, batch ops) — unreliable for freshness
+  const contentModified = poi.content_modified_at ? new Date(poi.content_modified_at).getTime() : null;
   const lastUpdated = poi.last_updated ? new Date(poi.last_updated).getTime() : null;
-  const contentAge = lastUpdated ? (now - lastUpdated) / DAY_MS : Infinity;
+  const contentAge = contentModified ? (now - contentModified) / DAY_MS
+    : (lastUpdated ? (now - lastUpdated) / DAY_MS : Infinity);
 
   // Boost: external verification
   const verifiedAt = poi.content_verified_at ? new Date(poi.content_verified_at).getTime() : null;
@@ -100,7 +104,7 @@ async function recalculateFreshness(destinationId) {
     const { QueryTypes } = await import('sequelize');
 
     const pois = await mysqlSequelize.query(`
-      SELECT id, last_updated, content_verified_at, website_scraped_at,
+      SELECT id, last_updated, content_modified_at, content_verified_at, website_scraped_at,
              enriched_detail_description
       FROM POI
       WHERE destination_id = ? AND is_active = 1

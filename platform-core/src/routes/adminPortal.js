@@ -1387,6 +1387,15 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
       pendingProspects = pp?.cnt || 0;
     } catch { /* table may not exist yet */ }
 
+    // 10. Stale POIs (freshness score < 50)
+    let stalePois = 0;
+    try {
+      const [[sp]] = await mysqlSequelize.query(
+        `SELECT COUNT(*) as cnt FROM POI WHERE is_active = 1 AND content_freshness_score < 50 ${destFilter}`
+      );
+      stalePois = sp?.cnt || 0;
+    } catch { /* column may not exist */ }
+
     res.json({
       success: true,
       data: {
@@ -1396,6 +1405,7 @@ router.get('/dashboard/actions', adminAuth('reviewer'), async (req, res) => {
           expiringTokens,
           failedPublishes,
           pendingProspects,
+          stalePois,
           topPerformer,
           trendingTopic,
         },
