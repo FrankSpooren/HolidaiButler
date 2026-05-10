@@ -101,7 +101,7 @@ const mediaService = {
    */
   async updateMedia(id, destinationId, updates, userId) {
     const allowedFields = [
-      'alt_text', 'description', 'description_en', 'description_de', 'description_es', 'description_fr',
+      'original_name', 'alt_text', 'description', 'description_en', 'description_de', 'description_es', 'description_fr',
       'tags', 'owner_name', 'owner_email', 'usage_rights', 'license_type', 'license_expiry',
       'consent_status', 'consent_form_url', 'media_type', 'location_lat', 'location_lng',
       'location_name', 'quality_tier', 'ai_badge', 'category'

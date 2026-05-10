@@ -368,7 +368,14 @@ function InfoTab({ media, onSave, t }) {
 
   return (
     <Stack spacing={2} sx={{ p: 1 }}>
-      <ReadOnlyField label={t('media.filename', 'Bestandsnaam')} value={media?.original_name || media?.filename} />
+      <TextField
+        label={t('media.filename', 'Bestandsnaam')}
+        value={getVal('original_name') || media?.filename || ''}
+        onChange={(e) => setFields(p => ({ ...p, original_name: e.target.value }))}
+        onBlur={() => handleBlur('original_name')}
+        size="small" fullWidth
+        InputProps={{ sx: { fontWeight: 600, fontSize: '0.9rem' } }}
+      />
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip label={media?.media_type || 'unknown'} size="small" />
         {media?.quality_tier && (

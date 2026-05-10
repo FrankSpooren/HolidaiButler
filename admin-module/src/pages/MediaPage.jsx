@@ -128,7 +128,7 @@ export default function MediaPage() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (id) => client.delete(`/media/${id}`).then(r => r.data),
+    mutationFn: (id) => client.delete(`/media/${id}`, { params: { destinationId: destId } }).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media'] });
       setDetailOpen(null);
@@ -138,7 +138,7 @@ export default function MediaPage() {
 
   const bulkDeleteMut = useMutation({
     mutationFn: async (ids) => {
-      const results = await Promise.allSettled(ids.map(id => client.delete(`/media/${id}`)));
+      const results = await Promise.allSettled(ids.map(id => client.delete(`/media/${id}`, { params: { destinationId: destId } })));
       return results.filter(r => r.status === 'fulfilled').length;
     },
     onSuccess: (deleted) => {

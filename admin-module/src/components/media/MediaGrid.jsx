@@ -127,7 +127,7 @@ function ThumbnailItem({ file, isSelected, onSelect, onClick, apiBase }) {
         </Box>
       )}
       <ImageListItemBar
-        title={file.original_name}
+        title={<span title={file.original_name || file.filename}>{file.original_name || file.filename}</span>}
         subtitle={<Chip size="small" label={file.category || file.mime_type?.split('/')[1]} sx={{ height: 18, fontSize: '0.65rem' }} />}
         sx={{ '& .MuiImageListItemBar-title': { fontSize: '0.7rem' } }}
       />
