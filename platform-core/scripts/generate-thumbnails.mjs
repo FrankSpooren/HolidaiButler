@@ -57,7 +57,7 @@ async function run() {
 
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {});
       // Wait for client-side rendering + any animations
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 5000));
 
       // Try to find the block element
       const blockEl = await page.$(`[data-block-type="${type}"]`).catch(() => null);
