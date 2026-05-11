@@ -166,7 +166,7 @@ function ListViewRow({ file, isSelected, onSelect, onClick, apiBase, t }) {
       <TableCell>
         <Chip size="small" label={file.mime_type?.split('/')[1] || '—'} sx={{ height: 20, fontSize: '0.7rem' }} />
       </TableCell>
-      <TableCell>{file.tags?.join(', ') || '—'}</TableCell>
+      <TableCell>{(Array.isArray(file.tags) ? file.tags : (() => { try { return JSON.parse(file.tags); } catch { return null; } })())?.join(', ') || '—'}</TableCell>
       <TableCell>{formatSize(file.size_bytes)}</TableCell>
       <TableCell>{formatDate(file.created_at)}</TableCell>
       <TableCell>{file.uploaded_by || '—'}</TableCell>
