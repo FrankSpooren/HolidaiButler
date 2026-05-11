@@ -98,6 +98,7 @@ export default function BlockSelectorDialog({ open, onClose, onSelect, currentBl
   // Check feature flag availability per block
   const isBlockAvailable = (block) => {
     if (!block.featureFlag) return true;
+    if (!featureFlags || Object.keys(featureFlags).length === 0) return true;
     return featureFlags[block.featureFlag] === true;
   };
 
