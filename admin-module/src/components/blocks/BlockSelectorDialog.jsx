@@ -205,10 +205,9 @@ export default function BlockSelectorDialog({ open, onClose, onSelect, currentBl
                       >
                         {/* Thumbnail */}
                         {thumbnail ? (
-                          <Box
-                            sx={{ width: '100%', height: 100, p: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', borderBottom: 1, borderColor: 'divider' }}
-                            dangerouslySetInnerHTML={{ __html: thumbnail }}
-                          />
+                          <Box sx={{ width: '100%', height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', borderBottom: 1, borderColor: 'divider', overflow: 'hidden' }}>
+                            <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                          </Box>
                         ) : (
                           <Box sx={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
                             <IconComponent sx={{ fontSize: 40, color: 'primary.main' }} />
