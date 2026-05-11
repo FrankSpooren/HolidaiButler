@@ -276,12 +276,15 @@ export default function PagesPage({ embedded = false }) {
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
-  // Map destination to preview domain
-  const PREVIEW_DOMAINS = { 1: 'https://dev.holidaibutler.com', 2: 'https://dev.texelmaps.nl' };
+  // Dynamic preview domain from destination data (no hardcoding)
   const getPreviewUrl = () => {
-    const baseDomain = PREVIEW_DOMAINS[editPage?.destination_id] || PREVIEW_DOMAINS[destId] || 'https://dev.holidaibutler.com';
-    const slug = editPage?.slug === 'home' ? '' : (editPage?.slug || '');
-    return `${baseDomain}/${slug}`;
+    const pageDestId = editPage?.destination_id || destId;
+    const dest = destinations.find(d => d.id === pageDestId || String(d.id) === String(pageDestId));
+    const domain = dest?.domain;
+    // Derive dev subdomain: texelmaps.nl → dev.texelmaps.nl, holidaibutler.com → dev.holidaibutler.com
+    const baseDomain = domain ? `https://dev.${domain}` : 'https://dev.texelmaps.nl';
+    // Use /preview route — postMessage-based, respects Apache frame-ancestors security
+    return `${baseDomain}/preview`;
   };
 
   if (isLoading) {
