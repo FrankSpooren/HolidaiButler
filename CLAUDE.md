@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.85.0
+> **Versie**: 4.86.0
 > **Laatst bijgewerkt**: 11 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -901,6 +901,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.86.0** | **2026-05-11** | **Fase VII-E4: Editor UX-Upgrade COMPLEET**. C1 Block Picker: search input, feature-flag gating (optie b), dependency warnings, Alles-tab met counts. C2 Template: apply-template-defaults endpoint met diff-preview + confirmation (optie b). C3 Quality Validation: pageQualityValidator.js (6 dimensies: content/SEO/a11y/data/performance/template), warnings-only (optie b), PageQualityPanel.jsx in editor. C5 WYSIWYG Preview: iframe laadt echte pagina i.p.v. wireframe, Apache CSP frame-ancestors globaal. DB migratie: Texel homepage 11 blocks (desktop/mobile split) naar 7 universele responsive blocks. |
 | **4.85.0** | **2026-05-11** | **Fase VII-E3: Page Builder Templates & Page Library COMPLEET**. 24 template configs (9 bestaand upgraded + 15 nieuw). templateDefaults.js service. template_type + metadata kolommen pages tabel. Slug-based routing /event/[id]/[slug] + /poi/[id]/[slug] (307 redirect). Template API: GET /admin-portal/templates + POST /pages/from-template. 6 schema.org generators (EventDetail, PoiDetail, Article, CollectionPage, TouristTrip + category-aware subtype mapping). Admin pageTemplates.js uitgebreid (9→24 templates). Categorieen: basic, discovery, events, editorial, commerce, detail, mobile, campaign. |
 | **4.84.0** | **2026-05-10** | **Fase VII-E2: Page Builder 15 nieuwe USP-blokken COMPLEET**. Batch A Discovery (Search FULLTEXT, Filter Bar React Context, Map+List bidirectioneel Leaflet, Related Items Haversine, Featured Item). Batch B Events & Planning (Add to Calendar 4 providers + ICS, Itinerary OSRM EU-first Docker, Save-to-Trip localStorage, Opening Hours live indicator, Location Details, Calendar View FullCalendar MIT). Batch C Page Structure & Commerce (Breadcrumbs Schema.org BreadcrumbList, Anchor Nav IntersectionObserver, Offer/Package Schema.org, Consent Embed GDPR). 15 feature flags staged rollout. Block registry 30 naar 45. 3 backend routes + OSRM Docker. 3 FULLTEXT indexes + search_logs. |
 | **4.83.0** | **2026-05-08** | **Fase VII-E1 COMPLEET: Page Builder Restructuring & Cleanup**. Banner split (Banner promo + AlertStatus operationeel, 3 severities, ARIA role=alert, 9 design tokens). CardGroup renamed CuratedCards (variant curated/offer/related, badge, price). Mobile/Desktop consolidatie: today_events (mobile_events+desktop_events, @container responsive), programme (mobile_program+desktop_program_tip, @container 3fr/2fr), tip_of_the_day (mobile_tip universal), mobile_map universal. category_grid @container promotion. Hero+Map verified no-op. Block picker 6→8 categorieen + hidden alias filter + i18n 4 talen. PascalCase aliassen WarreWijzer+Alicante. 44 frontend / 41 admin registry entries, 31 unieke blocks. DB: 5 blocks page 7 gemigreerd. 19 bestanden, +421/-99 LOC. Commit 24a18af. |
