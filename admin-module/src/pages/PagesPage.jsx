@@ -648,6 +648,7 @@ export default function PagesPage({ embedded = false }) {
         open={selectorOpen}
         onClose={() => setSelectorOpen(false)}
         onSelect={addBlockOfType}
+        currentBlocks={editPage?.layout?.blocks || []}
       />
 
       {/* Delete confirm dialog */}
