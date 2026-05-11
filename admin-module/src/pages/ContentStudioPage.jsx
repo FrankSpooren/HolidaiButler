@@ -2051,7 +2051,7 @@ export default function ContentStudioPage() {
 
   const handleGenerateContent = async (data) => {
     try {
-      await contentService.generateItem(data);
+      // Refresh lists — actual generation happens in GenerateContentDialog via generateConcept
       loadSuggestions();
       loadItems();
     } catch (err) {

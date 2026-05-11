@@ -14617,7 +14617,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
          AND (
            (ci.scheduled_at BETWEEN :start AND :end)
            OR (ci.published_at BETWEEN :start AND :end)
-           OR (ci.approval_status IN ('approved', 'draft', 'scheduled', 'publishing') AND ci.created_at BETWEEN :start AND :end)
+           OR (ci.approval_status IN ('approved', 'scheduled', 'publishing', 'published') AND ci.created_at BETWEEN :start AND :end)
          )
        ORDER BY COALESCE(ci.scheduled_at, ci.published_at, ci.created_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
