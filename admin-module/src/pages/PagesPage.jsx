@@ -28,6 +28,7 @@ import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import { pageService } from '../api/pageService.js';
 import BlockEditorCard from '../components/blocks/BlockEditorCard.jsx';
 import BlockSelectorDialog from '../components/blocks/BlockSelectorDialog.jsx';
+import PageQualityPanel from '../components/blocks/PageQualityPanel.jsx';
 import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
 import debounce from 'lodash.debounce';
@@ -511,6 +512,9 @@ export default function PagesPage({ embedded = false }) {
             <Tab label={t('pages.tabs.blocks')} />
             <Tab label={t('pages.tabs.preview')} />
           </Tabs>
+
+          {/* Quality validation panel (E4.3.2) */}
+          {editPage?.id && <PageQualityPanel pageId={editPage.id} />}
 
           {editTab === 0 && editPage && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

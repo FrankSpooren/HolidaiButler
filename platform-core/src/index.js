@@ -309,6 +309,65 @@ app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/related', relatedRoutes);
 app.use('/api/v1/itinerary', itineraryRoutes);
+
+// Page Quality Validation (VII-E4 Cluster 3)
+app.get('/api/v1/admin-portal/pages/:id/validate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+    const [page] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+    const { validatePage } = await import('./services/validation/pageQualityValidator.js');
+    const result = await validatePage(page);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Apply Template Defaults to existing page (VII-E4 Cluster 2, option b)
+app.post('/api/v1/admin-portal/pages/:id/apply-template', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmed = false } = req.body;
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+    const [page] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+
+    // Calpe protection
+    const [dest] = await mysqlSequelize.query('SELECT code FROM destinations WHERE id = :destId', { replacements: { destId: page.destination_id }, type: QueryTypes.SELECT });
+    if (dest?.code === 'calpe') return res.status(403).json({ error: 'Calpe pages are protected' });
+
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const template = TEMPLATES[page.template_type || 'blank'];
+    if (!template || !template.default_layout) return res.status(400).json({ error: 'No template defaults for this template_type' });
+
+    const currentLayout = typeof page.layout === 'string' ? JSON.parse(page.layout) : (page.layout || { blocks: [] });
+    const currentBlockCount = currentLayout.blocks?.length || 0;
+    const newBlockCount = template.default_layout.blocks?.length || 0;
+
+    // If page has content and not confirmed, return diff preview
+    if (!confirmed && currentBlockCount > 1) {
+      return res.json({
+        requires_confirmation: true,
+        diff: { current_blocks: currentBlockCount, new_blocks: newBlockCount, template_type: page.template_type },
+        message: 'Pagina heeft ' + currentBlockCount + ' blocks die vervangen worden door ' + newBlockCount + ' template-defaults.',
+      });
+    }
+
+    // Apply template defaults
+    await mysqlSequelize.query(
+      'UPDATE pages SET layout = :layout, updated_at = NOW() WHERE id = :id',
+      { replacements: { layout: JSON.stringify(template.default_layout), id }, type: QueryTypes.UPDATE }
+    );
+
+    res.json({ success: true, applied: true, template_type: page.template_type, new_block_count: newBlockCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // Template defaults for Page Editor (VII-E3)
 app.get('/api/v1/admin-portal/templates', async (req, res) => {
   try {
