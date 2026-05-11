@@ -265,6 +265,14 @@ function BlockPreview({ block, index }: { block: BlockConfig; index: number }) {
 
 export default function PreviewPage() {
   const [layout, setLayout] = useState<PageLayout | null>(null);
+  const [viewWidth, setViewWidth] = useState(1024);
+
+  useEffect(() => {
+    setViewWidth(window.innerWidth);
+    const h = () => setViewWidth(window.innerWidth);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   useEffect(() => {
     const trustedDomains = ['holidaibutler.com', 'texelmaps.nl', 'warrewijzer.be', 'localhost'];
@@ -301,8 +309,6 @@ export default function PreviewPage() {
   }
 
   // Filter blocks by visibility based on iframe width (admin viewport toggle)
-  const [viewWidth, setViewWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
-  useEffect(() => { const h = () => setViewWidth(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
   const isMobile = viewWidth < 500;
   const filteredBlocks = blocks.filter((block: BlockConfig) => {
     const vis = (block as unknown as Record<string, unknown>).visibility as string | undefined;
