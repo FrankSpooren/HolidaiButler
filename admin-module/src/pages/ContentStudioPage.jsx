@@ -3872,7 +3872,11 @@ export default function ContentStudioPage() {
               <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
                   <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
+<<<<<<< Updated upstream
                     <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, px: 0.5 }}>
+=======
+                    <TableCell padding="none" sx={{ width: 42, minWidth: 42, maxWidth: 42, textAlign: 'center', pl: 1 }}>
+>>>>>>> Stashed changes
                       <Checkbox size="small"
                         checked={concepts.length > 0 && selectedIds.length > 0 && selectedIds.length === concepts.filter(c => c.approval_status !== 'deleted').length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < concepts.filter(c => c.approval_status !== 'deleted').length}
@@ -3937,7 +3941,7 @@ export default function ContentStudioPage() {
                   {itemLoading ? (
                     Array.from({ length: 15 }).map((_, i) => (
                       <TableRow key={`skel-${i}`} sx={{ height: rowHeight }}>
-                        <TableCell padding="checkbox"><Skeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} /></TableCell>
+                        <TableCell padding="none" sx={{ width: 42, textAlign: 'center', pl: 1 }}><Skeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} /></TableCell>
                         {activeColumns.includes('title') && <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Skeleton variant="rectangular" width={28} height={28} sx={{ borderRadius: 1, flexShrink: 0 }} /><Skeleton variant="text" width={`${60 + Math.random() * 30}%`} /></Box></TableCell>}
                         {activeColumns.includes('source') && <TableCell><Skeleton variant="rounded" width={60} height={20} /></TableCell>}
                         {activeColumns.includes('platforms') && <TableCell><Box sx={{ display: 'flex', gap: 0.5 }}><Skeleton variant="rounded" width={55} height={20} /><Skeleton variant="rounded" width={55} height={20} /></Box></TableCell>}
@@ -4000,7 +4004,7 @@ export default function ContentStudioPage() {
                           '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                         }}
                         onClick={() => { setFocusedRow(rowIdx); setConceptDialogId(concept.id); setConceptDialogPlatform(null); }}>
-                        <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                        <TableCell padding="none" sx={{ width: 42, textAlign: 'center', pl: 1 }} onClick={e => e.stopPropagation()}>
                           <Checkbox size="small" checked={selectedIds.includes(firstItemId)} onChange={() => firstItemId && toggleSelectItem(firstItemId)} />
                         </TableCell>
                         {activeColumns.includes('title') && (
