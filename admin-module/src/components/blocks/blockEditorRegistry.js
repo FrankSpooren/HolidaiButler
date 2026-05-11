@@ -112,7 +112,7 @@ const blockEditorRegistry = {
     label: 'Banner',
     description: 'Dismissible notification or promo bar',
     category: 'Page Structure',
-    thumbnail: THUMBNAILS.banner
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="70" width="270" height="60" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/><circle cx="40" cy="100" r="12" fill="#f59e0b" opacity="0.2"/><text x="40" y="104" font-size="14" fill="#f59e0b" text-anchor="middle">!</text><text x="60" y="93" font-size="10" fill="#92400e" font-weight="600">Zomerkorting: 20% op alle tickets</text><text x="60" y="110" font-size="8" fill="#b45309">Geldig t/m 31 augustus 2026</text><rect x="230" y="87" width="20" height="20" rx="4" fill="none" stroke="#b45309" stroke-width="1.5"/><line x1="235" y1="92" x2="245" y2="102" stroke="#b45309" stroke-width="1.5"/><line x1="245" y1="92" x2="235" y2="102" stroke="#b45309" stroke-width="1.5"/></svg>`
   },
   alert_status: {
     editor: AlertStatusEditor,
@@ -120,7 +120,7 @@ const blockEditorRegistry = {
     label: 'Alert / Status',
     description: 'Operationele melding: sluiting, weersalarm, capaciteit',
     category: 'Page Structure',
-    thumbnail: THUMBNAILS.banner
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="65" width="270" height="70" rx="8" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/><circle cx="40" cy="90" r="12" fill="#ef4444"/><text x="40" y="95" font-size="14" fill="#fff" text-anchor="middle">⚠</text><text x="60" y="85" font-size="10" fill="#991b1b" font-weight="600">Weersalarm: Storm verwacht</text><text x="60" y="100" font-size="8" fill="#b91c1c">Strand gesloten vandaag 12:00-18:00</text><text x="60" y="115" font-size="8" fill="#dc2626">Bel 0222-123456 voor meer info</text></svg>`
   },
   search: {
     editor: SearchEditor,
@@ -262,7 +262,7 @@ const blockEditorRegistry = {
     label: 'FAQ',
     description: 'Expandable question & answer list',
     category: 'Page Structure',
-    thumbnail: THUMBNAILS.faq
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#fff"/><rect x="20" y="15" width="260" height="40" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/><text x="32" y="38" font-size="9" fill="#1e40af" font-weight="600">Hoe kom ik op Texel?</text><text x="248" y="38" font-size="14" fill="#3b82f6">−</text><text x="32" y="55" font-size="8" fill="#64748b">Met de TESO boot vanaf Den Helder...</text><rect x="20" y="70" width="260" height="36" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="32" y="92" font-size="9" fill="#334155">Wat is de beste tijd om te bezoeken?</text><text x="248" y="92" font-size="14" fill="#94a3b8">+</text><rect x="20" y="112" width="260" height="36" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="32" y="134" font-size="9" fill="#334155">Kan ik mijn hond meenemen?</text><text x="248" y="134" font-size="14" fill="#94a3b8">+</text><rect x="20" y="154" width="260" height="36" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5" opacity="0.6"/><text x="32" y="176" font-size="9" fill="#334155" opacity="0.6">Zijn er fietsverhuurders?</text></svg>`
   },
   gallery: {
     editor: GalleryEditor,
@@ -270,7 +270,7 @@ const blockEditorRegistry = {
     label: 'Gallery',
     description: 'Image and video gallery with lightbox',
     category: 'Media & Proof',
-    thumbnail: THUMBNAILS.gallery
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="135" height="85" rx="6" fill="#bfdbfe"/><rect x="155" y="10" width="65" height="85" rx="6" fill="#d9f99d"/><rect x="228" y="10" width="62" height="85" rx="6" fill="#fde68a"/><rect x="10" y="105" width="90" height="85" rx="6" fill="#fecaca"/><rect x="108" y="105" width="90" height="85" rx="6" fill="#c4b5fd"/><rect x="206" y="105" width="84" height="85" rx="6" fill="#a7f3d0"/><text x="77" y="58" font-size="10" fill="#1e40af" text-anchor="middle">🏖️ Strand</text><text x="187" y="58" font-size="9" fill="#365314" text-anchor="middle">🌿</text><text x="259" y="58" font-size="9" fill="#854d0e" text-anchor="middle">☀️</text></svg>`
   },
   video: {
     editor: VideoEditor,
@@ -278,7 +278,7 @@ const blockEditorRegistry = {
     label: 'Video',
     description: 'YouTube, Vimeo, or self-hosted video',
     category: 'Media & Proof',
-    thumbnail: THUMBNAILS.video
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#0f172a"/><rect x="20" y="15" width="260" height="145" rx="8" fill="#1e293b"/><circle cx="150" cy="87" r="24" fill="rgba(255,255,255,0.15)"/><polygon points="142,75 142,99 164,87" fill="#fff"/><rect x="20" y="150" width="260" height="4" rx="2" fill="#334155"/><rect x="20" y="150" width="100" height="4" rx="2" fill="#ef4444"/><text x="30" y="180" font-size="9" fill="#94a3b8">Ontdek Texel vanuit de lucht</text><text x="230" y="180" font-size="9" fill="#94a3b8">3:42</text></svg>`
   },
   partners: {
     editor: PartnersEditor,
@@ -286,7 +286,7 @@ const blockEditorRegistry = {
     label: 'Partners',
     description: 'Logo grid with links',
     category: 'Media & Proof',
-    thumbnail: THUMBNAILS.partners
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><text x="150" y="25" font-size="11" fill="#334155" text-anchor="middle" font-weight="600">Onze Partners</text><rect x="20" y="40" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="57" y="70" font-size="8" fill="#94a3b8" text-anchor="middle">TESO</text><rect x="112" y="40" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="149" y="70" font-size="8" fill="#94a3b8" text-anchor="middle">Ecomare</text><rect x="204" y="40" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="241" y="70" font-size="8" fill="#94a3b8" text-anchor="middle">VVV Texel</text><rect x="20" y="100" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="57" y="130" font-size="8" fill="#94a3b8" text-anchor="middle">De Koog</text><rect x="112" y="100" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="149" y="130" font-size="8" fill="#94a3b8" text-anchor="middle">Kaap Skil</text><rect x="204" y="100" width="75" height="50" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="241" y="130" font-size="8" fill="#94a3b8" text-anchor="middle">Jutters</text></svg>`
   },
   downloads: {
     editor: DownloadsEditor,
@@ -294,7 +294,7 @@ const blockEditorRegistry = {
     label: 'Downloads',
     description: 'File list with type icons',
     category: 'Media & Proof',
-    thumbnail: THUMBNAILS.downloads
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="20" width="260" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="32" width="24" height="20" rx="3" fill="#ef4444"/><text x="44" y="46" font-size="7" fill="#fff" text-anchor="middle">PDF</text><text x="66" y="42" font-size="9" fill="#334155">Wandelroute Slufter (3.2 MB)</text><text x="66" y="54" font-size="8" fill="#94a3b8">Laatste update: mei 2026</text><rect x="242" y="36" width="28" height="16" rx="3" fill="#3b82f6"/><text x="256" y="48" font-size="7" fill="#fff" text-anchor="middle">↓</text><rect x="20" y="75" width="260" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="87" width="24" height="20" rx="3" fill="#22c55e"/><text x="44" y="101" font-size="7" fill="#fff" text-anchor="middle">GPX</text><text x="66" y="97" font-size="9" fill="#334155">Fietsroute Texel Rondje (1.1 MB)</text><text x="66" y="109" font-size="8" fill="#94a3b8">42 km, 3-4 uur</text><rect x="242" y="91" width="28" height="16" rx="3" fill="#3b82f6"/><rect x="20" y="130" width="260" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="32" y="142" width="24" height="20" rx="3" fill="#3b82f6"/><text x="44" y="156" font-size="7" fill="#fff" text-anchor="middle">PNG</text><text x="66" y="152" font-size="9" fill="#334155">Plattegrond Texel (5.8 MB)</text></svg>`
   },
   poi_grid: {
     editor: PoiGridEditor,
@@ -302,7 +302,7 @@ const blockEditorRegistry = {
     label: 'POI Grid',
     description: 'Grid of points of interest',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.poi_grid
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="10" y="10" width="85" height="50" rx="6 6 0 0" fill="#bfdbfe"/><rect x="17" y="68" width="12" height="12" rx="6" fill="#7CB342"/><text x="35" y="77" font-size="7" fill="#64748b">Natuur</text><text x="17" y="93" font-size="9" fill="#334155" font-weight="600">Slufter</text><text x="17" y="108" font-size="8" fill="#f59e0b">★ 4.7 (89)</text><rect x="105" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="10" width="85" height="50" rx="6 6 0 0" fill="#fde68a"/><rect x="112" y="68" width="12" height="12" rx="6" fill="#E53935"/><text x="130" y="77" font-size="7" fill="#64748b">Eten</text><text x="112" y="93" font-size="9" fill="#334155" font-weight="600">Paal 17</text><text x="112" y="108" font-size="8" fill="#f59e0b">★ 4.8 (124)</text><rect x="200" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="200" y="10" width="85" height="50" rx="6 6 0 0" fill="#d9f99d"/><rect x="207" y="68" width="12" height="12" rx="6" fill="#004B87"/><text x="225" y="77" font-size="7" fill="#64748b">Cultuur</text><text x="207" y="93" font-size="9" fill="#334155" font-weight="600">Kaap Skil</text><text x="207" y="108" font-size="8" fill="#f59e0b">★ 4.6 (201)</text></svg>`
   },
   poi_grid_filtered: {
     editor: PoiGridEditor,
@@ -310,7 +310,7 @@ const blockEditorRegistry = {
     label: 'POI Grid (Filtered)',
     description: 'Grid of POIs with category/rating filter bar',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.poi_grid
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="10" y="10" width="85" height="50" rx="6 6 0 0" fill="#bfdbfe"/><rect x="17" y="68" width="12" height="12" rx="6" fill="#7CB342"/><text x="35" y="77" font-size="7" fill="#64748b">Natuur</text><text x="17" y="93" font-size="9" fill="#334155" font-weight="600">Slufter</text><text x="17" y="108" font-size="8" fill="#f59e0b">★ 4.7 (89)</text><rect x="105" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="10" width="85" height="50" rx="6 6 0 0" fill="#fde68a"/><rect x="112" y="68" width="12" height="12" rx="6" fill="#E53935"/><text x="130" y="77" font-size="7" fill="#64748b">Eten</text><text x="112" y="93" font-size="9" fill="#334155" font-weight="600">Paal 17</text><text x="112" y="108" font-size="8" fill="#f59e0b">★ 4.8 (124)</text><rect x="200" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="200" y="10" width="85" height="50" rx="6 6 0 0" fill="#d9f99d"/><rect x="207" y="68" width="12" height="12" rx="6" fill="#004B87"/><text x="225" y="77" font-size="7" fill="#64748b">Cultuur</text><text x="207" y="93" font-size="9" fill="#334155" font-weight="600">Kaap Skil</text><text x="207" y="108" font-size="8" fill="#f59e0b">★ 4.6 (201)</text></svg>`
   },
   event_calendar: {
     editor: EventCalendarEditor,
@@ -318,7 +318,7 @@ const blockEditorRegistry = {
     label: 'Events',
     description: 'Event listing from agenda',
     category: 'Events & Programme',
-    thumbnail: THUMBNAILS.event_calendar
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="18" width="28" height="28" rx="4" fill="#3b82f6"/><text x="32" y="30" font-size="8" fill="#fff" text-anchor="middle">12</text><text x="32" y="40" font-size="6" fill="#bfdbfe" text-anchor="middle">MEI</text><text x="55" y="30" font-size="9" fill="#334155" font-weight="600">Strandmarkt De Koog</text><text x="55" y="43" font-size="8" fill="#94a3b8">10:00 - 17:00 · Dorpsplein</text><rect x="10" y="62" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="70" width="28" height="28" rx="4" fill="#7c3aed"/><text x="32" y="82" font-size="8" fill="#fff" text-anchor="middle">14</text><text x="32" y="92" font-size="6" fill="#c4b5fd" text-anchor="middle">MEI</text><text x="55" y="82" font-size="9" fill="#334155" font-weight="600">Jazz op het Strand</text><text x="55" y="95" font-size="8" fill="#94a3b8">19:00 - 23:00 · Paal 9</text><rect x="10" y="114" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="122" width="28" height="28" rx="4" fill="#f59e0b"/><text x="32" y="134" font-size="8" fill="#fff" text-anchor="middle">18</text><text x="32" y="144" font-size="6" fill="#fde68a" text-anchor="middle">MEI</text><text x="55" y="134" font-size="9" fill="#334155" font-weight="600">Texel Culinair Festival</text><text x="55" y="147" font-size="8" fill="#94a3b8">12:00 - 21:00 · Den Burg</text></svg>`
   },
   event_calendar_filtered: {
     editor: EventCalendarEditor,
@@ -326,7 +326,7 @@ const blockEditorRegistry = {
     label: 'Events (Filtered)',
     description: 'Event listing with date/category filter bar',
     category: 'Events & Programme',
-    thumbnail: THUMBNAILS.event_calendar
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="18" width="28" height="28" rx="4" fill="#3b82f6"/><text x="32" y="30" font-size="8" fill="#fff" text-anchor="middle">12</text><text x="32" y="40" font-size="6" fill="#bfdbfe" text-anchor="middle">MEI</text><text x="55" y="30" font-size="9" fill="#334155" font-weight="600">Strandmarkt De Koog</text><text x="55" y="43" font-size="8" fill="#94a3b8">10:00 - 17:00 · Dorpsplein</text><rect x="10" y="62" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="70" width="28" height="28" rx="4" fill="#7c3aed"/><text x="32" y="82" font-size="8" fill="#fff" text-anchor="middle">14</text><text x="32" y="92" font-size="6" fill="#c4b5fd" text-anchor="middle">MEI</text><text x="55" y="82" font-size="9" fill="#334155" font-weight="600">Jazz op het Strand</text><text x="55" y="95" font-size="8" fill="#94a3b8">19:00 - 23:00 · Paal 9</text><rect x="10" y="114" width="280" height="45" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="18" y="122" width="28" height="28" rx="4" fill="#f59e0b"/><text x="32" y="134" font-size="8" fill="#fff" text-anchor="middle">18</text><text x="32" y="144" font-size="6" fill="#fde68a" text-anchor="middle">MEI</text><text x="55" y="134" font-size="9" fill="#334155" font-weight="600">Texel Culinair Festival</text><text x="55" y="147" font-size="8" fill="#94a3b8">12:00 - 21:00 · Den Burg</text></svg>`
   },
   map: {
     editor: MapEditor,
@@ -334,7 +334,7 @@ const blockEditorRegistry = {
     label: 'Map',
     description: 'Interactive map with POI markers',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.map
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#e8f4e8"/><path d="M0,130 Q80,100 150,120 T300,100 L300,200 L0,200 Z" fill="#d4edda" opacity="0.5"/><path d="M50,30 Q60,10 80,15 Q100,20 90,40 Q80,60 70,65 Q60,70 55,60 Q45,50 50,30 Z" fill="#bfdbfe" opacity="0.3"/><circle cx="80" cy="55" r="8" fill="#ef4444"/><circle cx="80" cy="55" r="4" fill="#fff"/><circle cx="180" cy="80" r="8" fill="#3b82f6"/><circle cx="180" cy="80" r="4" fill="#fff"/><circle cx="130" cy="120" r="6" fill="#f59e0b"/><circle cx="130" cy="120" r="3" fill="#fff"/><circle cx="220" cy="45" r="7" fill="#7c3aed"/><circle cx="220" cy="45" r="3.5" fill="#fff"/><rect x="180" y="150" width="100" height="35" rx="4" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><circle cx="192" cy="160" r="4" fill="#ef4444"/><text x="200" y="163" font-size="7" fill="#334155">Eten</text><circle cx="192" cy="175" r="4" fill="#3b82f6"/><text x="200" y="178" font-size="7" fill="#334155">Actief</text><circle cx="240" cy="160" r="4" fill="#f59e0b"/><text x="248" y="163" font-size="7" fill="#334155">Natuur</text></svg>`
   },
   weather_widget: {
     editor: WeatherWidgetEditor,
@@ -342,7 +342,7 @@ const blockEditorRegistry = {
     label: 'Weather',
     description: 'Current weather and forecast',
     category: 'Utility & Practical Info',
-    thumbnail: THUMBNAILS.weather_widget
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f0f9ff"/><rect x="30" y="20" width="240" height="160" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><circle cx="75" cy="65" r="22" fill="#fbbf24"/><circle cx="75" cy="65" r="16" fill="#fde68a"/><text x="140" y="60" font-size="28" fill="#1e293b" font-weight="700">18°C</text><text x="140" y="80" font-size="10" fill="#94a3b8">Deels bewolkt · Texel</text><line x1="50" y1="105" x2="250" y2="105" stroke="#e2e8f0"/><text x="65" y="125" font-size="8" fill="#64748b" text-anchor="middle">Ma</text><text x="65" y="140" font-size="10" fill="#334155" text-anchor="middle">17°</text><text x="65" y="155" font-size="12" text-anchor="middle">☀️</text><text x="125" y="125" font-size="8" fill="#64748b" text-anchor="middle">Di</text><text x="125" y="140" font-size="10" fill="#334155" text-anchor="middle">15°</text><text x="125" y="155" font-size="12" text-anchor="middle">🌧</text><text x="185" y="125" font-size="8" fill="#64748b" text-anchor="middle">Wo</text><text x="185" y="140" font-size="10" fill="#334155" text-anchor="middle">19°</text><text x="185" y="155" font-size="12" text-anchor="middle">⛅</text><text x="240" y="125" font-size="8" fill="#64748b" text-anchor="middle">Do</text><text x="240" y="140" font-size="10" fill="#334155" text-anchor="middle">20°</text><text x="240" y="155" font-size="12" text-anchor="middle">☀️</text></svg>`
   },
   social_feed: {
     editor: SocialFeedEditor,
@@ -350,7 +350,7 @@ const blockEditorRegistry = {
     label: 'Social Feed',
     description: 'Social media embed (privacy-first)',
     category: 'Media & Proof',
-    thumbnail: THUMBNAILS.social_feed
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="10" width="125" height="180" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="15" y="10" width="125" height="80" rx="8 8 0 0" fill="#bfdbfe"/><circle cx="33" cy="102" r="10" fill="#E1306C"/><text x="33" y="106" font-size="8" fill="#fff" text-anchor="middle">IG</text><text x="50" y="103" font-size="8" fill="#334155" font-weight="600">@texelmaps</text><text x="25" y="122" font-size="7" fill="#64748b">Prachtige zonsondergang bij</text><text x="25" y="133" font-size="7" fill="#64748b">Paal 17 vanavond! 🌅</text><text x="25" y="150" font-size="7" fill="#E1306C">♥ 284 likes</text><rect x="155" y="10" width="125" height="180" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="155" y="10" width="125" height="80" rx="8 8 0 0" fill="#d9f99d"/><circle cx="173" cy="102" r="10" fill="#1877F2"/><text x="173" y="106" font-size="8" fill="#fff" text-anchor="middle">FB</text><text x="190" y="103" font-size="8" fill="#334155" font-weight="600">TexelMaps</text><text x="165" y="122" font-size="7" fill="#64748b">Nieuwe fietsroute langs de</text><text x="165" y="133" font-size="7" fill="#64748b">mooiste plekken van Texel 🚴</text></svg>`
   },
   contact_form: {
     editor: ContactFormEditor,
@@ -358,7 +358,7 @@ const blockEditorRegistry = {
     label: 'Contact Form',
     description: 'Configurable contact form with GDPR',
     category: 'Forms & Assistance',
-    thumbnail: THUMBNAILS.contact_form
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="40" y="10" width="220" height="180" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="56" y="35" font-size="8" fill="#64748b">Naam *</text><rect x="56" y="40" width="188" height="28" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="66" y="58" font-size="9" fill="#94a3b8">Jan de Vries</text><text x="56" y="82" font-size="8" fill="#64748b">E-mail *</text><rect x="56" y="87" width="188" height="28" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="66" y="105" font-size="9" fill="#94a3b8">jan@voorbeeld.nl</text><text x="56" y="130" font-size="8" fill="#64748b">Bericht *</text><rect x="56" y="135" width="188" height="30" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><rect x="160" y="172" width="84" height="24" rx="12" fill="#3b82f6"/><text x="202" y="188" font-size="9" fill="#fff" text-anchor="middle">Versturen</text></svg>`
   },
   newsletter: {
     editor: NewsletterEditor,
@@ -366,7 +366,7 @@ const blockEditorRegistry = {
     label: 'Newsletter',
     description: 'Email signup via MailerLite',
     category: 'Forms & Assistance',
-    thumbnail: THUMBNAILS.newsletter
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f0fdf4"/><rect x="30" y="40" width="240" height="120" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="150" y="72" font-size="12" fill="#334155" text-anchor="middle" font-weight="600">Blijf op de hoogte!</text><text x="150" y="90" font-size="9" fill="#94a3b8" text-anchor="middle">Ontvang wekelijks tips en events van Texel</text><rect x="50" y="105" width="140" height="32" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="62" y="125" font-size="9" fill="#94a3b8">je@email.nl</text><rect x="196" y="105" width="56" height="32" rx="6" fill="#22c55e"/><text x="224" y="125" font-size="9" fill="#fff" text-anchor="middle">Aanmelden</text></svg>`
   },
   chatbot_widget: {
     editor: ChatbotWidgetEditor,
@@ -374,7 +374,7 @@ const blockEditorRegistry = {
     label: 'Chatbot',
     description: 'AI chatbot widget',
     category: 'Forms & Assistance',
-    thumbnail: THUMBNAILS.chatbot_widget
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="60" y="5" width="180" height="190" rx="12" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="60" y="5" width="180" height="35" rx="12 12 0 0" fill="#30c59b"/><text x="150" y="27" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">Tessa</text><rect x="75" y="52" width="120" height="22" rx="11" fill="#eff6ff"/><text x="85" y="67" font-size="8" fill="#3b82f6">Hoi! Waarmee kan ik helpen?</text><rect x="115" y="80" width="110" height="22" rx="11" fill="#f1f5f9"/><text x="125" y="95" font-size="8" fill="#475569">Wat is er te doen vandaag?</text><rect x="75" y="108" width="140" height="22" rx="11" fill="#eff6ff"/><text x="85" y="123" font-size="8" fill="#3b82f6">Er zijn 3 events vandaag! 🎉</text><rect x="75" y="150" width="150" height="28" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="88" y="168" font-size="8" fill="#94a3b8">Stel een vraag aan Tessa...</text></svg>`
   },
   ticket_shop: {
     editor: TicketShopEditor,
@@ -382,7 +382,7 @@ const blockEditorRegistry = {
     label: 'Ticket Shop',
     description: 'Ticket listing and booking',
     category: 'Commerce & Conversion',
-    thumbnail: THUMBNAILS.ticket_shop
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="10" width="125" height="180" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="15" y="10" width="125" height="55" rx="8 8 0 0" fill="#bfdbfe"/><text x="77" y="45" font-size="9" fill="#1e40af" text-anchor="middle">🎫 Ecomare</text><text x="25" y="82" font-size="9" fill="#334155" font-weight="600">Entree Volwassene</text><text x="25" y="100" font-size="18" fill="#16a34a" font-weight="700">€15,50</text><text x="25" y="120" font-size="8" fill="#94a3b8">Incl. zeehondenshow</text><rect x="25" y="152" width="105" height="28" rx="14" fill="#3b82f6"/><text x="77" y="170" font-size="9" fill="#fff" text-anchor="middle">Boek nu</text><rect x="160" y="10" width="125" height="180" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="160" y="10" width="125" height="55" rx="8 8 0 0" fill="#fde68a"/><text x="222" y="45" font-size="9" fill="#854d0e" text-anchor="middle">🎫 Kaap Skil</text><text x="170" y="82" font-size="9" fill="#334155" font-weight="600">Entree Museum</text><text x="170" y="100" font-size="18" fill="#16a34a" font-weight="700">€12,00</text></svg>`
   },
   reservation_widget: {
     editor: ReservationWidgetEditor,
@@ -390,7 +390,7 @@ const blockEditorRegistry = {
     label: 'Reservations',
     description: 'Reservation booking widget',
     category: 'Commerce & Conversion',
-    thumbnail: THUMBNAILS.reservation_widget
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="15" width="240" height="170" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="150" y="38" font-size="11" fill="#334155" text-anchor="middle" font-weight="600">Reserveer een tafel</text><text x="45" y="62" font-size="8" fill="#64748b">Datum</text><rect x="45" y="67" width="95" height="28" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="55" y="85" font-size="9" fill="#334155">12 mei 2026</text><text x="155" y="62" font-size="8" fill="#64748b">Tijd</text><rect x="155" y="67" width="95" height="28" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="165" y="85" font-size="9" fill="#334155">19:00</text><text x="45" y="112" font-size="8" fill="#64748b">Aantal personen</text><rect x="45" y="117" width="205" height="28" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/><text x="55" y="135" font-size="9" fill="#334155">4 personen</text><rect x="85" y="155" width="130" height="28" rx="14" fill="#3b82f6"/><text x="150" y="173" font-size="10" fill="#fff" text-anchor="middle">Reserveer</text></svg>`
   },
   curated_cards: {
     editor: CardGroupEditor,
@@ -398,7 +398,7 @@ const blockEditorRegistry = {
     label: 'Curated Cards',
     description: 'Content cards met variant (curated/aanbieding/gerelateerd)',
     category: 'Recommendations & Planning',
-    thumbnail: THUMBNAILS.card_group
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="115" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="10" y="10" width="85" height="45" rx="6 6 0 0" fill="#bfdbfe"/><text x="17" y="68" font-size="9" fill="#334155" font-weight="600">Top 5 Stranden</text><text x="17" y="82" font-size="7" fill="#94a3b8">De mooiste stranden</text><text x="17" y="93" font-size="7" fill="#94a3b8">van het eiland</text><rect x="17" y="105" width="50" height="14" rx="7" fill="#3b82f6"/><text x="42" y="115" font-size="7" fill="#fff" text-anchor="middle">Lees meer</text><rect x="105" y="10" width="85" height="115" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="105" y="10" width="85" height="45" rx="6 6 0 0" fill="#fde68a"/><text x="112" y="68" font-size="9" fill="#334155" font-weight="600">Weekend Tips</text><rect x="200" y="10" width="85" height="115" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="200" y="10" width="85" height="45" rx="6 6 0 0" fill="#d9f99d"/><text x="207" y="68" font-size="9" fill="#334155" font-weight="600">Met Kids</text></svg>`
   },
   card_group: {
     editor: CardGroupEditor,
@@ -415,7 +415,7 @@ const blockEditorRegistry = {
     label: 'Recensies / Testimonials',
     description: 'Reviews van bezoekers met sterren en citaten',
     category: 'Recommendations & Planning',
-    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="15" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="25" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="22" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><rect x="22" y="65" width="55" height="6" rx="2" fill="#94a3b8"/><circle cx="30" cy="86" r="6" fill="#e2e8f0"/><rect x="40" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="22" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="34" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="46" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="58" y="98" width="10" height="4" rx="1" fill="#fbbf24"/><rect x="70" y="98" width="10" height="4" rx="1" fill="#e2e8f0"/><rect x="110" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="120" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="117" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="117" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="125" cy="86" r="6" fill="#e2e8f0"/><rect x="135" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="205" y="15" width="80" height="95" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="215" y="35" font-size="24" fill="#fbbf24">&ldquo;</text><rect x="212" y="45" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="212" y="55" width="50" height="6" rx="2" fill="#94a3b8"/><circle cx="220" cy="86" r="6" fill="#e2e8f0"/><rect x="230" y="83" width="40" height="6" rx="2" fill="#334155"/><rect x="55" y="130" width="190" height="12" rx="2" fill="#334155"/><rect x="80" y="155" width="140" height="8" rx="2" fill="#94a3b8"/></svg>`
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="20" width="240" height="160" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><text x="45" y="48" font-size="24" fill="#e2e8f0">"</text><text x="65" y="55" font-size="9" fill="#475569">Texel is fantastisch! De stranden zijn</text><text x="45" y="70" font-size="9" fill="#475569">prachtig en de natuur is overweldigend.</text><text x="45" y="85" font-size="9" fill="#475569">Tessa hielp ons de beste plekken vinden.</text><text x="45" y="115" font-size="10" fill="#f59e0b">★★★★★</text><circle cx="45" cy="142" r="14" fill="#e2e8f0"/><text x="45" y="146" font-size="10" text-anchor="middle">👤</text><text x="68" y="138" font-size="9" fill="#334155" font-weight="600">Familie De Jong</text><text x="68" y="152" font-size="8" fill="#94a3b8">Bezocht mei 2026</text></svg>`
   },
   // Desktop homepage blocks (primary names used in templates + DB)
   desktop_hero: {
@@ -424,7 +424,7 @@ const blockEditorRegistry = {
     label: 'Hero + Chatbot',
     description: 'Hero met chatbot-input en quick actions',
     category: 'Page Structure',
-    thumbnail: THUMBNAILS.hero
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><defs><linearGradient id="dhg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#30c59b"/><stop offset="100%" stop-color="#3572de"/></linearGradient></defs><rect width="300" height="200" fill="url(#dhg)"/><text x="40" y="55" font-size="14" fill="#fff" font-weight="700">Welkom op Texel! 🏖️</text><text x="40" y="78" font-size="9" fill="#fff" opacity="0.8">Ontdek het eiland met Tessa</text><rect x="40" y="100" width="220" height="36" rx="18" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><text x="60" y="122" font-size="9" fill="#fff" opacity="0.6">Stel een vraag aan Tessa...</text><rect x="40" y="150" width="60" height="8" rx="4" fill="rgba(255,255,255,0.3)"/><rect x="110" y="150" width="60" height="8" rx="4" fill="rgba(255,255,255,0.2)"/><rect x="180" y="150" width="60" height="8" rx="4" fill="rgba(255,255,255,0.2)"/></svg>`
   },
   programme: {
     editor: MobileProgramEditor,
@@ -432,7 +432,7 @@ const blockEditorRegistry = {
     label: 'Dagprogramma + Tip',
     description: 'Responsive dagprogramma met tip van de dag',
     category: 'Events & Programme',
-    thumbnail: THUMBNAILS.mobile_program
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><text x="20" y="25" font-size="11" fill="#334155" font-weight="600">Dagprogramma</text><circle cx="30" cy="52" r="8" fill="#e2e8f0"/><text x="30" y="56" font-size="8" text-anchor="middle">🌅</text><text x="45" y="49" font-size="9" fill="#334155">08:00 · Yoga op het strand</text><text x="45" y="62" font-size="8" fill="#30c59b">Strand Paal 17</text><line x1="30" y1="64" x2="30" y2="76" stroke="#e2e8f0" stroke-width="2"/><circle cx="30" cy="88" r="8" fill="#e2e8f0"/><text x="30" y="92" font-size="8" text-anchor="middle">🚶</text><text x="45" y="85" font-size="9" fill="#334155">10:00 · Wadlopen excursie</text><text x="45" y="98" font-size="8" fill="#30c59b">Vertrek haven Oudeschild</text><line x1="30" y1="100" x2="30" y2="112" stroke="#e2e8f0" stroke-width="2"/><circle cx="30" cy="124" r="8" fill="#e2e8f0"/><text x="30" y="128" font-size="8" text-anchor="middle">🍽️</text><text x="45" y="121" font-size="9" fill="#334155">12:30 · Lunch bij De Stal</text><text x="45" y="134" font-size="8" fill="#30c59b">Den Burg centrum</text><rect x="160" y="30" width="120" height="140" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1"/><text x="170" y="50" font-size="9" fill="#92400e" font-weight="600">💡 Tip van de dag</text><text x="170" y="70" font-size="8" fill="#78350f">Bezoek de Vuurtoren bij</text><text x="170" y="83" font-size="8" fill="#78350f">zonsondergang voor het</text><text x="170" y="96" font-size="8" fill="#78350f">mooiste uitzicht van Texel!</text></svg>`
   },
   desktop_program_tip: {
     editor: MobileProgramEditor,
@@ -458,7 +458,7 @@ const blockEditorRegistry = {
     label: 'Categorie Grid',
     description: 'Responsive categorie browser: scroll op mobiel, 4-kolom grid op desktop',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.mobile_events
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="85" rx="10" fill="#7CB342" opacity="0.15"/><text x="52" y="45" font-size="20" text-anchor="middle">🌿</text><text x="52" y="70" font-size="9" fill="#365314" text-anchor="middle" font-weight="600">Natuur</text><text x="52" y="83" font-size="7" fill="#4d7c0f" text-anchor="middle">98 locaties</text><rect x="105" y="10" width="85" height="85" rx="10" fill="#E53935" opacity="0.12"/><text x="147" y="45" font-size="20" text-anchor="middle">🍽️</text><text x="147" y="70" font-size="9" fill="#991b1b" text-anchor="middle" font-weight="600">Eten</text><text x="147" y="83" font-size="7" fill="#b91c1c" text-anchor="middle">135 locaties</text><rect x="200" y="10" width="85" height="85" rx="10" fill="#FF6B00" opacity="0.12"/><text x="242" y="45" font-size="20" text-anchor="middle">🚴</text><text x="242" y="70" font-size="9" fill="#9a3412" text-anchor="middle" font-weight="600">Actief</text><text x="242" y="83" font-size="7" fill="#c2410c" text-anchor="middle">57 locaties</text><rect x="10" y="105" width="85" height="85" rx="10" fill="#004B87" opacity="0.12"/><text x="52" y="140" font-size="20" text-anchor="middle">🏛️</text><text x="52" y="165" font-size="9" fill="#1e3a5f" text-anchor="middle" font-weight="600">Cultuur</text><text x="52" y="178" font-size="7" fill="#1e40af" text-anchor="middle">96 locaties</text></svg>`
   },
   // Desktop homepage block aliases (backward compat)
   hero_chatbot: {
@@ -485,7 +485,7 @@ const blockEditorRegistry = {
     label: 'Vandaag Events',
     description: 'Responsive events: scroll op mobiel, grid op desktop',
     category: 'Events & Programme',
-    thumbnail: THUMBNAILS.mobile_events
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><text x="15" y="22" font-size="11" fill="#334155" font-weight="600">Vandaag op Texel</text><rect x="10" y="32" width="85" height="120" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="10" y="32" width="85" height="55" rx="8 8 0 0" fill="#bfdbfe"/><text x="17" y="100" font-size="8" fill="#334155" font-weight="600">Strandmarkt</text><text x="17" y="114" font-size="7" fill="#94a3b8">10:00 · De Koog</text><text x="17" y="128" font-size="7" fill="#3b82f6">Gratis</text><rect x="105" y="32" width="85" height="120" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="32" width="85" height="55" rx="8 8 0 0" fill="#fde68a"/><text x="112" y="100" font-size="8" fill="#334155" font-weight="600">Jazz Avond</text><text x="112" y="114" font-size="7" fill="#94a3b8">19:00 · Paal 9</text><rect x="200" y="32" width="85" height="120" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="200" y="32" width="85" height="55" rx="8 8 0 0" fill="#d9f99d"/><text x="207" y="100" font-size="8" fill="#334155" font-weight="600">Yoga Strand</text><text x="207" y="114" font-size="7" fill="#94a3b8">08:00 · Paal 17</text></svg>`
   },
   popular_pois: {
     editor: PoiGridEditor,
@@ -493,7 +493,7 @@ const blockEditorRegistry = {
     label: 'Populaire POIs',
     description: 'Top POIs grid met titel',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.poi_grid
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="10" y="10" width="85" height="50" rx="6 6 0 0" fill="#bfdbfe"/><rect x="17" y="68" width="12" height="12" rx="6" fill="#7CB342"/><text x="35" y="77" font-size="7" fill="#64748b">Natuur</text><text x="17" y="93" font-size="9" fill="#334155" font-weight="600">Slufter</text><text x="17" y="108" font-size="8" fill="#f59e0b">★ 4.7 (89)</text><rect x="105" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="10" width="85" height="50" rx="6 6 0 0" fill="#fde68a"/><rect x="112" y="68" width="12" height="12" rx="6" fill="#E53935"/><text x="130" y="77" font-size="7" fill="#64748b">Eten</text><text x="112" y="93" font-size="9" fill="#334155" font-weight="600">Paal 17</text><text x="112" y="108" font-size="8" fill="#f59e0b">★ 4.8 (124)</text><rect x="200" y="10" width="85" height="120" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="200" y="10" width="85" height="50" rx="6 6 0 0" fill="#d9f99d"/><rect x="207" y="68" width="12" height="12" rx="6" fill="#004B87"/><text x="225" y="77" font-size="7" fill="#64748b">Cultuur</text><text x="207" y="93" font-size="9" fill="#334155" font-weight="600">Kaap Skil</text><text x="207" y="108" font-size="8" fill="#f59e0b">★ 4.6 (201)</text></svg>`
   },
   map_preview: {
     editor: MapEditor,
@@ -501,7 +501,7 @@ const blockEditorRegistry = {
     label: 'Kaart met overlay',
     description: 'Interactieve kaart met overlay label',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.map
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#e8f4e8"/><path d="M0,130 Q80,100 150,120 T300,100 L300,200 L0,200 Z" fill="#d4edda" opacity="0.5"/><path d="M50,30 Q60,10 80,15 Q100,20 90,40 Q80,60 70,65 Q60,70 55,60 Q45,50 50,30 Z" fill="#bfdbfe" opacity="0.3"/><circle cx="80" cy="55" r="8" fill="#ef4444"/><circle cx="80" cy="55" r="4" fill="#fff"/><circle cx="180" cy="80" r="8" fill="#3b82f6"/><circle cx="180" cy="80" r="4" fill="#fff"/><circle cx="130" cy="120" r="6" fill="#f59e0b"/><circle cx="130" cy="120" r="3" fill="#fff"/><circle cx="220" cy="45" r="7" fill="#7c3aed"/><circle cx="220" cy="45" r="3.5" fill="#fff"/><rect x="180" y="150" width="100" height="35" rx="4" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><circle cx="192" cy="160" r="4" fill="#ef4444"/><text x="200" y="163" font-size="7" fill="#334155">Eten</text><circle cx="192" cy="175" r="4" fill="#3b82f6"/><text x="200" y="178" font-size="7" fill="#334155">Actief</text><circle cx="240" cy="160" r="4" fill="#f59e0b"/><text x="248" y="163" font-size="7" fill="#334155">Natuur</text></svg>`
   },
   mobile_program: {
     editor: MobileProgramEditor,
@@ -518,7 +518,7 @@ const blockEditorRegistry = {
     label: 'Tip van de Dag',
     description: 'Dagelijkse aanbeveling op basis van interesses',
     category: 'Recommendations & Planning',
-    thumbnail: THUMBNAILS.mobile_tip
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="25" y="25" width="250" height="150" rx="12" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5"/><text x="45" y="55" font-size="12" fill="#92400e" font-weight="600">💡 Tip van de dag</text><rect x="45" y="68" width="70" height="55" rx="8" fill="#fde68a"/><text x="80" y="100" font-size="16" text-anchor="middle">🌅</text><text x="125" y="82" font-size="10" fill="#78350f" font-weight="600">Vuurtoren Eierland</text><text x="125" y="98" font-size="8" fill="#92400e">Het noordelijkste punt van</text><text x="125" y="111" font-size="8" fill="#92400e">Texel. Spectaculair bij</text><text x="125" y="124" font-size="8" fill="#92400e">zonsondergang!</text><text x="45" y="155" font-size="8" fill="#b45309">★ 4.9 · Natuur · De Cocksdorp</text></svg>`
   },
   mobile_tip: {
     editor: MobileTipEditor,
@@ -544,7 +544,7 @@ const blockEditorRegistry = {
     label: 'Kaart Preview (compact)',
     description: 'Compacte kaart met top POIs per categorie (verschilt van volledige Map)',
     category: 'Discovery',
-    thumbnail: THUMBNAILS.mobile_map
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#e8f4e8"/><circle cx="90" cy="60" r="7" fill="#ef4444"/><circle cx="90" cy="60" r="3.5" fill="#fff"/><circle cx="180" cy="90" r="7" fill="#3b82f6"/><circle cx="180" cy="90" r="3.5" fill="#fff"/><circle cx="130" cy="130" r="6" fill="#f59e0b"/><circle cx="130" cy="130" r="3" fill="#fff"/><rect x="25" y="155" width="65" height="26" rx="13" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="57" y="172" font-size="8" fill="#334155" text-anchor="middle">Natuur</text><rect x="100" y="155" width="65" height="26" rx="13" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="132" y="172" font-size="8" fill="#334155" text-anchor="middle">Eten</text><rect x="175" y="155" width="65" height="26" rx="13" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><text x="207" y="172" font-size="8" fill="#334155" text-anchor="middle">Actief</text></svg>`
   },
   blog_grid: {
     editor: BlogGridEditor,
@@ -552,7 +552,7 @@ const blockEditorRegistry = {
     label: 'Blog Grid',
     description: 'Overzicht van gepubliceerde blog artikelen uit Content Studio',
     category: 'Utility & Practical Info',
-    thumbnail: THUMBNAILS.rich_text
+    thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="10" y="10" width="85" height="130" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="10" y="10" width="85" height="50" rx="6 6 0 0" fill="#bfdbfe"/><text x="17" y="75" font-size="8" fill="#334155" font-weight="600">10 Mooiste</text><text x="17" y="87" font-size="8" fill="#334155" font-weight="600">Stranden</text><text x="17" y="103" font-size="7" fill="#94a3b8">De ultieme gids voor</text><text x="17" y="114" font-size="7" fill="#94a3b8">strandliefhebbers...</text><text x="17" y="132" font-size="7" fill="#3b82f6">Lees meer →</text><rect x="105" y="10" width="85" height="130" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="105" y="10" width="85" height="50" rx="6 6 0 0" fill="#d9f99d"/><text x="112" y="75" font-size="8" fill="#334155" font-weight="600">Fietsen op</text><text x="112" y="87" font-size="8" fill="#334155" font-weight="600">Texel</text><rect x="200" y="10" width="85" height="130" rx="6" fill="#fff" stroke="#e2e8f0" stroke-width="1"/><rect x="200" y="10" width="85" height="50" rx="6 6 0 0" fill="#fecaca"/><text x="207" y="75" font-size="8" fill="#334155" font-weight="600">Wadlopen:</text><text x="207" y="87" font-size="8" fill="#334155" font-weight="600">een avontuur</text></svg>`
   }
 };
 
