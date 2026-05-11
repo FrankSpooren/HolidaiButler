@@ -126,7 +126,257 @@ const pageTemplates = [
         { id: 'cta-1', type: 'cta', props: { headline: { en: 'Become a partner', nl: 'Word partner' }, buttons: [{ label: { en: 'Contact us', nl: 'Neem contact op' }, url: '/contact', variant: 'primary' }] } }
       ]
     }
-  }
+  },
+  // ========== E3 NEW TEMPLATES ==========
+  {
+    id: 'event_detail',
+    label: 'Event Detail',
+    description: 'Full event page with booking, calendar, map and FAQ',
+    icon: 'EventNote',
+    category: 'detail',
+    layout: { blocks: [
+      { id: 'ed_1', type: 'breadcrumbs', featureFlag: 'hasBreadcrumbsBlock', props: { source: 'auto_url' } },
+      { id: 'ed_2', type: 'hero', props: { height: 'compact' } },
+      { id: 'ed_3', type: 'rich_text', props: {} },
+      { id: 'ed_4', type: 'add_to_calendar', featureFlag: 'hasAddToCalendarBlock', props: { source: 'event_id_from_url' } },
+      { id: 'ed_5', type: 'location_details', featureFlag: 'hasLocationDetailsBlock', props: { source: 'manual' } },
+      { id: 'ed_6', type: 'map', props: { height: '300px' } },
+      { id: 'ed_7', type: 'gallery', props: {} },
+      { id: 'ed_8', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'event', limit: 4 } },
+      { id: 'ed_9', type: 'faq', props: {} },
+      { id: 'ed_10', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'poi_detail',
+    label: 'POI Detail',
+    description: 'Full POI page with opening hours, map, reviews and related',
+    icon: 'PinDrop',
+    category: 'detail',
+    layout: { blocks: [
+      { id: 'pd_1', type: 'breadcrumbs', featureFlag: 'hasBreadcrumbsBlock', props: { source: 'auto_url' } },
+      { id: 'pd_2', type: 'hero', props: { height: 'compact' } },
+      { id: 'pd_3', type: 'rich_text', props: {} },
+      { id: 'pd_4', type: 'opening_hours', featureFlag: 'hasOpeningHoursBlock', props: { source: 'poi' } },
+      { id: 'pd_5', type: 'location_details', featureFlag: 'hasLocationDetailsBlock', props: { source: 'poi' } },
+      { id: 'pd_6', type: 'map', props: { height: '300px' } },
+      { id: 'pd_7', type: 'gallery', props: {} },
+      { id: 'pd_8', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'poi', limit: 4 } },
+      { id: 'pd_9', type: 'faq', props: {} },
+      { id: 'pd_10', type: 'save_to_trip', featureFlag: 'hasSaveToTripBlock', props: { variant: 'add_button' } },
+    ]}
+  },
+  {
+    id: 'events_what_on',
+    label: "What's On",
+    description: 'Events with calendar view and weekend filter',
+    icon: 'EventNote',
+    category: 'events',
+    layout: { blocks: [
+      { id: 'wo_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'wo_2', type: 'filter_bar', featureFlag: 'hasFilterBarBlock', props: { filters: ['date_preset', 'category'] } },
+      { id: 'wo_3', type: 'featured_item', featureFlag: 'hasFeaturedItemBlock', props: { itemType: 'event' } },
+      { id: 'wo_4', type: 'event_calendar', props: {} },
+      { id: 'wo_5', type: 'calendar_view', featureFlag: 'hasCalendarViewBlock', props: { view: 'dayGridMonth' } },
+      { id: 'wo_6', type: 'map_list', featureFlag: 'hasMapListBlock', props: { source: 'events' } },
+      { id: 'wo_7', type: 'cta', props: {} },
+      { id: 'wo_8', type: 'newsletter', props: {} },
+    ]}
+  },
+  {
+    id: 'reservations',
+    label: 'Reservations',
+    description: 'Reservation page with opening hours and location',
+    icon: 'BookOnline',
+    category: 'commerce',
+    layout: { blocks: [
+      { id: 'rs_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'rs_2', type: 'reservation_widget', props: {} },
+      { id: 'rs_3', type: 'opening_hours', featureFlag: 'hasOpeningHoursBlock', props: { source: 'manual' } },
+      { id: 'rs_4', type: 'location_details', featureFlag: 'hasLocationDetailsBlock', props: { source: 'manual' } },
+      { id: 'rs_5', type: 'testimonials', props: {} },
+      { id: 'rs_6', type: 'faq', props: {} },
+    ]}
+  },
+  {
+    id: 'route_itinerary',
+    label: 'Route / Itinerary',
+    description: 'Curated route with OSRM routing and save-to-trip',
+    icon: 'ViewTimeline',
+    category: 'editorial',
+    layout: { blocks: [
+      { id: 'ri_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'ri_2', type: 'rich_text', props: {} },
+      { id: 'ri_3', type: 'itinerary', featureFlag: 'hasItineraryBlock', props: { source: 'manual_waypoints', mode: 'foot', variant: 'map_split' } },
+      { id: 'ri_4', type: 'map_list', featureFlag: 'hasMapListBlock', props: { source: 'pois' } },
+      { id: 'ri_5', type: 'save_to_trip', featureFlag: 'hasSaveToTripBlock', props: { variant: 'add_button' } },
+      { id: 'ri_6', type: 'downloads', props: {} },
+      { id: 'ri_7', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'event' } },
+      { id: 'ri_8', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'festival_grounds',
+    label: 'Festival / Event Grounds',
+    description: 'Festival page with programme, map and tickets',
+    icon: 'Campaign',
+    category: 'events',
+    layout: { blocks: [
+      { id: 'fg_1', type: 'hero', props: { height: 'tall' } },
+      { id: 'fg_2', type: 'alert_status', props: {} },
+      { id: 'fg_3', type: 'rich_text', props: {} },
+      { id: 'fg_4', type: 'map', props: { height: '400px' } },
+      { id: 'fg_5', type: 'ticket_shop', props: {} },
+      { id: 'fg_6', type: 'event_calendar', props: {} },
+      { id: 'fg_7', type: 'faq', props: {} },
+      { id: 'fg_8', type: 'downloads', props: {} },
+      { id: 'fg_9', type: 'gallery', props: {} },
+    ]}
+  },
+  {
+    id: 'mobile_onsite_guide',
+    label: 'On-site Guide',
+    description: 'Guide for visitors at the destination (NOT CalpeTrip)',
+    icon: 'Explore',
+    category: 'mobile',
+    layout: { blocks: [
+      { id: 'mo_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'mo_2', type: 'desktop_events', props: { limit: 6 } },
+      { id: 'mo_3', type: 'map', props: { height: '250px' } },
+      { id: 'mo_4', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'poi', limit: 4 } },
+      { id: 'mo_5', type: 'opening_hours', featureFlag: 'hasOpeningHoursBlock', props: { source: 'manual', variant: 'compact' } },
+      { id: 'mo_6', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'whats_on_weekend',
+    label: 'This Weekend',
+    description: 'Weekend events overview with featured event',
+    icon: 'WbSunny',
+    category: 'events',
+    layout: { blocks: [
+      { id: 'ww_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'ww_2', type: 'filter_bar', featureFlag: 'hasFilterBarBlock', props: { filters: ['date_preset', 'category'] } },
+      { id: 'ww_3', type: 'featured_item', featureFlag: 'hasFeaturedItemBlock', props: { itemType: 'event' } },
+      { id: 'ww_4', type: 'event_calendar', props: {} },
+      { id: 'ww_5', type: 'cta', props: {} },
+      { id: 'ww_6', type: 'newsletter', props: {} },
+    ]}
+  },
+  {
+    id: 'rainy_day',
+    label: 'Rainy Day Guide',
+    description: 'Indoor activities and tips for rainy days',
+    icon: 'WbSunny',
+    category: 'editorial',
+    layout: { blocks: [
+      { id: 'rd_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'rd_2', type: 'weather_widget', props: {} },
+      { id: 'rd_3', type: 'poi_grid', props: { limit: 12 } },
+      { id: 'rd_4', type: 'event_calendar', props: {} },
+      { id: 'rd_5', type: 'map_list', featureFlag: 'hasMapListBlock', props: { source: 'pois' } },
+      { id: 'rd_6', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'family_day_out',
+    label: 'Family Day Out',
+    description: 'Family-friendly activities and places',
+    icon: 'Stars',
+    category: 'editorial',
+    layout: { blocks: [
+      { id: 'fd_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'fd_2', type: 'poi_grid', props: { limit: 12 } },
+      { id: 'fd_3', type: 'event_calendar', props: {} },
+      { id: 'fd_4', type: 'map_list', featureFlag: 'hasMapListBlock', props: { source: 'pois' } },
+      { id: 'fd_5', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'food_drink_guide',
+    label: 'Food & Drink Guide',
+    description: 'Restaurants, cafes and local food',
+    icon: 'Stars',
+    category: 'editorial',
+    layout: { blocks: [
+      { id: 'fg_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'fg_2', type: 'category_grid', props: {} },
+      { id: 'fg_3', type: 'filter_bar', featureFlag: 'hasFilterBarBlock', props: { filters: ['category', 'rating'] } },
+      { id: 'fg_4', type: 'poi_grid', props: { limit: 24 } },
+      { id: 'fg_5', type: 'map_list', featureFlag: 'hasMapListBlock', props: { source: 'pois' } },
+      { id: 'fg_6', type: 'testimonials', props: {} },
+      { id: 'fg_7', type: 'reservation_widget', props: {} },
+    ]}
+  },
+  {
+    id: 'local_deals',
+    label: 'Local Deals / Passes',
+    description: 'Deals, passes and promotions',
+    icon: 'ConfirmationNumber',
+    category: 'commerce',
+    layout: { blocks: [
+      { id: 'ld_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'ld_2', type: 'offer', featureFlag: 'hasOfferPackageBlock', props: { variant: 'comparison' } },
+      { id: 'ld_3', type: 'ticket_shop', props: {} },
+      { id: 'ld_4', type: 'partners', props: {} },
+      { id: 'ld_5', type: 'faq', props: {} },
+      { id: 'ld_6', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'venue_location',
+    label: 'Venue / Location',
+    description: 'Venue info with opening hours and events',
+    icon: 'PinDrop',
+    category: 'detail',
+    layout: { blocks: [
+      { id: 'vl_1', type: 'hero', props: { height: 'compact' } },
+      { id: 'vl_2', type: 'rich_text', props: {} },
+      { id: 'vl_3', type: 'opening_hours', featureFlag: 'hasOpeningHoursBlock', props: { source: 'manual' } },
+      { id: 'vl_4', type: 'location_details', featureFlag: 'hasLocationDetailsBlock', props: { source: 'manual' } },
+      { id: 'vl_5', type: 'map', props: { height: '300px' } },
+      { id: 'vl_6', type: 'event_calendar', props: {} },
+      { id: 'vl_7', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'poi' } },
+      { id: 'vl_8', type: 'faq', props: {} },
+    ]}
+  },
+  {
+    id: 'campaign_landing',
+    label: 'Campaign Landing',
+    description: 'Landing page for seasonal or marketing campaigns',
+    icon: 'Campaign',
+    category: 'campaign',
+    layout: { blocks: [
+      { id: 'cl_1', type: 'hero', props: { height: 'tall' } },
+      { id: 'cl_2', type: 'alert_status', props: {} },
+      { id: 'cl_3', type: 'featured_item', featureFlag: 'hasFeaturedItemBlock', props: {} },
+      { id: 'cl_4', type: 'rich_text', props: {} },
+      { id: 'cl_5', type: 'gallery', props: {} },
+      { id: 'cl_6', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: {} },
+      { id: 'cl_7', type: 'ticket_shop', props: {} },
+      { id: 'cl_8', type: 'faq', props: {} },
+      { id: 'cl_9', type: 'cta', props: {} },
+    ]}
+  },
+  {
+    id: 'guide_article',
+    label: 'Guide Article',
+    description: 'Editorial article with related POIs and events',
+    icon: 'Article',
+    category: 'editorial',
+    layout: { blocks: [
+      { id: 'ga_1', type: 'breadcrumbs', featureFlag: 'hasBreadcrumbsBlock', props: { source: 'auto_url' } },
+      { id: 'ga_2', type: 'hero', props: { height: 'compact' } },
+      { id: 'ga_3', type: 'rich_text', props: {} },
+      { id: 'ga_4', type: 'gallery', props: {} },
+      { id: 'ga_5', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'poi' } },
+      { id: 'ga_6', type: 'related_items', featureFlag: 'hasRelatedItemsBlock', props: { itemType: 'event' } },
+      { id: 'ga_7', type: 'map', props: { height: '300px' } },
+      { id: 'ga_8', type: 'save_to_trip', featureFlag: 'hasSaveToTripBlock', props: { variant: 'add_button' } },
+      { id: 'ga_9', type: 'newsletter', props: {} },
+    ]}
+  },
+
 ];
 
 export default pageTemplates;

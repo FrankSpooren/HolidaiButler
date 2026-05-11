@@ -177,7 +177,7 @@ const blockEditorRegistry = {
     icon: 'CalendarMonth',
     label: 'Add to Calendar',
     description: 'Calendar links for Google, Apple, Outlook, Yahoo',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasAddToCalendarBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="60" y="50" width="180" height="100" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="60" y="50" width="180" height="30" rx="10 10 0 0" fill="#3b82f6"/><rect x="75" y="60" width="60" height="10" rx="2" fill="#fff"/><rect x="80" y="95" width="70" height="24" rx="12" fill="#4285F4"/><rect x="88" y="102" width="54" height="10" rx="2" fill="#fff"/><rect x="160" y="95" width="60" height="24" rx="12" fill="#333"/><rect x="168" y="102" width="44" height="10" rx="2" fill="#fff"/><rect x="80" y="125" width="65" height="24" rx="12" fill="#0078D4"/><rect x="88" y="132" width="49" height="10" rx="2" fill="#fff"/></svg>`
@@ -187,7 +187,7 @@ const blockEditorRegistry = {
     icon: 'Schedule',
     label: 'Opening Hours',
     description: 'Show opening hours with live open/closed status',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasOpeningHoursBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="40" y="20" width="220" height="160" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="55" y="35" width="60" height="16" rx="8" fill="#dcfce7"/><rect x="63" y="39" width="44" height="8" rx="2" fill="#16a34a"/><rect x="55" y="65" width="80" height="8" rx="2" fill="#334155"/><rect x="190" y="65" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="85" width="70" height="8" rx="2" fill="#334155"/><rect x="190" y="85" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="105" width="90" height="8" rx="2" fill="#1e40af" opacity="0.8"/><rect x="190" y="105" width="55" height="8" rx="2" fill="#1e40af"/><rect x="50" y="100" width="200" height="20" rx="4" fill="#eff6ff" opacity="0.5"/><rect x="55" y="125" width="75" height="8" rx="2" fill="#334155"/><rect x="190" y="125" width="55" height="8" rx="2" fill="#94a3b8"/><rect x="55" y="145" width="65" height="8" rx="2" fill="#334155"/><rect x="190" y="145" width="40" height="8" rx="2" fill="#ef4444"/></svg>`
@@ -197,7 +197,7 @@ const blockEditorRegistry = {
     icon: 'Place',
     label: 'Location Details',
     description: 'Address, directions, parking, and accessibility info',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasLocationDetailsBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="30" y="20" width="240" height="160" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><g transform="translate(50,45)"><circle r="12" fill="#ef4444" opacity="0.2"/><circle r="6" fill="#ef4444"/></g><rect x="72" y="38" width="120" height="8" rx="2" fill="#334155"/><rect x="72" y="52" width="80" height="6" rx="2" fill="#94a3b8"/><rect x="50" y="75" width="100" height="28" rx="14" fill="#3b82f6"/><rect x="62" y="83" width="76" height="12" rx="2" fill="#fff"/><rect x="160" y="75" width="80" height="28" rx="14" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/><rect x="172" y="83" width="56" height="12" rx="2" fill="#94a3b8"/><line x1="50" y1="120" x2="250" y2="120" stroke="#e2e8f0"/><rect x="50" y="132" width="16" height="16" rx="4" fill="#f1f5f9"/><rect x="74" y="132" width="50" height="6" rx="2" fill="#64748b"/><rect x="74" y="144" width="120" height="6" rx="2" fill="#94a3b8"/></svg>`
@@ -207,7 +207,7 @@ const blockEditorRegistry = {
     icon: 'Route',
     label: 'Itinerary / Route',
     description: 'Multi-stop route planner with OSRM-powered routing',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasItineraryBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><circle cx="60" cy="40" r="14" fill="#3b82f6"/><text x="60" y="45" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">1</text><line x1="60" y1="54" x2="60" y2="76" stroke="#93c5fd" stroke-width="2"/><circle cx="60" cy="90" r="14" fill="#3b82f6"/><text x="60" y="95" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">2</text><line x1="60" y1="104" x2="60" y2="126" stroke="#93c5fd" stroke-width="2"/><circle cx="60" cy="140" r="14" fill="#3b82f6"/><text x="60" y="145" font-size="14" fill="#fff" text-anchor="middle" font-weight="700">3</text><rect x="90" y="30" width="100" height="8" rx="2" fill="#334155"/><rect x="90" y="44" width="60" height="6" rx="2" fill="#94a3b8"/><rect x="90" y="80" width="80" height="8" rx="2" fill="#334155"/><rect x="90" y="94" width="50" height="6" rx="2" fill="#94a3b8"/><rect x="90" y="130" width="90" height="8" rx="2" fill="#334155"/><rect x="200" y="20" width="80" height="160" rx="8" fill="#e8f4e8" stroke="#d1d5db" stroke-width="1"/></svg>`
@@ -217,7 +217,7 @@ const blockEditorRegistry = {
     icon: 'BookmarkAdd',
     label: 'Save to Trip',
     description: 'Let visitors save POIs and events to a personal plan',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasSaveToTripBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="60" y="30" width="180" height="140" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="75" y="45" width="100" height="10" rx="2" fill="#334155"/><rect x="75" y="60" width="40" height="6" rx="2" fill="#94a3b8"/><rect x="75" y="80" width="150" height="30" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><circle cx="90" cy="95" r="8" fill="#eff6ff"/><text x="90" y="99" font-size="10" fill="#3b82f6" text-anchor="middle">1</text><rect x="105" y="89" width="80" height="6" rx="2" fill="#334155"/><rect x="105" y="99" width="40" height="4" rx="2" fill="#94a3b8"/><rect x="75" y="118" width="150" height="30" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/><circle cx="90" cy="133" r="8" fill="#eff6ff"/><text x="90" y="137" font-size="10" fill="#3b82f6" text-anchor="middle">2</text><rect x="105" y="127" width="70" height="6" rx="2" fill="#334155"/><rect x="105" y="137" width="50" height="4" rx="2" fill="#94a3b8"/></svg>`
@@ -227,7 +227,7 @@ const blockEditorRegistry = {
     icon: 'CalendarViewMonth',
     label: 'Calendar View',
     description: 'Full calendar with month, week, and agenda views (FullCalendar)',
-    category: 'Events & Planning',
+    category: 'Events & Programme',
     featureFlag: 'hasCalendarViewBlock',
     addedIn: 'VII-E2 Batch B',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="260" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="260" height="30" rx="8 8 0 0" fill="#3b82f6"/><rect x="35" y="25" width="50" height="10" rx="2" fill="#fff"/><rect x="210" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><rect x="235" y="25" width="20" height="10" rx="2" fill="#fff" opacity="0.5"/><g fill="#94a3b8" font-size="8"><text x="45" y="58">Ma</text><text x="80" y="58">Di</text><text x="115" y="58">Wo</text><text x="150" y="58">Do</text><text x="185" y="58">Vr</text><text x="220" y="58">Za</text><text x="250" y="58">Zo</text></g><rect x="30" y="70" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="70" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="150" y="70" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="36" y="80" width="20" height="4" rx="1" fill="#3b82f6"/><rect x="30" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="70" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="110" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="116" y="115" width="20" height="4" rx="1" fill="#ef4444"/><rect x="150" y="105" width="30" height="25" rx="3" fill="#f8fafc"/><rect x="190" y="105" width="30" height="25" rx="3" fill="#eff6ff"/><rect x="196" y="115" width="18" height="4" rx="1" fill="#7c3aed"/></svg>`
@@ -247,7 +247,7 @@ const blockEditorRegistry = {
   offer: {
     editor: OfferEditor, icon: 'LocalOffer', label: 'Offer / Package',
     description: 'Deals, bundles, and promotions with pricing and CTA',
-    category: 'Commerce', featureFlag: 'hasOfferPackageBlock', addedIn: 'VII-E2 Batch C',
+    category: 'Commerce & Conversion', featureFlag: 'hasOfferPackageBlock', addedIn: 'VII-E2 Batch C',
     thumbnail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#f8fafc"/><rect x="20" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="20" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/><rect x="30" y="25" width="40" height="14" rx="7" fill="#f59e0b"/><rect x="35" y="29" width="30" height="6" rx="2" fill="#fff"/><rect x="30" y="75" width="80" height="8" rx="2" fill="#334155"/><rect x="30" y="90" width="100" height="6" rx="2" fill="#94a3b8"/><rect x="30" y="110" width="50" height="14" rx="2" fill="#1e40af" font-weight="bold"/><rect x="85" y="112" width="35" height="10" rx="2" fill="#94a3b8" opacity="0.5"/><rect x="30" y="140" width="100" height="28" rx="8" fill="#3b82f6"/><rect x="50" y="148" width="60" height="12" rx="2" fill="#fff"/><rect x="160" y="15" width="120" height="170" rx="8" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/><rect x="160" y="15" width="120" height="50" rx="8 8 0 0" fill="#e2e8f0"/></svg>`
   },
   consent_embed: {
@@ -464,10 +464,11 @@ const blockEditorRegistry = {
   hero_chatbot: {
     editor: HeroEditor,
     icon: 'Chat',
-    label: 'Hero + Chatbot',
-    description: 'Hero met chatbot-input en quick actions',
+    label: 'Hero + Chatbot (alias)',
+    description: 'Alias voor Desktop Hero',
     category: 'Page Structure',
-    thumbnail: THUMBNAILS.hero
+    thumbnail: THUMBNAILS.hero,
+    hidden: true
   },
   program_card: {
     editor: MobileProgramEditor,

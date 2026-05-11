@@ -28,6 +28,7 @@ import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import { pageService } from '../api/pageService.js';
 import BlockEditorCard from '../components/blocks/BlockEditorCard.jsx';
 import BlockSelectorDialog from '../components/blocks/BlockSelectorDialog.jsx';
+import PageQualityPanel from '../components/blocks/PageQualityPanel.jsx';
 import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
 import debounce from 'lodash.debounce';
@@ -258,28 +259,62 @@ export default function PagesPage({ embedded = false }) {
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks: reordered } });
   };
 
-  // Live preview: send layout updates to iframe
-  const sendPreviewUpdate = useCallback(
-    debounce((layout) => {
-      if (previewRef.current?.contentWindow) {
-        previewRef.current.contentWindow.postMessage({ type: 'layout-update', layout }, '*');
-      }
-    }, 300),
-    []
-  );
+  // Live preview: send layout updates to iframe (waits for preview-ready)
+  const previewReadyRef = useRef(false);
 
-  useEffect(() => {
-    if (editTab === 2 && editPage?.layout) {
-      sendPreviewUpdate(editPage.layout);
+  const sendPreviewUpdate = useCallback((layout) => {
+    if (previewRef.current?.contentWindow && previewReadyRef.current) {
+      previewRef.current.contentWindow.postMessage({ type: 'layout-update', layout }, '*');
     }
-  }, [editPage?.layout, editTab, sendPreviewUpdate]);
+  }, []);
+
+  // Listen for 'preview-ready' from iframe, then send initial layout
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data?.type === 'preview-ready') {
+        previewReadyRef.current = true;
+        // Send layout immediately now that preview is ready
+        if (editTab === 2 && editPage?.layout) {
+          sendPreviewUpdate(editPage.layout);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [editTab, editPage?.layout, sendPreviewUpdate]);
+
+  // Auto-refresh live preview when tab switches to VOORBEELD
+  useEffect(() => {
+    if (editTab === 2 && previewRef.current) {
+      // Reload iframe to show latest saved content
+      const timer = setTimeout(() => {
+        if (previewRef.current) {
+          previewRef.current.src = previewRef.current.src;
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [editTab]);
+
+  // Reset preview-ready when iframe src changes (new page selected)
+  useEffect(() => {
+    previewReadyRef.current = false;
+  }, [editPage?.id]);
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
-  // Map destination to preview domain
-  const PREVIEW_DOMAINS = { 1: 'https://dev.holidaibutler.com', 2: 'https://dev.texelmaps.nl' };
+  // WYSIWYG live preview: real page URL (VII-E4)
+  const DEV_PREVIEW_DOMAINS = {
+    texel: 'https://dev.texelmaps.nl',
+    warrewijzer: 'https://dev.warrewijzer.be',
+    alicante: 'https://dev.alicante.holidaibutler.com',
+  };
   const getPreviewUrl = () => {
-    const baseDomain = PREVIEW_DOMAINS[editPage?.destination_id] || PREVIEW_DOMAINS[destId] || 'https://dev.holidaibutler.com';
+    const pageDestId = editPage?.destination_id || destId;
+    const dest = destinations.find(d => d.id === pageDestId || String(d.id) === String(pageDestId));
+    if (!dest || dest.code === 'calpe' || String(pageDestId) === '1') return null;
+    const baseDomain = DEV_PREVIEW_DOMAINS[dest.code];
+    if (!baseDomain) return null;
     const slug = editPage?.slug === 'home' ? '' : (editPage?.slug || '');
     return `${baseDomain}/${slug}`;
   };
@@ -478,6 +513,9 @@ export default function PagesPage({ embedded = false }) {
             <Tab label={t('pages.tabs.preview')} />
           </Tabs>
 
+          {/* Quality validation panel (E4.3.2) */}
+          {editPage?.id && <PageQualityPanel pageId={editPage.id} />}
+
           {editTab === 0 && editPage && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField size="small" label={t('pages.fields.slug')} value={editPage.slug || ''} onChange={e => setEditPage(p => ({ ...p, slug: e.target.value }))} />
@@ -585,12 +623,21 @@ export default function PagesPage({ embedded = false }) {
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'action.hover' }}>
-                  <iframe
-                    ref={previewRef}
-                    src={getPreviewUrl()}
-                    style={{ width: '100%', height: 600, border: 'none' }}
-                    title="Page Preview"
-                  />
+                  {getPreviewUrl() ? (
+                    <iframe
+                      ref={previewRef}
+                      src={getPreviewUrl()}
+                      style={{ width: '100%', height: 600, border: 'none' }}
+                      title="Page Preview"
+                    />
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: 'text.secondary' }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h6" sx={{ mb: 1 }}>Preview niet beschikbaar</Typography>
+                        <Typography variant="body2">Deze bestemming gebruikt een standalone portal en geen Page Builder preview.</Typography>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             </Box>
@@ -609,6 +656,7 @@ export default function PagesPage({ embedded = false }) {
         open={selectorOpen}
         onClose={() => setSelectorOpen(false)}
         onSelect={addBlockOfType}
+        currentBlocks={editPage?.layout?.blocks || []}
       />
 
       {/* Delete confirm dialog */}
