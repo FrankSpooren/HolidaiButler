@@ -258,21 +258,43 @@ export default function PagesPage({ embedded = false }) {
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks: reordered } });
   };
 
-  // Live preview: send layout updates to iframe
-  const sendPreviewUpdate = useCallback(
-    debounce((layout) => {
-      if (previewRef.current?.contentWindow) {
-        previewRef.current.contentWindow.postMessage({ type: 'layout-update', layout }, '*');
-      }
-    }, 300),
-    []
-  );
+  // Live preview: send layout updates to iframe (waits for preview-ready)
+  const previewReadyRef = useRef(false);
 
+  const sendPreviewUpdate = useCallback((layout) => {
+    if (previewRef.current?.contentWindow && previewReadyRef.current) {
+      previewRef.current.contentWindow.postMessage({ type: 'layout-update', layout }, '*');
+    }
+  }, []);
+
+  // Listen for 'preview-ready' from iframe, then send initial layout
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data?.type === 'preview-ready') {
+        previewReadyRef.current = true;
+        // Send layout immediately now that preview is ready
+        if (editTab === 2 && editPage?.layout) {
+          sendPreviewUpdate(editPage.layout);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [editTab, editPage?.layout, sendPreviewUpdate]);
+
+  // Also send on tab switch / layout change (if preview already ready)
   useEffect(() => {
     if (editTab === 2 && editPage?.layout) {
-      sendPreviewUpdate(editPage.layout);
+      // Small delay to ensure iframe has processed previous messages
+      const timer = setTimeout(() => sendPreviewUpdate(editPage.layout), 100);
+      return () => clearTimeout(timer);
     }
   }, [editPage?.layout, editTab, sendPreviewUpdate]);
+
+  // Reset preview-ready when iframe src changes (new page selected)
+  useEffect(() => {
+    previewReadyRef.current = false;
+  }, [editPage?.id]);
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
