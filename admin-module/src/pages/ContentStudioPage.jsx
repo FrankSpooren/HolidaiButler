@@ -3872,11 +3872,7 @@ export default function ContentStudioPage() {
               <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
                   <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
-<<<<<<< Updated upstream
-                    <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, px: 0.5 }}>
-=======
                     <TableCell padding="none" sx={{ width: 42, minWidth: 42, maxWidth: 42, textAlign: 'center', pl: 1 }}>
->>>>>>> Stashed changes
                       <Checkbox size="small"
                         checked={concepts.length > 0 && selectedIds.length > 0 && selectedIds.length === concepts.filter(c => c.approval_status !== 'deleted').length}
                         indeterminate={selectedIds.length > 0 && selectedIds.length < concepts.filter(c => c.approval_status !== 'deleted').length}

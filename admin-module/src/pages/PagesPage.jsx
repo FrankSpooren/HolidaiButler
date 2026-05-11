@@ -276,14 +276,19 @@ export default function PagesPage({ embedded = false }) {
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
-  // Dynamic preview domain from destination data (no hardcoding)
+  // Preview domain per destination code (SSOT: CLAUDE.md)
+  // Calpe uses standalone CalpeTrip.com — NO Page Builder preview
+  const DEV_PREVIEW_DOMAINS = {
+    texel: 'https://dev.texelmaps.nl',
+    warrewijzer: 'https://dev.warrewijzer.be',
+    alicante: 'https://dev.alicante.holidaibutler.com',
+  };
   const getPreviewUrl = () => {
     const pageDestId = editPage?.destination_id || destId;
     const dest = destinations.find(d => d.id === pageDestId || String(d.id) === String(pageDestId));
-    const domain = dest?.domain;
-    // Derive dev subdomain: texelmaps.nl → dev.texelmaps.nl, holidaibutler.com → dev.holidaibutler.com
-    const baseDomain = domain ? `https://dev.${domain}` : 'https://dev.texelmaps.nl';
-    // Use /preview route — postMessage-based, respects Apache frame-ancestors security
+    if (!dest || dest.code === 'calpe' || String(pageDestId) === '1') return null;
+    const baseDomain = DEV_PREVIEW_DOMAINS[dest.code];
+    if (!baseDomain) return null;
     return `${baseDomain}/preview`;
   };
 
@@ -588,12 +593,21 @@ export default function PagesPage({ embedded = false }) {
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <Box sx={{ width: viewportWidths[previewViewport], maxWidth: '100%', transition: 'width 0.3s', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', bgcolor: 'action.hover' }}>
-                  <iframe
-                    ref={previewRef}
-                    src={getPreviewUrl()}
-                    style={{ width: '100%', height: 600, border: 'none' }}
-                    title="Page Preview"
-                  />
+                  {getPreviewUrl() ? (
+                    <iframe
+                      ref={previewRef}
+                      src={getPreviewUrl()}
+                      style={{ width: '100%', height: 600, border: 'none' }}
+                      title="Page Preview"
+                    />
+                  ) : (
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: 'text.secondary' }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h6" sx={{ mb: 1 }}>Preview niet beschikbaar</Typography>
+                        <Typography variant="body2">Deze bestemming gebruikt een standalone portal en geen Page Builder preview.</Typography>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             </Box>
