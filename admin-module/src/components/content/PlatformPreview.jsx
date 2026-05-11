@@ -252,17 +252,17 @@ function PlatformMockup({ platform, content, rules, isTargetPlatform, contentTyp
           overflow: 'hidden',
         }}>
           {images && images.length > 0 ? (
-            <Box
-              component="img"
+            <img
               src={images[0].url || images[0].thumbnail}
               alt={images[0].alt || 'Content image'}
-              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-              sx={{
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
+              style={{
                 position: 'absolute',
                 top: 0, left: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
+                objectFit: 'contain',
+                backgroundColor: '#f0f0f0',
               }}
             />
           ) : null}
