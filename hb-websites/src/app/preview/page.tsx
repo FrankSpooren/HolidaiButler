@@ -301,7 +301,9 @@ export default function PreviewPage() {
   }
 
   // Filter blocks by visibility based on iframe width (admin viewport toggle)
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 500;
+  const [viewWidth, setViewWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => { const h = () => setViewWidth(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  const isMobile = viewWidth < 500;
   const filteredBlocks = blocks.filter((block: BlockConfig) => {
     const vis = (block as unknown as Record<string, unknown>).visibility as string | undefined;
     if (!vis || vis === 'all') return true;

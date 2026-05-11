@@ -87,7 +87,7 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
         <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        <Tabs
+        <Tabs variant="scrollable" scrollButtons="auto"
           value={categoryTab}
           onChange={(_, v) => setCategoryTab(v)}
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
