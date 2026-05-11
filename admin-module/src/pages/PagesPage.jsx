@@ -282,14 +282,18 @@ export default function PagesPage({ embedded = false }) {
     return () => window.removeEventListener('message', handler);
   }, [editTab, editPage?.layout, sendPreviewUpdate]);
 
-  // Also send on tab switch / layout change (if preview already ready)
+  // Auto-refresh live preview when tab switches to VOORBEELD
   useEffect(() => {
-    if (editTab === 2 && editPage?.layout) {
-      // Small delay to ensure iframe has processed previous messages
-      const timer = setTimeout(() => sendPreviewUpdate(editPage.layout), 100);
+    if (editTab === 2 && previewRef.current) {
+      // Reload iframe to show latest saved content
+      const timer = setTimeout(() => {
+        if (previewRef.current) {
+          previewRef.current.src = previewRef.current.src;
+        }
+      }, 300);
       return () => clearTimeout(timer);
     }
-  }, [editPage?.layout, editTab, sendPreviewUpdate]);
+  }, [editTab]);
 
   // Reset preview-ready when iframe src changes (new page selected)
   useEffect(() => {
@@ -298,8 +302,7 @@ export default function PagesPage({ embedded = false }) {
 
   const viewportWidths = { desktop: '100%', tablet: '768px', mobile: '375px' };
 
-  // Preview domain per destination code (SSOT: CLAUDE.md)
-  // Calpe uses standalone CalpeTrip.com — NO Page Builder preview
+  // WYSIWYG live preview: real page URL (VII-E4)
   const DEV_PREVIEW_DOMAINS = {
     texel: 'https://dev.texelmaps.nl',
     warrewijzer: 'https://dev.warrewijzer.be',
@@ -311,7 +314,8 @@ export default function PagesPage({ embedded = false }) {
     if (!dest || dest.code === 'calpe' || String(pageDestId) === '1') return null;
     const baseDomain = DEV_PREVIEW_DOMAINS[dest.code];
     if (!baseDomain) return null;
-    return `${baseDomain}/preview`;
+    const slug = editPage?.slug === 'home' ? '' : (editPage?.slug || '');
+    return `${baseDomain}/${slug}`;
   };
 
   if (isLoading) {
