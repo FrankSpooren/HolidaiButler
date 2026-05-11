@@ -10,6 +10,7 @@ import {
   Box, Typography, Button, IconButton, Tabs, Tab, Chip, TextField,
   Alert, CircularProgress, Tooltip, Divider, Menu, MenuItem,
   Paper, InputAdornment, LinearProgress, Snackbar,
+  FormControl, InputLabel, Select,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import PublishIcon from '@mui/icons-material/Publish';
@@ -28,6 +29,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ReplayIcon from '@mui/icons-material/Replay';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
@@ -274,6 +278,20 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const autoSaveTimerRef = useRef(null);
   const [repurposing, setRepurposing] = useState(null); // platform key currently being generated
 
+  // ─── Governance State (migrated from ContentItemDialog) ───
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [revisions, setRevisions] = useState([]);
+  const [revisionLoading, setRevisionLoading] = useState(false);
+  const [approvalLog, setApprovalLog] = useState([]);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareDestId, setShareDestId] = useState('');
+  const [sharing, setSharing] = useState(false);
+  const [shareResult, setShareResult] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+  const [governanceTab, setGovernanceTab] = useState('comments');
+
   // ─── Load Concept ───────────────────────────────────────
   const loadConcept = useCallback(async () => {
     if (!conceptId) return;
@@ -325,6 +343,103 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     loadPersonas();
   }, [open, conceptId, loadConcept, loadPersonas]);
 
+  // ─── Governance Handlers (migrated from ContentItemDialog) ───
+  const loadComments = useCallback(async (itemId) => {
+    if (!itemId) return;
+    setCommentLoading(true);
+    try {
+      const r = await contentService.getComments(itemId);
+      setComments(r.data || []);
+    } finally { setCommentLoading(false); }
+  }, []);
+
+  const handleAddComment = async () => {
+    const itemId = items[activeTab]?.id;
+    if (!newComment.trim() || !itemId) return;
+    try {
+      await contentService.addComment(itemId, newComment.trim());
+      setNewComment('');
+      await loadComments(itemId);
+    } catch { /* ignore */ }
+  };
+
+  const loadRevisions = useCallback(async (itemId) => {
+    if (!itemId) return;
+    setRevisionLoading(true);
+    try {
+      const r = await contentService.getRevisions(itemId);
+      setRevisions(r.data || []);
+    } finally { setRevisionLoading(false); }
+  }, []);
+
+  const handleRestore = async (revId) => {
+    const itemId = items[activeTab]?.id;
+    if (!itemId) return;
+    try {
+      await contentService.restoreRevision(itemId, revId);
+      await loadConcept();
+      await loadRevisions(itemId);
+    } catch { /* ignore */ }
+  };
+
+  const loadApprovalLog = useCallback(async (itemId) => {
+    if (!itemId) return;
+    try {
+      const r = await contentService.getApprovalLog(itemId);
+      setApprovalLog(r.data || []);
+    } catch { setApprovalLog([]); }
+  }, []);
+
+  const handleStatusUpdate = async (status) => {
+    const itemId = items[activeTab]?.id;
+    if (!itemId) return;
+    try {
+      await contentService.updateItem(itemId, { approval_status: status });
+      await loadConcept();
+      const itemIdReload = items[activeTab]?.id;
+      if (itemIdReload) loadApprovalLog(itemIdReload);
+      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
+    } catch (err) {
+      setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
+    }
+  };
+
+  const handleRetryPublish = async () => {
+    const itemId = items[activeTab]?.id;
+    if (!itemId) return;
+    setRetrying(true);
+    try {
+      await contentService.retryPublish(itemId);
+      await loadConcept();
+      setSnackMsg({ severity: 'success', text: 'Publicatie opnieuw gestart' });
+    } catch (err) {
+      setSnackMsg({ severity: 'error', text: err.message || 'Retry mislukt' });
+    } finally { setRetrying(false); }
+  };
+
+  const handleShare = async () => {
+    const itemId = items[activeTab]?.id;
+    if (!shareDestId || !itemId) return;
+    setSharing(true);
+    setShareResult(null);
+    try {
+      const r = await contentService.shareToDestination(itemId, Number(shareDestId));
+      setShareResult({ success: true, data: r.data });
+      setShareDialogOpen(false);
+      if (onUpdate) onUpdate();
+      setSnackMsg({ severity: 'success', text: 'Content succesvol gedeeld naar andere bestemming' });
+    } catch (err) {
+      setShareResult({ success: false, error: err.message || 'Delen mislukt' });
+    } finally { setSharing(false); }
+  };
+
+  // Load governance data when active item changes
+  useEffect(() => {
+    const itemId = items[activeTab]?.id;
+    if (!itemId || !open) return;
+    loadApprovalLog(itemId);
+  }, [items, activeTab, open, loadApprovalLog]);
+
   // Reset on close
   useEffect(() => {
     if (!open) {
@@ -332,6 +447,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       setEditingTitle(false); setSelectedPersona(null);
       setIsEditing(false); setDirty(false);
       setImproveResult(null); setEmojiOpen(false);
+      setComments([]); setNewComment(''); setRevisions([]); setApprovalLog([]); setGovernanceTab('comments');
+      setShareDialogOpen(false); setShareDestId(''); setShareResult(null);
     }
   }, [open]);
 
@@ -426,7 +543,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     if (!concept || titleValue === concept.title) { setEditingTitle(false); return; }
     setSavingTitle(true);
     try {
-      await contentService.updateItem(concept.id, { title: titleValue });
+      await contentService.updateConcept(concept.id, { title: titleValue });
       setConcept(prev => ({ ...prev, title: titleValue }));
       setEditingTitle(false);
       if (onUpdate) onUpdate();
@@ -1718,6 +1835,144 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     {activeItem?.ai_model && <Typography variant="caption" color="text.secondary">Platform AI: {activeItem.ai_model}</Typography>}
                   </Box>
                 </Paper>
+
+                {/* ══ APPROVE / REJECT / SHARE ══ */}
+                {activeItem && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>Beoordeling</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button size="small" variant="contained" color="success"
+                      onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />}
+                      disabled={activeItem.approval_status === 'approved'}>
+                      Approve
+                    </Button>
+                    <Button size="small" variant="outlined" color="error"
+                      onClick={() => handleStatusUpdate('rejected')} startIcon={<CloseIcon />}
+                      disabled={activeItem.approval_status === 'rejected'}>
+                      Afwijzen
+                    </Button>
+                    {activeItem.approval_status === 'failed' && (
+                      <Button size="small" variant="contained" color="warning"
+                        onClick={handleRetryPublish} disabled={retrying}
+                        startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
+                        {retrying ? 'Opnieuw...' : 'Opnieuw Proberen'}
+                      </Button>
+                    )}
+                    <Button size="small" variant="outlined"
+                      onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
+                      Deel
+                    </Button>
+                  </Box>
+                  {seoData && (seoData.overallScore || 0) < 70 && activeItem.approval_status !== 'approved' && activeItem.approval_status !== 'published' && (
+                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>
+                      <Typography variant="caption"><strong>SEO-score {seoData.overallScore}/100 (min. 70).</strong> Gebruik "AI Herschrijven" om de score te verhogen. Publiceren blijft handmatig mogelijk.</Typography>
+                    </Alert>
+                  )}
+                </Paper>
+                )}
+
+                {/* ══ WORKFLOW STATUS ══ */}
+                {activeItem && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Workflow Status</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                    {['draft', 'in_review', 'reviewed', 'approved'].map((step, idx) => {
+                      const steps = ['draft', 'in_review', 'reviewed', 'approved', 'scheduled', 'published'];
+                      const currentIdx = steps.indexOf(activeItem.approval_status);
+                      const isActive = activeItem.approval_status === step;
+                      const isPast = currentIdx > idx || activeItem.approval_status === 'published' || activeItem.approval_status === 'scheduled';
+                      return (
+                        <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                          <Box sx={{
+                            width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            bgcolor: isPast ? 'success.main' : isActive ? 'primary.main' : 'action.disabledBackground',
+                            color: (isPast || isActive) ? 'white' : 'text.disabled', fontSize: 11,
+                          }}>
+                            {isPast ? <CheckIcon sx={{ fontSize: 14 }} /> : idx + 1}
+                          </Box>
+                          <Typography variant="caption" sx={{ fontWeight: isActive ? 700 : 400, color: isActive ? 'primary.main' : 'text.secondary' }}>
+                            {step === 'draft' ? 'Concept' : step === 'in_review' ? 'Ter Review' : step === 'reviewed' ? 'Beoordeeld' : 'Goedgekeurd'}
+                          </Typography>
+                          {idx < 3 && <Box sx={{ width: 16, height: 2, bgcolor: isPast ? 'success.main' : 'divider' }} />}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                  {approvalLog.length > 0 && (
+                    <Box sx={{ maxHeight: 100, overflowY: 'auto' }}>
+                      {approvalLog.slice(0, 5).map((entry, i) => (
+                        <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.3 }}>
+                          {entry.new_status} — {entry.first_name || 'System'} — {new Date(entry.created_at).toLocaleString('nl-NL')}
+                          {entry.comment ? ` — "${entry.comment}"` : ''}
+                        </Typography>
+                      ))}
+                    </Box>
+                  )}
+                </Paper>
+                )}
+
+                {/* ══ GOVERNANCE TABS: COMMENTS & VERSIES ══ */}
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Tabs value={governanceTab} onChange={(_, v) => {
+                    setGovernanceTab(v);
+                    const itemId = items[activeTab]?.id;
+                    if (v === 'comments' && comments.length === 0 && itemId) loadComments(itemId);
+                    if (v === 'versions' && revisions.length === 0 && itemId) loadRevisions(itemId);
+                  }} sx={{ mb: 1.5, minHeight: 32 }}>
+                    <Tab value="comments" label={`Comments${comments.length ? ` (${comments.length})` : ''}`} sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                    <Tab value="versions" label="Versies" sx={{ minHeight: 32, py: 0, fontSize: 12 }} />
+                  </Tabs>
+
+                  {governanceTab === 'comments' && (
+                    <>
+                      {commentLoading ? <CircularProgress size={20} /> : (
+                        <>
+                          {comments.length === 0 && <Typography variant="body2" color="text.secondary">Geen comments.</Typography>}
+                          {comments.map(c => (
+                            <Box key={c.id} sx={{ mb: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.3 }}>
+                                <Typography variant="caption" fontWeight={600}>{c.first_name || c.user_email || 'System'}</Typography>
+                                <Typography variant="caption" color="text.secondary">{new Date(c.created_at).toLocaleString('nl-NL')}</Typography>
+                              </Box>
+                              <Typography variant="body2">{c.comment}</Typography>
+                            </Box>
+                          ))}
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                            <TextField size="small" fullWidth placeholder="Schrijf een comment..."
+                              value={newComment} onChange={e => setNewComment(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+                            />
+                            <Button size="small" variant="contained" onClick={handleAddComment} disabled={!newComment.trim()}>Post</Button>
+                          </Box>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {governanceTab === 'versions' && (
+                    <>
+                      {revisionLoading ? <CircularProgress size={20} /> : (
+                        <>
+                          {revisions.length === 0 && <Typography variant="body2" color="text.secondary">Geen eerdere versies.</Typography>}
+                          {revisions.map(rev => (
+                            <Box key={rev.id} sx={{ mb: 1, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="caption" fontWeight={600}>v{rev.revision_number}</Typography>
+                                <Typography variant="caption" color="text.secondary">{new Date(rev.created_at).toLocaleString('nl-NL')}</Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary">{rev.change_summary || '—'}</Typography>
+                              <Box sx={{ mt: 0.5 }}>
+                                <Button size="small" variant="outlined" onClick={() => handleRestore(rev.id)} sx={{ fontSize: 11 }}>
+                                  Herstel
+                                </Button>
+                              </Box>
+                            </Box>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </Paper>
               </Box>
             </Box>
           </Box>
@@ -1727,6 +1982,31 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
           <DialogActions sx={{ px: 3, py: 1.5 }}>
             <Button onClick={onClose} color="inherit">{t('common.close', 'Sluiten')}</Button>
           </DialogActions>
+
+          {/* ═══ SHARE TO DESTINATION DIALOG ═══ */}
+          <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="xs" fullWidth>
+            <DialogTitle>Deel naar andere bestemming</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Kopieer dit content item naar een andere bestemming. De content wordt als nieuw concept aangemaakt.
+              </Typography>
+              <FormControl fullWidth>
+                <InputLabel>Bestemming</InputLabel>
+                <Select value={shareDestId} onChange={e => setShareDestId(e.target.value)} label="Bestemming">
+                  {[{ id: 1, name: 'Calpe' }, { id: 2, name: 'Texel' }, { id: 4, name: 'WarreWijzer' }]
+                    .filter(d => d.id !== destinationId)
+                    .map(d => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShareDialogOpen(false)}>Annuleren</Button>
+              <Button variant="contained" onClick={handleShare} disabled={!shareDestId || sharing}
+                startIcon={sharing ? <CircularProgress size={16} /> : <ShareIcon />}>
+                {sharing ? 'Delen...' : 'Deel'}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {/* ═══ SCHEDULE DIALOG ═══ */}
           <Dialog open={scheduleDialogOpen} onClose={() => setScheduleDialogOpen(false)} maxWidth="xs" fullWidth>
