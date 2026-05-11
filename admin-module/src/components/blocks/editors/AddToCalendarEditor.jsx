@@ -22,6 +22,7 @@ const PROVIDERS = [
 ];
 
 export default function AddToCalendarEditor({ data, onChange }) {
+  data = data || {};
   const u = (field, value) => onChange({ ...data, [field]: value });
   const toggleProvider = (p) => {
     const current = data.providers || ['google', 'apple', 'outlook', 'yahoo'];

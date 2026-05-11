@@ -12,6 +12,7 @@ const START_DAY_OPTIONS = [
 ];
 
 export default function CalendarViewEditor({ data, onChange }) {
+  data = data || {};
   const u = (field, value) => onChange({ ...data, [field]: value });
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
