@@ -300,9 +300,19 @@ export default function PreviewPage() {
     );
   }
 
+  // Filter blocks by visibility based on iframe width (admin viewport toggle)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 500;
+  const filteredBlocks = blocks.filter((block: BlockConfig) => {
+    const vis = (block as unknown as Record<string, unknown>).visibility as string | undefined;
+    if (!vis || vis === 'all') return true;
+    if (vis === 'mobile' && !isMobile) return false;
+    if (vis === 'desktop' && isMobile) return false;
+    return true;
+  });
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', minHeight: '100vh', backgroundColor: '#fafaf9' }}>
-      {blocks.map((block: BlockConfig, index: number) => (
+      {filteredBlocks.map((block: BlockConfig, index: number) => (
         <BlockPreview key={block.id || index} block={block} index={index} />
       ))}
     </div>

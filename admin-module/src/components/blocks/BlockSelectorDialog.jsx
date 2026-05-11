@@ -93,7 +93,7 @@ export default function BlockSelectorDialog({ open, onClose, onSelect }) {
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
         >
           {CATEGORIES.map(cat => (
-            <Tab key={cat} label={cat} />
+            <Tab key={cat} label={t(`blocks.category.${cat}`, cat)} />
           ))}
         </Tabs>
         <Grid container spacing={2}>

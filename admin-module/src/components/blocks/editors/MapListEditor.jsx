@@ -22,6 +22,7 @@ const HEIGHT_OPTIONS = [
  * MapListEditor — Admin block editor for Map+List block (VII-E2 A3)
  */
 export default function MapListEditor({ data, onChange }) {
+  data = data || {};
   const updateField = (field, value) => {
     onChange({ ...data, [field]: value });
   };
