@@ -2051,7 +2051,7 @@ export default function ContentStudioPage() {
 
   const handleGenerateContent = async (data) => {
     try {
-      await contentService.generateItem(data);
+      // Refresh lists — actual generation happens in GenerateContentDialog via generateConcept
       loadSuggestions();
       loadItems();
     } catch (err) {
@@ -3206,6 +3206,10 @@ export default function ContentStudioPage() {
                               <Chip icon={<AccessTimeIcon sx={{ fontSize: 14 }} />} label="Ingepland" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(100,181,246,0.15)', color: '#64B5F6', border: '1px solid rgba(100,181,246,0.3)' }} />
                             ) : concept.platform_versions?.some(v => v.status === 'failed') ? (
                               <Chip icon={<ErrorOutlineIcon sx={{ fontSize: 14 }} />} label="Mislukt" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(229,115,115,0.15)', color: '#E57373', border: '1px solid rgba(229,115,115,0.3)' }} />
+                            ) : concept.platform_versions?.every(v => v.status === 'approved') && concept.platform_versions?.length > 0 ? (
+                              <Chip icon={<CheckCircleOutlineIcon sx={{ fontSize: 14 }} />} label="Goedgekeurd" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(129,199,132,0.15)', color: '#66BB6A', border: '1px solid rgba(129,199,132,0.3)' }} />
+                            ) : concept.platform_versions?.some(v => v.status === 'approved') ? (
+                              <Chip icon={<CheckCircleOutlineIcon sx={{ fontSize: 14 }} />} label="Deels goedgekeurd" size="small" sx={{ height: 22, fontSize: 10, bgcolor: 'rgba(255,183,77,0.15)', color: '#FFB74D', border: '1px solid rgba(255,183,77,0.3)' }} />
                             ) : (
                               <StatusChip status={concept.approval_status} />
                             )}

@@ -49,6 +49,13 @@ class MetaClient {
       imageUrls.unshift(metadata.image_url);
     }
 
+    // Facebook toont 2 foto's als lelijke side-by-side grid (geen carousel).
+    // Bij exact 2 images: publiceer alleen de eerste als single photo post.
+    if (imageUrls.length === 2) {
+      logger.info('[MetaClient] Facebook: 2 images detected, publishing first image only (grid prevention)');
+      imageUrls.splice(1); // keep only first
+    }
+
     if (imageUrls.length > 1) {
       // Step 1: Upload each photo as unpublished
       const photoIds = [];
