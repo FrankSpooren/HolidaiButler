@@ -168,6 +168,8 @@ class PublisherAgent extends BaseAgent {
         `UPDATE content_items SET approval_status = 'published', published_at = NOW(), publish_url = :url, platform_post_id = :postId, publish_error = NULL, updated_at = NOW() WHERE id = :id`,
         { replacements: { url: result.url || null, postId: result.postId || null, id: contentItemId } }
       );
+      // Sync concept status after publish
+      try { const [[pi]] = await mysqlSequelize.query('SELECT concept_id FROM content_items WHERE id = :id', { replacements: { id } }); if (pi?.concept_id) { const [its] = await mysqlSequelize.query("SELECT approval_status FROM content_items WHERE concept_id = :cid AND approval_status != 'deleted'", { replacements: { cid: pi.concept_id } }); const prio = ['draft','generating','pending_review','in_review','reviewed','rejected','approved','failed','scheduled','publishing','published']; let h=0; for(const it of its){const i=prio.indexOf(it.approval_status);if(i>h)h=i;} await mysqlSequelize.query('UPDATE content_concepts SET approval_status = :s, updated_at = NOW() WHERE id = :cid', { replacements: { s: prio[h]||'draft', cid: pi.concept_id } }); } } catch(e) { /* non-blocking */ }
 
 // Track media usage — increment usage_count for media items used in this content      try {        const mediaIds = typeof contentItem.media_ids === "string" ? JSON.parse(contentItem.media_ids) : contentItem.media_ids;        if (Array.isArray(mediaIds) && mediaIds.length > 0) {          for (const mid of mediaIds) {            const numId = typeof mid === "string" && mid.startsWith("media:") ? parseInt(mid.replace("media:", "")) : parseInt(mid);            if (!isNaN(numId) && numId > 0) {              await mysqlSequelize.query("UPDATE media SET usage_count = usage_count + 1, last_used_at = NOW() WHERE id = ?", { replacements: [numId] });            }          }        }      } catch (usageErr) { /* non-critical */ }
       await logAgent('publisher', contentItem.destination_id, 'content-published', {
@@ -196,6 +198,8 @@ class PublisherAgent extends BaseAgent {
         `UPDATE content_items SET approval_status = 'failed', publish_error = :error, updated_at = NOW() WHERE id = :id`,
         { replacements: { error: error.message, id: contentItemId } }
       );
+      // Sync concept status after publish failure
+      try { const [[fi]] = await mysqlSequelize.query('SELECT concept_id FROM content_items WHERE id = :id', { replacements: { id } }); if (fi?.concept_id) { const [its] = await mysqlSequelize.query("SELECT approval_status FROM content_items WHERE concept_id = :cid AND approval_status != 'deleted'", { replacements: { cid: fi.concept_id } }); const prio = ['draft','generating','pending_review','in_review','reviewed','rejected','approved','failed','scheduled','publishing','published']; let h=0; for(const it of its){const i=prio.indexOf(it.approval_status);if(i>h)h=i;} await mysqlSequelize.query('UPDATE content_concepts SET approval_status = :s, updated_at = NOW() WHERE id = :cid', { replacements: { s: prio[h]||'draft', cid: fi.concept_id } }); } } catch(e) { /* non-blocking */ }
 
       await logError('publisher', error, { action: 'publish-failed', destination_id: contentItem.destination_id });
       throw error;

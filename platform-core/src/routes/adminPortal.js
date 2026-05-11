@@ -13243,6 +13243,9 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
       { replacements }
     );
 
+    // Sync concept status after item update
+    await syncConceptStatus(id);
+
     res.json({ success: true, data: { id: Number(id), updated: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item update error:', error);
@@ -13265,6 +13268,49 @@ router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_
     res.status(500).json({ success: false, error: { code: 'CONTENT_DELETE_ERROR', message: error.message } });
   }
 });
+
+// ============================================================
+// CONCEPT STATUS SYNC — derive concept status from item statuses
+// ============================================================
+// Priority: published > scheduled > failed > approved > in_review > draft
+const CONCEPT_STATUS_PRIORITY = ['draft', 'generating', 'pending_review', 'in_review', 'reviewed', 'rejected', 'approved', 'failed', 'scheduled', 'publishing', 'published'];
+
+async function syncConceptStatus(itemId) {
+  try {
+    // Get concept_id for this item
+    const [[item]] = await mysqlSequelize.query(
+      'SELECT concept_id FROM content_items WHERE id = :itemId',
+      { replacements: { itemId: Number(itemId) } }
+    );
+    if (!item?.concept_id) return;
+    await syncConceptStatusByConceptId(item.concept_id);
+  } catch (err) {
+    logger.debug('[syncConceptStatus] Non-blocking error:', err.message);
+  }
+}
+
+async function syncConceptStatusByConceptId(conceptId) {
+  try {
+    const [items] = await mysqlSequelize.query(
+      "SELECT approval_status FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'",
+      { replacements: { conceptId: Number(conceptId) } }
+    );
+    if (items.length === 0) return;
+    // Derive: highest priority status among all items
+    let highest = 0;
+    for (const it of items) {
+      const idx = CONCEPT_STATUS_PRIORITY.indexOf(it.approval_status);
+      if (idx > highest) highest = idx;
+    }
+    const derivedStatus = CONCEPT_STATUS_PRIORITY[highest] || 'draft';
+    await mysqlSequelize.query(
+      'UPDATE content_concepts SET approval_status = :status, updated_at = NOW() WHERE id = :conceptId',
+      { replacements: { status: derivedStatus, conceptId: Number(conceptId) } }
+    );
+  } catch (err) {
+    logger.debug('[syncConceptStatusByConceptId] Non-blocking error:', err.message);
+  }
+}
 
 // ============================================================
 // CONTENT CONCEPTS — Grouped content management
@@ -14990,6 +15036,7 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
       `UPDATE content_items SET approval_status = 'approved', scheduled_at = NULL, updated_at = NOW() WHERE id = :id AND approval_status = 'scheduled'`,
       { replacements: { id: Number(id) } }
     );
+        await syncConceptStatus(req.params.id);
     res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
   } catch (error) {
     logger.error('[AdminPortal] Cancel schedule error:', error);
@@ -16223,6 +16270,8 @@ router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform
        WHERE id IN (:ids) AND approval_status NOT IN ('published', 'deleted')`,
       { replacements: { ids: numericIds, userId: req.adminUser?.id || null } }
     );
+        // Sync concept statuses for all affected items
+    for (const iid of itemIds) { await syncConceptStatus(iid); }
     res.json({ success: true, data: { approved: numericIds.length } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk approve error:', error);
@@ -16385,6 +16434,7 @@ router.post('/content/items/:id/retry-publish', adminAuth('editor'), writeAccess
        VALUES (:itemId, 'failed', 'scheduled', :userId, :comment)`,
       { replacements: { itemId: Number(id), userId: req.adminUser?.id || 'system', comment: `Manual retry. Previous error: ${item.publish_error || 'unknown'}` } }
     );
+        await syncConceptStatus(req.params.id);
     res.json({ success: true, data: { id: Number(id), retried: true, previousError: item.publish_error } });
   } catch (error) {
     logger.error('[AdminPortal] Retry publish error:', error);
