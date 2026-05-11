@@ -161,6 +161,7 @@ import blogRoutes from './routes/blogs.js';
 import searchRoutes from './routes/search.js';
 import relatedRoutes from './routes/related.js';
 import itineraryRoutes from './routes/itinerary.js';
+import TEMPLATE_DEFAULTS from './services/templates/templateDefaults.js';
 import poiImagesRoutes from "./routes/poiImages.js";
 import monitoringRoutes from "./routes/monitoring.js";
 import { initializeCircuitBreakers } from './services/circuitBreakerInit.js';
@@ -307,7 +308,54 @@ app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/related', relatedRoutes);
-app.use('/api/v1/itinerary', itineraryRoutes); // Itinerary OSRM routing (VII-E2 B2) // Related Items (VII-E2 A4) // Unified Search (VII-E2 A1)
+app.use('/api/v1/itinerary', itineraryRoutes);
+// Template defaults for Page Editor (VII-E3)
+app.get('/api/v1/admin-portal/templates', async (req, res) => {
+  try {
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const templates = Object.entries(TEMPLATES).map(([key, t]) => ({
+      template_type: key,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      url_pattern: t.url_pattern,
+      required_blocks: t.required_blocks,
+      recommended_blocks: t.recommended_blocks,
+      block_count: t.default_layout?.blocks?.length || 0,
+      schema_type: t.schema_type,
+    }));
+    res.json({ success: true, templates });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create page from template (VII-E3)
+app.post('/api/v1/admin-portal/pages/from-template', async (req, res) => {
+  try {
+    const { template_type, destination_id, slug, title_nl, title_en } = req.body;
+    if (!template_type || !destination_id || !slug) {
+      return res.status(400).json({ error: 'template_type, destination_id, slug required' });
+    }
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const template = TEMPLATES[template_type];
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    const layout = JSON.stringify(template.default_layout || { blocks: [] });
+    await mysqlSequelize.query(
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, layout, status, template_type)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :layout, 'draft', :tmpl)`,
+      { replacements: { destId: destination_id, slug, titleNl: title_nl || '', titleEn: title_en || '', layout, tmpl: template_type }, type: QueryTypes.INSERT }
+    );
+
+    res.json({ success: true, message: 'Page created from template', template_type, slug });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+}); // Itinerary OSRM routing (VII-E2 B2) // Related Items (VII-E2 A4) // Unified Search (VII-E2 A1)
 app.use("/api/v1/public/media-collections", createPublicCollectionRouter()); // Public collection sharing (ML-1.4)
 
 // OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)
