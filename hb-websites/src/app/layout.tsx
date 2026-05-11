@@ -76,7 +76,7 @@ export default async function RootLayout({
 }) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
-  const pathname = headersList.get('x-invoke-path') || headersList.get('x-matched-path') || '';
+  const pathname = headersList.get('x-pathname') || '';
   const isPreview = pathname.startsWith('/preview');
   const locale = headersList.get('x-tenant-locale') ?? 'en';
 
