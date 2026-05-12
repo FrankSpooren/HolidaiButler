@@ -1,0 +1,113 @@
+'use client';
+
+/**
+ * Block Showcase — destination-neutral thumbnail renderer
+ * Renders each block type with generic placeholder content.
+ * Used by generate-thumbnails.mjs for Puppeteer screenshots.
+ *
+ * Route: /__block-showcase?type=hero (renders single block)
+ * Route: /__block-showcase (renders all blocks sequentially)
+ */
+
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import { getBlock } from '@/blocks/index';
+
+// Destination-neutral sample props per block type
+const SAMPLE_PROPS: Record<string, Record<string, unknown>> = {
+  hero: { headline: 'Ontdek je bestemming', description: 'Vind de mooiste plekken, evenementen en ervaringen', height: 'compact', backgroundType: 'color', bgColor: '#1a5c3a' },
+  desktop_hero: { greeting: 'Welkom!', subtitle: 'Ontdek alles met je persoonlijke AI-reisassistent', chatbotPlaceholder: 'Stel een vraag...', image: '' },
+  rich_text: { content: '<h2>Over deze bestemming</h2><p>Een prachtige plek met rijke geschiedenis, adembenemende natuur en heerlijke lokale gerechten. Of je nu houdt van wandelen, cultuur of culinair genieten — er is voor iedereen iets te beleven.</p><h3>Natuur & Stranden</h3><p>Kilometers aan ongerepte kustlijn, beschermde natuurgebieden en unieke flora en fauna maken dit tot een paradijs voor natuurliefhebbers.</p>' },
+  cta: { headline: 'Klaar om te ontdekken?', description: 'Plan je perfecte dag met onze AI-assistent', backgroundStyle: 'primary', buttons: [{ label: 'Start nu', variant: 'primary' }, { label: 'Meer info', variant: 'secondary' }] },
+  banner: { message: 'Zomeractie: 20% korting op alle tickets t/m 31 augustus', variant: 'info', dismissible: true },
+  alert_status: { message: 'Weersalarm: harde wind verwacht. Check actuele situatie.', severity: 'warning' },
+  search: { placeholder: 'Zoek plekken, evenementen, artikelen...', variant: 'hero', showSuggestions: true, enableChatbotFallback: true },
+  filter_bar: { filters: ['category', 'rating'], categories: ['Natuur', 'Restaurants', 'Cultuur', 'Actief', 'Winkelen'], layout: 'auto', showResetButton: true },
+  poi_grid: { title: 'Populaire plekken', limit: 6, columns: 3, showFilters: false },
+  poi_grid_filtered: { title: 'Restaurants in de buurt', limit: 6, columns: 3 },
+  event_calendar: { title: 'Evenementen', limit: 6, layout: 'list' },
+  event_calendar_filtered: { title: 'Evenementen deze week', limit: 6 },
+  map: { height: '400px', overlayLabel: 'Ontdek alle locaties' },
+  map_list: { source: 'pois', layout: 'split_60_40', height: 'medium', limit: 10, title: 'Verken de kaart' },
+  map_preview: { height: '300px' },
+  mobile_map: { height: '250px' },
+  category_grid: { layout: 'auto' },
+  today_events: { limit: 6, layout: 'auto' },
+  programme: { programSize: 4 },
+  tip_of_the_day: {},
+  popular_pois: { limit: 6, columns: 3, title: 'Populair' },
+  gallery: { columns: 3, items: [] },
+  video: { url: '', title: 'Ontdek de bestemming vanuit de lucht' },
+  faq: { items: [{ question: 'Hoe kom ik er?', answer: 'Er zijn verschillende vervoersmogelijkheden beschikbaar.' }, { question: 'Wat is de beste tijd om te bezoeken?', answer: 'Elk seizoen heeft zijn eigen charme.' }, { question: 'Zijn er activiteiten voor kinderen?', answer: 'Ja, er zijn tal van gezinsvriendelijke activiteiten.' }] },
+  testimonials: {},
+  partners: { items: [] },
+  downloads: { items: [{ title: 'Wandelroute (PDF)', type: 'pdf', size: '3.2 MB' }, { title: 'Fietsroute (GPX)', type: 'gpx', size: '1.1 MB' }] },
+  social_feed: {},
+  curated_cards: { variant: 'curated' },
+  blog_grid: { limit: 6, columns: 3 },
+  contact_form: { fields: ['name', 'email', 'message'], requireGdpr: true },
+  newsletter: { title: 'Blijf op de hoogte', variant: 'inline' },
+  chatbot_widget: {},
+  weather_widget: {},
+  ticket_shop: {},
+  reservation_widget: {},
+  opening_hours: { source: 'manual', showOpenNow: true, variant: 'detailed', manualHours: [{ day: 'mon', from: '09:00', to: '17:00' }, { day: 'tue', from: '09:00', to: '17:00' }, { day: 'wed', from: '09:00', to: '21:00' }, { day: 'thu', from: '09:00', to: '17:00' }, { day: 'fri', from: '09:00', to: '17:00' }, { day: 'sat', from: '10:00', to: '16:00' }, { day: 'sun', closed: true }] },
+  location_details: { source: 'manual', manualLocation: { address: 'Hoofdstraat 1', city: 'Centrum', postalCode: '1234 AB', country: 'Nederland' }, showOpenInMaps: true, showCopyAddress: true, variant: 'detailed' },
+  breadcrumbs: { source: 'manual', manualItems: [{ label: 'Home', href: '/' }, { label: 'Ontdekken', href: '/explore' }, { label: 'Restaurant De Goede Smaak' }], showHomeIcon: true },
+  anchor_nav: { source: 'manual', manualAnchors: [{ id: 's1', label: 'Over' }, { id: 's2', label: 'Reviews' }, { id: 's3', label: 'Kaart' }, { id: 's4', label: 'FAQ' }], variant: 'pills', position: 'top' },
+  offer: { variant: 'comparison', offers: [{ title: 'Dagpas', discountedPrice: 29, originalPrice: 36, currency: 'EUR', badge: 'Populair', features: ['Alle musea', 'Openbaar vervoer', 'Rondleiding'], bookingType: 'internal_ticket_shop' }, { title: 'Weekend Deal', discountedPrice: 49, currency: 'EUR', features: ['Alles van Dagpas', '2 nachten verblijf'], bookingType: 'external_url' }] },
+  consent_embed: { embedType: 'youtube', consentText: 'Klik om YouTube-content te laden', privacyNoteText: 'Door te klikken ga je akkoord met cookies van derden.', rememberConsent: true },
+  related_items: { itemType: 'poi', relationStrategy: 'nearby', limit: 4, title: 'In de buurt' },
+  featured_item: { itemType: 'poi', variant: 'split_image_text', badgeText: 'Tip van de dag', showCta: true },
+  add_to_calendar: { source: 'manual', manualEvent: { title: 'Zomerfestival', startDate: '2026-07-15T14:00:00', location: 'Centrumplein' }, providers: ['google', 'apple', 'outlook', 'yahoo'], buttonStyle: 'dropdown' },
+  calendar_view: { view: 'dayGridMonth', startDay: 1, title: 'Evenementenkalender' },
+  itinerary: { source: 'manual_waypoints', mode: 'foot', variant: 'timeline', showMap: false, showTimeEstimates: true, title: 'Dagwandeling', manualWaypoints: [{ name: 'Start: Bezoekerscentrum', lat: 52.37, lon: 4.89, durationMinutes: 30 }, { name: 'Natuurgebied', lat: 52.38, lon: 4.90, durationMinutes: 60 }, { name: 'Strandpaviljoen (lunch)', lat: 52.39, lon: 4.88, durationMinutes: 45 }] },
+  save_to_trip: { variant: 'view_my_plan', showCount: true },
+};
+
+function BlockRenderer({ type }: { type: string }) {
+  const Component = getBlock(type as any);
+  if (!Component) return <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>Block type "{type}" niet gevonden</div>;
+
+  const props = SAMPLE_PROPS[type] || {};
+
+  return (
+    <div
+      data-block-type={type}
+      style={{ width: '100%', minHeight: 200, background: '#fff', borderBottom: '2px solid #e2e8f0' }}
+    >
+      <Component {...props} />
+    </div>
+  );
+}
+
+function ShowcaseContent() {
+  const searchParams = useSearchParams();
+  const singleType = searchParams.get('type');
+
+  if (singleType) {
+    return <BlockRenderer type={singleType} />;
+  }
+
+  // Render all blocks
+  return (
+    <div>
+      {Object.keys(SAMPLE_PROPS).map(type => (
+        <div key={type} id={`block-${type}`}>
+          <div style={{ padding: '8px 16px', background: '#f1f5f9', fontSize: 12, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {type}
+          </div>
+          <BlockRenderer type={type} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function BlockShowcasePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShowcaseContent />
+    </Suspense>
+  );
+}

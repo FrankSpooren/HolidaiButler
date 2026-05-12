@@ -17,6 +17,7 @@ const SEARCH_TYPE_OPTIONS = [
  * SearchEditor — Admin block editor for Search block (VII-E2 A1)
  */
 export default function SearchEditor({ data, onChange }) {
+  data = data || {};
   const updateField = (field, value) => {
     onChange({ ...data, [field]: value });
   };

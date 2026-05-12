@@ -17,6 +17,7 @@ const ASPECT_OPTIONS = [
 ];
 
 export default function ConsentEmbedEditor({ data, onChange }) {
+  data = data || {};
   const u = (f, v) => onChange({ ...data, [f]: v });
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
