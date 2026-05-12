@@ -215,15 +215,28 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
     }
   };
 
+  // Platform-specific max image limits
+  const PLATFORM_IMAGE_LIMITS = { facebook: 10, instagram: 10, linkedin: 9, x: 4, tiktok: 1, youtube: 1, pinterest: 1, website: 20 };
+
   const handleSelectImage = async (mediaId) => {
     const isSocial = item?.content_type === 'social_post' || item?.content_type === 'video_script';
     try {
       if (isSocial) {
-        for (const img of images) {
-          const id = typeof img === 'object' ? img.id : img;
-          await contentService.detachImage(itemId, id);
+        const platform = item?.target_platform || 'facebook';
+        const maxImages = PLATFORM_IMAGE_LIMITS[platform] || 4;
+        // Check if image is already attached — if so, detach (toggle behavior)
+        const existingId = images.find(img => (typeof img === 'object' ? img.id : img) === mediaId);
+        if (existingId) {
+          await contentService.detachImage(itemId, mediaId);
+        } else if (images.length >= maxImages) {
+          // At limit: remove oldest, add new
+          const oldestId = typeof images[0] === 'object' ? images[0].id : images[0];
+          await contentService.detachImage(itemId, oldestId);
+          await contentService.attachImages(itemId, [mediaId]);
+        } else {
+          // Under limit: just add
+          await contentService.attachImages(itemId, [mediaId]);
         }
-        await contentService.attachImages(itemId, [mediaId]);
       } else {
         await contentService.attachImages(itemId, [mediaId]);
       }

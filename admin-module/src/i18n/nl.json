@@ -874,6 +874,15 @@
     }
   },
   "common": {
+    "days": {
+      "sunday": "Zondag",
+      "monday": "Maandag",
+      "tuesday": "Dinsdag",
+      "wednesday": "Woensdag",
+      "thursday": "Donderdag",
+      "friday": "Vrijdag",
+      "saturday": "Zaterdag"
+    },
     "loading": "Laden...",
     "error": "Er is een fout opgetreden",
     "retry": "Opnieuw proberen",
@@ -1575,7 +1584,26 @@
       "en": "Engels",
       "nl": "Nederlands",
       "de": "Duits",
-      "es": "Spaans"
+      "es": "Spaans",
+      "fr": "Frans"
+    },
+    "contentTypes": {
+      "social_post": "Social Post",
+      "blog": "Blog",
+      "video_script": "Videoscript",
+      "newsletter": "Nieuwsbrief"
+    },
+    "trends": {
+      "breakout": "Doorbraak",
+      "rising": "Stijgend",
+      "stable": "Stabiel",
+      "declining": "Dalend",
+      "breakoutRising": "Doorbraak + Stijgend"
+    },
+    "period": {
+      "7d": "7 dagen",
+      "30d": "30 dagen",
+      "90d": "90 dagen"
     },
     "actions": {
       "cancel": "Annuleren",
