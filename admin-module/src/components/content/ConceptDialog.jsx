@@ -943,6 +943,21 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
+  const handleCancelSchedule = async (itemId) => {
+    setPublishing(true);
+    try {
+      await contentService.cancelSchedule(itemId);
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'approved', scheduled_at: null } : it));
+      await loadConcept();
+      if (onUpdate) onUpdate();
+      setSnackMsg({ severity: 'success', text: 'Inplanning geannuleerd' });
+    } catch (err) {
+      setSnackMsg({ severity: 'error', text: `Annuleren mislukt: ${err.message}` });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const selectBestTime = (timeArr) => {
     const [targetDay, hh, mm] = timeArr;
     const now = new Date();
@@ -1202,7 +1217,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 /* ═══ BLOG MODUS — TipTap WYSIWYG + SEO Metadata ═══ */
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {/* Image Section */}
-                  <ContentImageSection itemId={activeItem.id} item={activeItem} onUpdate={handleImageUpdate} />
+                  <ContentImageSection itemId={activeItem.id} item={activeItem} onUpdate={handleImageUpdate} siblingItems={items} />
 
                   {/* Blog Header */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1340,6 +1355,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     itemId={activeItem.id}
                     item={activeItem}
                     onUpdate={handleImageUpdate}
+                    siblingItems={items}
                   />
 
                   {/* ── Platform Header + Action Buttons ── */}
@@ -1634,6 +1650,20 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                             </Tooltip>
                           </>
                         )}
+                        {isScheduled && (
+                          <>
+                            <Tooltip title="Herplannen">
+                              <IconButton size="small" color="primary" onClick={() => { setPublishTarget(it.id); setScheduleDialogOpen(true); }} disabled={publishing}>
+                                <ScheduleIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Annuleren">
+                              <IconButton size="small" color="warning" onClick={() => handleCancelSchedule(it.id)} disabled={publishing}>
+                                <CloseIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
                         {isPublished && (
                           <>
                             <Tooltip title="Opnieuw publiceren">
@@ -1650,7 +1680,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         )}
                         <Chip
                           icon={isScheduled ? <ScheduleIcon sx={{ fontSize: '12px !important' }} /> : undefined}
-                          label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status === 'approved' ? 'Goedgekeurd' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status === 'draft' ? 'Concept' : it.approval_status === 'rejected' ? 'Afgewezen' : it.approval_status}
+                          label={isPublished ? 'Live' : isScheduled ? 'Ingepland' : it.approval_status === 'approved' ? 'Goedgekeurd' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status === 'draft' ? 'Concept' : it.approval_status === 'rejected' ? 'Afgewezen' : it.approval_status}
                           size="small" variant={isScheduled ? 'outlined' : 'filled'}
                           color={STATUS_COLORS[it.approval_status] || 'default'}
                           sx={{ height: 20, fontSize: 10, fontWeight: 600,
