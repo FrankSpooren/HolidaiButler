@@ -13258,14 +13258,63 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
  */
 router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
+    const itemId = Number(req.params.id);
     await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE id = :id`,
-      { replacements: { id: Number(req.params.id) } }
+      `UPDATE content_items SET approval_status = 'deleted', scheduled_at = NULL, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: itemId } }
     );
-    res.json({ success: true, data: { id: Number(req.params.id), deleted: true } });
+    // Sync concept status so parent reflects deletion
+    await syncConceptStatus(itemId);
+    res.json({ success: true, data: { id: itemId, deleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item delete error:', error);
     res.status(500).json({ success: false, error: { code: 'CONTENT_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/concepts/:id/approve — Approve ALL child items of a concept at once
+ */
+router.post('/content/concepts/:id/approve', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
+  try {
+    const conceptId = Number(req.params.id);
+    const userId = req.adminUser?.id || 'system';
+
+    // Get all non-deleted, non-published items for this concept
+    const [items] = await mysqlSequelize.query(
+      "SELECT id, approval_status FROM content_items WHERE concept_id = :conceptId AND approval_status NOT IN ('deleted', 'published')",
+      { replacements: { conceptId } }
+    );
+    if (items.length === 0) {
+      return res.status(404).json({ success: false, error: { code: 'NO_ITEMS', message: 'Geen items om goed te keuren' } });
+    }
+
+    // Log approval trail for each item
+    for (const item of items) {
+      if (item.approval_status !== 'approved') {
+        await mysqlSequelize.query(
+          `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+           VALUES (:itemId, :fromStatus, 'approved', :userId, 'Concept-level approval (alle kanalen)')`,
+          { replacements: { itemId: item.id, fromStatus: item.approval_status, userId } }
+        );
+      }
+    }
+
+    // Approve all items at once
+    const itemIds = items.map(i => i.id);
+    await mysqlSequelize.query(
+      `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
+       WHERE concept_id = :conceptId AND approval_status NOT IN ('deleted', 'published')`,
+      { replacements: { conceptId, userId } }
+    );
+
+    // Sync concept status
+    await syncConceptStatusByConceptId(conceptId);
+
+    res.json({ success: true, data: { concept_id: conceptId, approved_items: itemIds.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Concept approve error:', error);
+    res.status(500).json({ success: false, error: { code: 'CONCEPT_APPROVE_ERROR', message: error.message } });
   }
 });
 
@@ -14617,7 +14666,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
          AND (
            (ci.scheduled_at BETWEEN :start AND :end)
            OR (ci.published_at BETWEEN :start AND :end)
-           OR (ci.approval_status IN ('approved', 'scheduled', 'publishing', 'published') AND ci.created_at BETWEEN :start AND :end)
+           OR (ci.approval_status IN ('approved') AND ci.scheduled_at IS NULL AND ci.published_at IS NULL AND ci.created_at BETWEEN :start AND :end)
          )
        ORDER BY COALESCE(ci.scheduled_at, ci.published_at, ci.created_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
@@ -14999,10 +15048,21 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     // Normalize datetime string to MySQL format without UTC conversion (Amsterdam local time)
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
 
+    // Log approval trail
+    await mysqlSequelize.query(
+      `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
+       SELECT id, approval_status, 'scheduled', :userId, :comment
+       FROM content_items WHERE id = :id`,
+      { replacements: { id: Number(id), userId: req.adminUser?.id || 'system', comment: `Scheduled for ${parsedScheduledAt}` } }
+    );
+
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
       { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
+
+    // Sync concept status
+    await syncConceptStatus(Number(id));
 
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
   } catch (error) {
@@ -15059,6 +15119,12 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
     }
 
+    // Get the CONCEPT title (source of truth for duplication name)
+    const [[parentConcept]] = await mysqlSequelize.query(
+      'SELECT title FROM content_concepts WHERE id = :conceptId',
+      { replacements: { conceptId: original.concept_id } }
+    );
+
     // Get ALL platform items of this concept (not just the clicked one)
     const [allItems] = await mysqlSequelize.query(
       `SELECT destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
@@ -15071,8 +15137,9 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
       return res.status(404).json({ success: false, error: { code: 'NO_ITEMS', message: 'No items found for this concept' } });
     }
 
-    // Create a NEW concept for the duplicate
-    const newTitle = original.title ? `${original.title} (kopie)` : 'Kopie';
+    // Create a NEW concept for the duplicate — use concept title, strip existing "(kopie)" suffixes
+    const baseTitle = (parentConcept?.title || original.title || '').replace(/(\s*\(kopie\))+$/i, '').trim();
+    const newTitle = baseTitle ? `${baseTitle} (kopie)` : 'Kopie';
     const [newConceptId] = await mysqlSequelize.query(
       `INSERT INTO content_concepts (destination_id, title, content_type, approval_status, ai_generated, created_at, updated_at)
        VALUES (:destId, :title, :cType, 'draft', false, NOW(), NOW())`,
@@ -16271,7 +16338,7 @@ router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform
       { replacements: { ids: numericIds, userId: req.adminUser?.id || null } }
     );
         // Sync concept statuses for all affected items
-    for (const iid of itemIds) { await syncConceptStatus(iid); }
+    for (const iid of numericIds) { await syncConceptStatus(iid); }
     res.json({ success: true, data: { approved: numericIds.length } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk approve error:', error);
@@ -16332,9 +16399,11 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
     await mysqlSequelize.query(
       `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
-       WHERE id IN (:ids) AND approval_status IN ('approved', 'draft', 'pending_review')`,
+       WHERE id IN (:ids) AND approval_status IN ('approved')`,
       { replacements: { ids: numericIds, scheduledAt: parsedScheduledAt } }
     );
+    // Sync concept statuses
+    for (const iid of numericIds) { await syncConceptStatus(iid); }
     res.json({ success: true, data: { scheduled: numericIds.length, scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk schedule error:', error);

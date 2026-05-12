@@ -148,6 +148,10 @@ const contentService = {
     return client.post(`/content/items/${id}/duplicate`).then(r => r.data);
   },
 
+  approveConcept(conceptId) {
+    return client.post(`/content/concepts/${conceptId}/approve`).then(r => r.data);
+  },
+
   republishItem(id) {
     return client.post(`/content/items/${id}/republish`).then(r => r.data);
   },
