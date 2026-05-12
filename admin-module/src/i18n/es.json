@@ -1525,7 +1525,14 @@
       "en": "Inglés",
       "nl": "Neerlandés",
       "de": "Alemán",
-      "es": "Español"
+      "es": "Español",
+      "fr": "Francés"
+    },
+    "contentTypes": {
+      "social_post": "Publicación social",
+      "blog": "Blog",
+      "video_script": "Guión de vídeo",
+      "newsletter": "Boletín"
     },
     "actions": {
       "cancel": "Cancelar",

@@ -1575,7 +1575,14 @@
       "en": "Engels",
       "nl": "Nederlands",
       "de": "Duits",
-      "es": "Spaans"
+      "es": "Spaans",
+      "fr": "Frans"
+    },
+    "contentTypes": {
+      "social_post": "Social Post",
+      "blog": "Blog",
+      "video_script": "Videoscript",
+      "newsletter": "Nieuwsbrief"
     },
     "actions": {
       "cancel": "Annuleren",

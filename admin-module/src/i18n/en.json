@@ -1560,7 +1560,14 @@
       "en": "English",
       "nl": "Dutch",
       "de": "German",
-      "es": "Spanish"
+      "es": "Spanish",
+      "fr": "French"
+    },
+    "contentTypes": {
+      "social_post": "Social Post",
+      "blog": "Blog",
+      "video_script": "Video Script",
+      "newsletter": "Newsletter"
     },
     "actions": {
       "cancel": "Cancel",

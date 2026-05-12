@@ -36,6 +36,8 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import InfoIcon from '@mui/icons-material/Info';
+import TagIcon from '@mui/icons-material/Tag';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
@@ -70,7 +72,7 @@ const STATUS_COLORS = {
   publishing: 'primary',
 };
 
-const CONTENT_TYPE_LABELS = {
+const CONTENT_TYPE_FALLBACKS = {
   social_post: 'Social Post', blog: 'Blog', video_script: 'Video Script', newsletter: 'Newsletter',
 };
 
@@ -390,15 +392,26 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } catch { setApprovalLog([]); }
   }, []);
 
-  const handleStatusUpdate = async (status) => {
-    const itemId = items[activeTab]?.id;
-    if (!itemId) return;
+  const handleStatusUpdate = async (status, scope = 'all') => {
     try {
-      await contentService.updateItem(itemId, { approval_status: status });
+      if (status === 'approved' && scope === 'all' && concept?.id) {
+        // Approve ALL platforms at once via concept-level endpoint
+        await contentService.approveConcept(concept.id);
+        // Optimistic update: mark all items approved in local state
+        setItems(prev => prev.map(it => it.approval_status !== 'published' && it.approval_status !== 'deleted'
+          ? { ...it, approval_status: 'approved' } : it));
+      } else {
+        // Single item update (reject, or single-platform action)
+        const itemId = items[activeTab]?.id;
+        if (!itemId) return;
+        await contentService.updateItem(itemId, { approval_status: status });
+        // Optimistic update for single item
+        setItems(prev => prev.map((it, idx) => idx === activeTab ? { ...it, approval_status: status } : it));
+      }
       await loadConcept();
       const itemIdReload = items[activeTab]?.id;
       if (itemIdReload) loadApprovalLog(itemIdReload);
-      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
+      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Alle kanalen goedgekeurd' : 'Afgewezen' });
     } catch (err) {
       setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
     }
@@ -824,6 +837,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       clearTimeout(statusTimer);
       clearTimeout(statusTimer2);
       setPublishStatus({ platform, step: 'Gepubliceerd!', detail: null });
+      // Optimistic chip update
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'published' } : it));
       await loadConcept();
       if (onUpdate) onUpdate();
       setSnackMsg({ severity: 'success', text: `${platform} succesvol gepubliceerd` });
@@ -905,6 +920,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       await contentService.scheduleItem(itemId, { scheduled_at: scheduleDatetime, platform });
       setScheduleDialogOpen(false);
       setScheduleDatetime('');
+      // Optimistic chip update
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'scheduled' } : it));
       await loadConcept();
       if (onUpdate) onUpdate();
       setSnackMsg(`${platform} ingepland op ${new Date(scheduleDatetime).toLocaleString('nl-NL')}`);
@@ -1075,7 +1092,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Typography>
                 )}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mt: 0.5 }}>
-                  <Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" variant="outlined" />
+                  <Chip label={t(`contentStudio.contentTypes.${concept.content_type}`, CONTENT_TYPE_FALLBACKS[concept.content_type] || concept.content_type)} size="small" variant="outlined" />
                   <Chip label={aggStatus.label} size="small" color={aggStatus.color} />
                   <Typography variant="caption" color="text.secondary">
                     {items.length} {items.length === 1 ? 'platform' : 'platformen'}
@@ -1144,7 +1161,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <cfg.Icon sx={{ fontSize: 18, color: cfg.color }} />
                       <span>{cfg.label}</span>
-                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'failed' ? '✗' : '—'}
+                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'approved' ? '✔' : item.approval_status === 'failed' ? '✗' : '—'}
                         size="small" variant={item.approval_status === 'scheduled' ? 'outlined' : 'filled'}
                         color={STATUS_COLORS[item.approval_status] || 'default'}
                         sx={{ height: 18, fontSize: 10, ml: 0.5, minWidth: 24, fontWeight: 700,
@@ -1361,7 +1378,24 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         <InsertEmoticonIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Auto Hashtags">
+                      <IconButton size="small" onClick={handleGenerateHashtags} disabled={hashtagLoading}>
+                        {hashtagLoading ? <CircularProgress size={16} /> : <TagIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
                   </Box>
+
+                  {/* Hashtag result chips */}
+                  {hashtags.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {hashtags.map((tag, i) => (
+                        <Chip key={i} label={tag} size="small" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                          onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
+                      ))}
+                      <Chip label="Kopieer alle" size="small" color="primary" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                        onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
+                    </Box>
+                  )}
 
                   {/* Emoji Picker with Categories */}
                   {emojiOpen && (
@@ -1505,7 +1539,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
             <Box sx={{ width: '40%', display: 'flex', flexDirection: 'column', overflow: 'auto', bgcolor: 'grey.50' }}>
               <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-                {/* ══ ACTIES SECTIE ══ */}
+                {/* ══ ACTIES SECTIE (3-stappen workflow) ══ */}
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <PublishIcon sx={{ fontSize: 18 }} /> Acties
@@ -1522,7 +1556,40 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Alert>
                   )}
 
-                  {/* Batch actions */}
+                  {/* Stap 1: Approve / Afwijzen / Deel (alle platformen) */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 1 — Beoordeling</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+                    <Button size="small" variant="contained" color="success"
+                      onClick={() => handleStatusUpdate('approved', 'all')} startIcon={<CheckIcon />}
+                      disabled={items.every(i => i.approval_status === 'approved' || i.approval_status === 'published')}>
+                      Approve alle
+                    </Button>
+                    <Button size="small" variant="outlined" color="error"
+                      onClick={() => handleStatusUpdate('rejected', 'single')} startIcon={<CloseIcon />}
+                      disabled={!activeItem || activeItem.approval_status === 'rejected'}>
+                      Afwijzen
+                    </Button>
+                    <Button size="small" variant="outlined"
+                      onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
+                      Deel
+                    </Button>
+                    {activeItem?.approval_status === 'failed' && (
+                      <Button size="small" variant="contained" color="warning"
+                        onClick={handleRetryPublish} disabled={retrying}
+                        startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
+                        {retrying ? 'Opnieuw...' : 'Opnieuw'}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {seoData && (seoData.overallScore || 0) < 70 && activeItem && activeItem.approval_status !== 'approved' && activeItem.approval_status !== 'published' && (
+                    <Alert severity="warning" sx={{ mb: 1.5, py: 0 }}>
+                      <Typography variant="caption"><strong>SEO-score {seoData.overallScore}/100 (min. 70).</strong> Publiceren blijft handmatig mogelijk.</Typography>
+                    </Alert>
+                  )}
+
+                  {/* Stap 2: Publiceer alle / Plan alle in */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 2 — Publicatie</Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
                     <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
                       onClick={handlePublishAll} disabled={publishing || items.every(i => i.approval_status === 'published')} fullWidth>
@@ -1535,28 +1602,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Button>
                   </Box>
 
-                  {/* Hashtag generation */}
-                  {activeItem && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Button variant="outlined" size="small" fullWidth
-                        startIcon={hashtagLoading ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
-                        onClick={handleGenerateHashtags} disabled={hashtagLoading}>
-                        {hashtagLoading ? 'Hashtags genereren...' : 'Auto Hashtags'}
-                      </Button>
-                      {hashtags.length > 0 && (
-                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {hashtags.map((tag, i) => (
-                            <Chip key={i} label={tag} size="small" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
-                              onClick={() => {
-                                navigator.clipboard.writeText(hashtags.join(' '));
-                              }} />
-                          ))}
-                          <Chip label="Kopieer alle" size="small" color="primary" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
-                            onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
-                        </Box>
-                      )}
-                    </Box>
-                  )}
+                  {/* Stap 3: Per-platform acties */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 3 — Per platform</Typography>
 
                   {/* Per-platform actions */}
                   {items.map(it => {
@@ -1597,7 +1644,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         )}
                         <Chip
                           icon={isScheduled ? <ScheduleIcon sx={{ fontSize: '12px !important' }} /> : undefined}
-                          label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status}
+                          label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status === 'approved' ? 'Goedgekeurd' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status === 'draft' ? 'Concept' : it.approval_status === 'rejected' ? 'Afgewezen' : it.approval_status}
                           size="small" variant={isScheduled ? 'outlined' : 'filled'}
                           color={STATUS_COLORS[it.approval_status] || 'default'}
                           sx={{ height: 20, fontSize: 10, fontWeight: 600,
@@ -1823,53 +1870,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Paper>
                 )}
 
-                {/* ══ INFO SECTIE ══ */}
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Info</Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    {concept.ai_model && <Typography variant="caption" color="text.secondary">AI Model: {concept.ai_model}</Typography>}
-                    {concept.content_pillar && <Typography variant="caption" color="text.secondary">Pillar: {concept.content_pillar}</Typography>}
-                    {concept.keywords && <Typography variant="caption" color="text.secondary">Keywords: {Array.isArray(concept.keywords) ? concept.keywords.join(', ') : concept.keywords}</Typography>}
-                    <Typography variant="caption" color="text.secondary">Aangemaakt: {new Date(concept.created_at).toLocaleString('nl-NL')}</Typography>
-                    {selectedPersonaObj && <Typography variant="caption" color="text.secondary">Doelgroep: {selectedPersonaObj.name}</Typography>}
-                    {activeItem?.ai_model && <Typography variant="caption" color="text.secondary">Platform AI: {activeItem.ai_model}</Typography>}
-                  </Box>
-                </Paper>
-
-                {/* ══ APPROVE / REJECT / SHARE ══ */}
-                {activeItem && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>Beoordeling</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="contained" color="success"
-                      onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />}
-                      disabled={activeItem.approval_status === 'approved'}>
-                      Approve
-                    </Button>
-                    <Button size="small" variant="outlined" color="error"
-                      onClick={() => handleStatusUpdate('rejected')} startIcon={<CloseIcon />}
-                      disabled={activeItem.approval_status === 'rejected'}>
-                      Afwijzen
-                    </Button>
-                    {activeItem.approval_status === 'failed' && (
-                      <Button size="small" variant="contained" color="warning"
-                        onClick={handleRetryPublish} disabled={retrying}
-                        startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
-                        {retrying ? 'Opnieuw...' : 'Opnieuw Proberen'}
-                      </Button>
-                    )}
-                    <Button size="small" variant="outlined"
-                      onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
-                      Deel
-                    </Button>
-                  </Box>
-                  {seoData && (seoData.overallScore || 0) < 70 && activeItem.approval_status !== 'approved' && activeItem.approval_status !== 'published' && (
-                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>
-                      <Typography variant="caption"><strong>SEO-score {seoData.overallScore}/100 (min. 70).</strong> Gebruik "AI Herschrijven" om de score te verhogen. Publiceren blijft handmatig mogelijk.</Typography>
-                    </Alert>
-                  )}
-                </Paper>
-                )}
+                {/* Beoordeling is nu geïntegreerd in Acties-blok (Stap 1) */}
 
                 {/* ══ WORKFLOW STATUS ══ */}
                 {activeItem && (
@@ -1972,6 +1973,21 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       )}
                     </>
                   )}
+                </Paper>
+
+                {/* ══ INFO SECTIE (onderaan — puur informatief) ══ */}
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <InfoIcon sx={{ fontSize: 18 }} /> Info
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {concept.ai_model && <Typography variant="caption" color="text.secondary">AI Model: {concept.ai_model}</Typography>}
+                    {concept.content_pillar && <Typography variant="caption" color="text.secondary">Pillar: {concept.content_pillar}</Typography>}
+                    {concept.keywords && <Typography variant="caption" color="text.secondary">Keywords: {Array.isArray(concept.keywords) ? concept.keywords.join(', ') : concept.keywords}</Typography>}
+                    <Typography variant="caption" color="text.secondary">Aangemaakt: {new Date(concept.created_at).toLocaleString('nl-NL')}</Typography>
+                    {selectedPersonaObj && <Typography variant="caption" color="text.secondary">Doelgroep: {selectedPersonaObj.name}</Typography>}
+                    {activeItem?.ai_model && <Typography variant="caption" color="text.secondary">Platform AI: {activeItem.ai_model}</Typography>}
+                  </Box>
                 </Paper>
               </Box>
             </Box>
