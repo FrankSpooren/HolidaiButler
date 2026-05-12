@@ -36,6 +36,8 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import InfoIcon from '@mui/icons-material/Info';
+import TagIcon from '@mui/icons-material/Tag';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
@@ -70,7 +72,7 @@ const STATUS_COLORS = {
   publishing: 'primary',
 };
 
-const CONTENT_TYPE_LABELS = {
+const CONTENT_TYPE_FALLBACKS = {
   social_post: 'Social Post', blog: 'Blog', video_script: 'Video Script', newsletter: 'Newsletter',
 };
 
@@ -89,15 +91,26 @@ const EMOJI_CATEGORIES = {
   'Gezondheid': ['♿', '🏥', '💊', '🧑‍⚕️', '🦷', '🩺', '🆘', '❤️‍🩹', '🧘', '💆'],
 };
 
-const BEST_TIME_DEFAULTS = {
-  instagram: { best: 'Dinsdag 11:00', alt: ['Donderdag 14:00', 'Zaterdag 10:00'] },
-  facebook:  { best: 'Woensdag 11:00', alt: ['Vrijdag 13:00', 'Zaterdag 12:00'] },
-  linkedin:  { best: 'Dinsdag 10:00', alt: ['Woensdag 12:00', 'Donderdag 09:00'] },
-  x:         { best: 'Maandag 09:00', alt: ['Woensdag 12:00', 'Vrijdag 15:00'] },
-  tiktok:    { best: 'Dinsdag 19:00', alt: ['Donderdag 20:00', 'Zaterdag 11:00'] },
-  youtube:   { best: 'Zaterdag 10:00', alt: ['Woensdag 17:00', 'Vrijdag 14:00'] },
-  pinterest: { best: 'Zaterdag 14:00', alt: ['Zondag 11:00', 'Vrijdag 15:00'] },
+// Best posting times — stored as [dayIndex, hour, minute] for i18n-safe rendering
+// dayIndex: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+const BEST_TIME_DATA = {
+  instagram: { best: [2, 11, 0], alt: [[4, 14, 0], [6, 10, 0]] },
+  facebook:  { best: [3, 11, 0], alt: [[5, 13, 0], [6, 12, 0]] },
+  linkedin:  { best: [2, 10, 0], alt: [[3, 12, 0], [4, 9, 0]] },
+  x:         { best: [1, 9, 0],  alt: [[3, 12, 0], [5, 15, 0]] },
+  tiktok:    { best: [2, 19, 0], alt: [[4, 20, 0], [6, 11, 0]] },
+  youtube:   { best: [6, 10, 0], alt: [[3, 17, 0], [5, 14, 0]] },
+  pinterest: { best: [6, 14, 0], alt: [[0, 11, 0], [5, 15, 0]] },
 };
+
+const DAY_KEYS = ['common.days.sunday', 'common.days.monday', 'common.days.tuesday', 'common.days.wednesday', 'common.days.thursday', 'common.days.friday', 'common.days.saturday'];
+const DAY_FALLBACKS = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
+function formatBestTime(t, timeArr) {
+  const [day, h, m] = timeArr;
+  const dayName = t(DAY_KEYS[day], DAY_FALLBACKS[day]);
+  return `${dayName} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 // Helper: clean em-dashes and AI artifacts from display text
 function cleanBodyForDisplay(text) {
@@ -390,15 +403,26 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } catch { setApprovalLog([]); }
   }, []);
 
-  const handleStatusUpdate = async (status) => {
-    const itemId = items[activeTab]?.id;
-    if (!itemId) return;
+  const handleStatusUpdate = async (status, scope = 'all') => {
     try {
-      await contentService.updateItem(itemId, { approval_status: status });
+      if (status === 'approved' && scope === 'all' && concept?.id) {
+        // Approve ALL platforms at once via concept-level endpoint
+        await contentService.approveConcept(concept.id);
+        // Optimistic update: mark all items approved in local state
+        setItems(prev => prev.map(it => it.approval_status !== 'published' && it.approval_status !== 'deleted'
+          ? { ...it, approval_status: 'approved' } : it));
+      } else {
+        // Single item update (reject, or single-platform action)
+        const itemId = items[activeTab]?.id;
+        if (!itemId) return;
+        await contentService.updateItem(itemId, { approval_status: status });
+        // Optimistic update for single item
+        setItems(prev => prev.map((it, idx) => idx === activeTab ? { ...it, approval_status: status } : it));
+      }
       await loadConcept();
       const itemIdReload = items[activeTab]?.id;
       if (itemIdReload) loadApprovalLog(itemIdReload);
-      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
+      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Alle kanalen goedgekeurd' : 'Afgewezen' });
     } catch (err) {
       setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
     }
@@ -824,6 +848,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       clearTimeout(statusTimer);
       clearTimeout(statusTimer2);
       setPublishStatus({ platform, step: 'Gepubliceerd!', detail: null });
+      // Optimistic chip update
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'published' } : it));
       await loadConcept();
       if (onUpdate) onUpdate();
       setSnackMsg({ severity: 'success', text: `${platform} succesvol gepubliceerd` });
@@ -905,6 +931,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       await contentService.scheduleItem(itemId, { scheduled_at: scheduleDatetime, platform });
       setScheduleDialogOpen(false);
       setScheduleDatetime('');
+      // Optimistic chip update
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'scheduled' } : it));
       await loadConcept();
       if (onUpdate) onUpdate();
       setSnackMsg(`${platform} ingepland op ${new Date(scheduleDatetime).toLocaleString('nl-NL')}`);
@@ -915,31 +943,41 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
-  const selectBestTime = (label) => {
-    const dayMap = { maandag: 1, dinsdag: 2, woensdag: 3, donderdag: 4, vrijdag: 5, zaterdag: 6, zondag: 0 };
-    const parts = label.toLowerCase().split(' ');
-    if (parts.length < 2) return;
-    const targetDay = dayMap[parts[0]];
-    const [hh, mm] = (parts[1] || '12:00').split(':');
-    if (targetDay === undefined) return;
+  const handleCancelSchedule = async (itemId) => {
+    setPublishing(true);
+    try {
+      await contentService.cancelSchedule(itemId);
+      setItems(prev => prev.map(it => it.id === itemId ? { ...it, approval_status: 'approved', scheduled_at: null } : it));
+      await loadConcept();
+      if (onUpdate) onUpdate();
+      setSnackMsg({ severity: 'success', text: 'Inplanning geannuleerd' });
+    } catch (err) {
+      setSnackMsg({ severity: 'error', text: `Annuleren mislukt: ${err.message}` });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const selectBestTime = (timeArr) => {
+    const [targetDay, hh, mm] = timeArr;
     const now = new Date();
     let daysAhead = targetDay - now.getDay();
     if (daysAhead <= 0) daysAhead += 7;
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, Number(hh), Number(mm || 0));
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, hh, mm || 0);
     const pad = n => String(n).padStart(2, '0');
     setScheduleDatetime(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`);
   };
 
   // ─── Aggregate Status ───────────────────────────────────
   const getAggregateStatus = () => {
-    if (!items.length) return { label: 'Leeg', color: 'default' };
+    if (!items.length) return { label: t('contentStudio.status.empty', 'Leeg'), color: 'default' };
     const published = items.filter(i => i.approval_status === 'published').length;
     const scheduled = items.filter(i => i.approval_status === 'scheduled').length;
-    if (published === items.length) return { label: 'Live', color: 'success' };
-    if (published > 0) return { label: 'Deels live', color: 'info' };
-    if (scheduled === items.length) return { label: 'Ingepland', color: 'warning' };
-    if (scheduled > 0) return { label: 'Deels ingepland', color: 'warning' };
-    return { label: 'Concept', color: 'default' };
+    if (published === items.length) return { label: t('contentStudio.status.live', 'Live'), color: 'success' };
+    if (published > 0) return { label: t('contentStudio.status.partialLive', 'Deels live'), color: 'info' };
+    if (scheduled === items.length) return { label: t('contentStudio.status.allScheduled', 'Ingepland'), color: 'warning' };
+    if (scheduled > 0) return { label: t('contentStudio.status.partialScheduled', 'Deels ingepland'), color: 'warning' };
+    return { label: t('contentStudio.status.draft', 'Concept'), color: 'default' };
   };
 
   // === Opdracht 10: Auto-save draft every 10s ===
@@ -1075,7 +1113,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Typography>
                 )}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mt: 0.5 }}>
-                  <Chip label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type} size="small" variant="outlined" />
+                  <Chip label={t(`contentStudio.contentTypes.${concept.content_type}`, CONTENT_TYPE_FALLBACKS[concept.content_type] || concept.content_type)} size="small" variant="outlined" />
                   <Chip label={aggStatus.label} size="small" color={aggStatus.color} />
                   <Typography variant="caption" color="text.secondary">
                     {items.length} {items.length === 1 ? 'platform' : 'platformen'}
@@ -1144,7 +1182,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <cfg.Icon sx={{ fontSize: 18, color: cfg.color }} />
                       <span>{cfg.label}</span>
-                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'failed' ? '✗' : '—'}
+                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'approved' ? '✔' : item.approval_status === 'failed' ? '✗' : '—'}
                         size="small" variant={item.approval_status === 'scheduled' ? 'outlined' : 'filled'}
                         color={STATUS_COLORS[item.approval_status] || 'default'}
                         sx={{ height: 18, fontSize: 10, ml: 0.5, minWidth: 24, fontWeight: 700,
@@ -1179,12 +1217,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 /* ═══ BLOG MODUS — TipTap WYSIWYG + SEO Metadata ═══ */
                 <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {/* Image Section */}
-                  <ContentImageSection itemId={activeItem.id} item={activeItem} onUpdate={handleImageUpdate} />
+                  <ContentImageSection itemId={activeItem.id} item={activeItem} onUpdate={handleImageUpdate} siblingItems={items} />
 
                   {/* Blog Header */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LanguageIcon sx={{ fontSize: 20, color: '#5E8B7E' }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Blog Editor</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t('contentStudio.editor.blogEditor', 'Blog Editor')}</Typography>
                     {(() => {
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
@@ -1317,6 +1355,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     itemId={activeItem.id}
                     item={activeItem}
                     onUpdate={handleImageUpdate}
+                    siblingItems={items}
                   />
 
                   {/* ── Platform Header + Action Buttons ── */}
@@ -1361,7 +1400,24 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         <InsertEmoticonIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title="Auto Hashtags">
+                      <IconButton size="small" onClick={handleGenerateHashtags} disabled={hashtagLoading}>
+                        {hashtagLoading ? <CircularProgress size={16} /> : <TagIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
                   </Box>
+
+                  {/* Hashtag result chips */}
+                  {hashtags.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {hashtags.map((tag, i) => (
+                        <Chip key={i} label={tag} size="small" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                          onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
+                      ))}
+                      <Chip label="Kopieer alle" size="small" color="primary" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
+                        onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
+                    </Box>
+                  )}
 
                   {/* Emoji Picker with Categories */}
                   {emojiOpen && (
@@ -1505,7 +1561,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
             <Box sx={{ width: '40%', display: 'flex', flexDirection: 'column', overflow: 'auto', bgcolor: 'grey.50' }}>
               <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-                {/* ══ ACTIES SECTIE ══ */}
+                {/* ══ ACTIES SECTIE (3-stappen workflow) ══ */}
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <PublishIcon sx={{ fontSize: 18 }} /> Acties
@@ -1522,7 +1578,40 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Alert>
                   )}
 
-                  {/* Batch actions */}
+                  {/* Stap 1: Approve / Afwijzen / Deel (alle platformen) */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 1 — Beoordeling</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+                    <Button size="small" variant="contained" color="success"
+                      onClick={() => handleStatusUpdate('approved', 'all')} startIcon={<CheckIcon />}
+                      disabled={items.every(i => i.approval_status === 'approved' || i.approval_status === 'published')}>
+                      Approve alle
+                    </Button>
+                    <Button size="small" variant="outlined" color="error"
+                      onClick={() => handleStatusUpdate('rejected', 'single')} startIcon={<CloseIcon />}
+                      disabled={!activeItem || activeItem.approval_status === 'rejected'}>
+                      Afwijzen
+                    </Button>
+                    <Button size="small" variant="outlined"
+                      onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
+                      Deel
+                    </Button>
+                    {activeItem?.approval_status === 'failed' && (
+                      <Button size="small" variant="contained" color="warning"
+                        onClick={handleRetryPublish} disabled={retrying}
+                        startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
+                        {retrying ? 'Opnieuw...' : 'Opnieuw'}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {seoData && (seoData.overallScore || 0) < 70 && activeItem && activeItem.approval_status !== 'approved' && activeItem.approval_status !== 'published' && (
+                    <Alert severity="warning" sx={{ mb: 1.5, py: 0 }}>
+                      <Typography variant="caption"><strong>SEO-score {seoData.overallScore}/100 (min. 70).</strong> Publiceren blijft handmatig mogelijk.</Typography>
+                    </Alert>
+                  )}
+
+                  {/* Stap 2: Publiceer alle / Plan alle in */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 2 — Publicatie</Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
                     <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
                       onClick={handlePublishAll} disabled={publishing || items.every(i => i.approval_status === 'published')} fullWidth>
@@ -1535,28 +1624,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Button>
                   </Box>
 
-                  {/* Hashtag generation */}
-                  {activeItem && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Button variant="outlined" size="small" fullWidth
-                        startIcon={hashtagLoading ? <CircularProgress size={14} /> : <AutoAwesomeIcon />}
-                        onClick={handleGenerateHashtags} disabled={hashtagLoading}>
-                        {hashtagLoading ? 'Hashtags genereren...' : 'Auto Hashtags'}
-                      </Button>
-                      {hashtags.length > 0 && (
-                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {hashtags.map((tag, i) => (
-                            <Chip key={i} label={tag} size="small" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
-                              onClick={() => {
-                                navigator.clipboard.writeText(hashtags.join(' '));
-                              }} />
-                          ))}
-                          <Chip label="Kopieer alle" size="small" color="primary" sx={{ fontSize: 10, height: 20, cursor: 'pointer' }}
-                            onClick={() => navigator.clipboard.writeText(hashtags.join(' '))} />
-                        </Box>
-                      )}
-                    </Box>
-                  )}
+                  {/* Stap 3: Per-platform acties */}
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 3 — Per platform</Typography>
 
                   {/* Per-platform actions */}
                   {items.map(it => {
@@ -1581,6 +1650,20 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                             </Tooltip>
                           </>
                         )}
+                        {isScheduled && (
+                          <>
+                            <Tooltip title="Herplannen">
+                              <IconButton size="small" color="primary" onClick={() => { setPublishTarget(it.id); setScheduleDialogOpen(true); }} disabled={publishing}>
+                                <ScheduleIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Annuleren">
+                              <IconButton size="small" color="warning" onClick={() => handleCancelSchedule(it.id)} disabled={publishing}>
+                                <CloseIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
                         {isPublished && (
                           <>
                             <Tooltip title="Opnieuw publiceren">
@@ -1597,7 +1680,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         )}
                         <Chip
                           icon={isScheduled ? <ScheduleIcon sx={{ fontSize: '12px !important' }} /> : undefined}
-                          label={isPublished ? 'Live' : isScheduled ? 'Gepland' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status}
+                          label={isPublished ? 'Live' : isScheduled ? 'Ingepland' : it.approval_status === 'approved' ? 'Goedgekeurd' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status === 'draft' ? 'Concept' : it.approval_status === 'rejected' ? 'Afgewezen' : it.approval_status}
                           size="small" variant={isScheduled ? 'outlined' : 'filled'}
                           color={STATUS_COLORS[it.approval_status] || 'default'}
                           sx={{ height: 20, fontSize: 10, fontWeight: 600,
@@ -1823,53 +1906,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Paper>
                 )}
 
-                {/* ══ INFO SECTIE ══ */}
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Info</Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    {concept.ai_model && <Typography variant="caption" color="text.secondary">AI Model: {concept.ai_model}</Typography>}
-                    {concept.content_pillar && <Typography variant="caption" color="text.secondary">Pillar: {concept.content_pillar}</Typography>}
-                    {concept.keywords && <Typography variant="caption" color="text.secondary">Keywords: {Array.isArray(concept.keywords) ? concept.keywords.join(', ') : concept.keywords}</Typography>}
-                    <Typography variant="caption" color="text.secondary">Aangemaakt: {new Date(concept.created_at).toLocaleString('nl-NL')}</Typography>
-                    {selectedPersonaObj && <Typography variant="caption" color="text.secondary">Doelgroep: {selectedPersonaObj.name}</Typography>}
-                    {activeItem?.ai_model && <Typography variant="caption" color="text.secondary">Platform AI: {activeItem.ai_model}</Typography>}
-                  </Box>
-                </Paper>
-
-                {/* ══ APPROVE / REJECT / SHARE ══ */}
-                {activeItem && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>Beoordeling</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="contained" color="success"
-                      onClick={() => handleStatusUpdate('approved')} startIcon={<CheckIcon />}
-                      disabled={activeItem.approval_status === 'approved'}>
-                      Approve
-                    </Button>
-                    <Button size="small" variant="outlined" color="error"
-                      onClick={() => handleStatusUpdate('rejected')} startIcon={<CloseIcon />}
-                      disabled={activeItem.approval_status === 'rejected'}>
-                      Afwijzen
-                    </Button>
-                    {activeItem.approval_status === 'failed' && (
-                      <Button size="small" variant="contained" color="warning"
-                        onClick={handleRetryPublish} disabled={retrying}
-                        startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
-                        {retrying ? 'Opnieuw...' : 'Opnieuw Proberen'}
-                      </Button>
-                    )}
-                    <Button size="small" variant="outlined"
-                      onClick={() => setShareDialogOpen(true)} startIcon={<ShareIcon />} disabled={sharing}>
-                      Deel
-                    </Button>
-                  </Box>
-                  {seoData && (seoData.overallScore || 0) < 70 && activeItem.approval_status !== 'approved' && activeItem.approval_status !== 'published' && (
-                    <Alert severity="warning" sx={{ mt: 1, py: 0 }}>
-                      <Typography variant="caption"><strong>SEO-score {seoData.overallScore}/100 (min. 70).</strong> Gebruik "AI Herschrijven" om de score te verhogen. Publiceren blijft handmatig mogelijk.</Typography>
-                    </Alert>
-                  )}
-                </Paper>
-                )}
+                {/* Beoordeling is nu geïntegreerd in Acties-blok (Stap 1) */}
 
                 {/* ══ WORKFLOW STATUS ══ */}
                 {activeItem && (
@@ -1973,6 +2010,21 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </>
                   )}
                 </Paper>
+
+                {/* ══ INFO SECTIE (onderaan — puur informatief) ══ */}
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <InfoIcon sx={{ fontSize: 18 }} /> Info
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {concept.ai_model && <Typography variant="caption" color="text.secondary">AI Model: {concept.ai_model}</Typography>}
+                    {concept.content_pillar && <Typography variant="caption" color="text.secondary">Pillar: {concept.content_pillar}</Typography>}
+                    {concept.keywords && <Typography variant="caption" color="text.secondary">Keywords: {Array.isArray(concept.keywords) ? concept.keywords.join(', ') : concept.keywords}</Typography>}
+                    <Typography variant="caption" color="text.secondary">Aangemaakt: {new Date(concept.created_at).toLocaleString('nl-NL')}</Typography>
+                    {selectedPersonaObj && <Typography variant="caption" color="text.secondary">Doelgroep: {selectedPersonaObj.name}</Typography>}
+                    {activeItem?.ai_model && <Typography variant="caption" color="text.secondary">Platform AI: {activeItem.ai_model}</Typography>}
+                  </Box>
+                </Paper>
               </Box>
             </Box>
           </Box>
@@ -2024,23 +2076,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {(() => {
-                      const defaults = BEST_TIME_DEFAULTS[activeItem.target_platform] || BEST_TIME_DEFAULTS.instagram;
-                      // HH:MM uit scheduleDatetime (datetime-local format: YYYY-MM-DDTHH:MM)
+                      const defaults = BEST_TIME_DATA[activeItem.target_platform] || BEST_TIME_DATA.instagram;
                       const selectedHm = scheduleDatetime ? scheduleDatetime.slice(11, 16) : null;
-                      // Extract HH:MM uit chip label "Dinsdag 11:00" → "11:00"
-                      const extractHm = (label) => {
-                        const m = label.match(/(\d{1,2}):(\d{2})/);
-                        return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
-                      };
-                      const times = [defaults.best, ...defaults.alt];
-                      const timesHm = times.map(extractHm);
+                      const timeArrs = [defaults.best, ...defaults.alt];
+                      const timesHm = timeArrs.map(([, h, m]) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
                       const hasMatch = selectedHm && timesHm.includes(selectedHm);
-                      return times.map((t, i) => {
+                      return timeArrs.map((ta, i) => {
                         const isSelected = hasMatch ? (timesHm[i] === selectedHm) : (i === 0 && !selectedHm);
                         return (
-                          <Chip key={i} label={t} color={isSelected ? 'success' : 'default'} size="small"
+                          <Chip key={i} label={formatBestTime(t, ta)} color={isSelected ? 'success' : 'default'} size="small"
                             variant={isSelected ? 'filled' : 'outlined'}
-                            onClick={() => selectBestTime(t)} sx={{ cursor: 'pointer' }} />
+                            onClick={() => selectBestTime(ta)} sx={{ cursor: 'pointer' }} />
                         );
                       });
                     })()}
