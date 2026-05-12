@@ -859,8 +859,17 @@
     }
   },
   "common": {
-    "loading": "Loading...",
-    "error": "An error occurred",
+    "days": {
+      "sunday": "Dimanche",
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi"
+    },
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
     "retry": "Retry",
     "comingSoon": "Coming soon",
     "allDestinations": "All Destinations",
@@ -1569,12 +1578,24 @@
       "video_script": "Script vidéo",
       "newsletter": "Lettre d'information"
     },
+    "trends": {
+      "breakout": "Percée",
+      "rising": "En hausse",
+      "stable": "Stable",
+      "declining": "En baisse",
+      "breakoutRising": "Percée + En hausse"
+    },
+    "period": {
+      "7d": "7 jours",
+      "30d": "30 jours",
+      "90d": "90 jours"
+    },
     "actions": {
-      "cancel": "Cancel",
-      "add": "Add",
-      "generating": "Generating...",
-      "create": "Create",
-      "creating": "Creating...",
+      "cancel": "Annuler",
+      "add": "Ajouter",
+      "generating": "Génération...",
+      "create": "Créer",
+      "creating": "Création...",
       "createFailed": "Creation failed",
       "close": "Close",
       "reload": "Reload",

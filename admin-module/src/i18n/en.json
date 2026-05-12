@@ -859,6 +859,15 @@
     }
   },
   "common": {
+    "days": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
     "loading": "Loading...",
     "error": "An error occurred",
     "retry": "Retry",
@@ -1568,6 +1577,18 @@
       "blog": "Blog",
       "video_script": "Video Script",
       "newsletter": "Newsletter"
+    },
+    "trends": {
+      "breakout": "Breakout",
+      "rising": "Rising",
+      "stable": "Stable",
+      "declining": "Declining",
+      "breakoutRising": "Breakout + Rising"
+    },
+    "period": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days"
     },
     "actions": {
       "cancel": "Cancel",

@@ -91,15 +91,26 @@ const EMOJI_CATEGORIES = {
   'Gezondheid': ['♿', '🏥', '💊', '🧑‍⚕️', '🦷', '🩺', '🆘', '❤️‍🩹', '🧘', '💆'],
 };
 
-const BEST_TIME_DEFAULTS = {
-  instagram: { best: 'Dinsdag 11:00', alt: ['Donderdag 14:00', 'Zaterdag 10:00'] },
-  facebook:  { best: 'Woensdag 11:00', alt: ['Vrijdag 13:00', 'Zaterdag 12:00'] },
-  linkedin:  { best: 'Dinsdag 10:00', alt: ['Woensdag 12:00', 'Donderdag 09:00'] },
-  x:         { best: 'Maandag 09:00', alt: ['Woensdag 12:00', 'Vrijdag 15:00'] },
-  tiktok:    { best: 'Dinsdag 19:00', alt: ['Donderdag 20:00', 'Zaterdag 11:00'] },
-  youtube:   { best: 'Zaterdag 10:00', alt: ['Woensdag 17:00', 'Vrijdag 14:00'] },
-  pinterest: { best: 'Zaterdag 14:00', alt: ['Zondag 11:00', 'Vrijdag 15:00'] },
+// Best posting times — stored as [dayIndex, hour, minute] for i18n-safe rendering
+// dayIndex: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+const BEST_TIME_DATA = {
+  instagram: { best: [2, 11, 0], alt: [[4, 14, 0], [6, 10, 0]] },
+  facebook:  { best: [3, 11, 0], alt: [[5, 13, 0], [6, 12, 0]] },
+  linkedin:  { best: [2, 10, 0], alt: [[3, 12, 0], [4, 9, 0]] },
+  x:         { best: [1, 9, 0],  alt: [[3, 12, 0], [5, 15, 0]] },
+  tiktok:    { best: [2, 19, 0], alt: [[4, 20, 0], [6, 11, 0]] },
+  youtube:   { best: [6, 10, 0], alt: [[3, 17, 0], [5, 14, 0]] },
+  pinterest: { best: [6, 14, 0], alt: [[0, 11, 0], [5, 15, 0]] },
 };
+
+const DAY_KEYS = ['common.days.sunday', 'common.days.monday', 'common.days.tuesday', 'common.days.wednesday', 'common.days.thursday', 'common.days.friday', 'common.days.saturday'];
+const DAY_FALLBACKS = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+
+function formatBestTime(t, timeArr) {
+  const [day, h, m] = timeArr;
+  const dayName = t(DAY_KEYS[day], DAY_FALLBACKS[day]);
+  return `${dayName} ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 // Helper: clean em-dashes and AI artifacts from display text
 function cleanBodyForDisplay(text) {
@@ -932,31 +943,26 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
-  const selectBestTime = (label) => {
-    const dayMap = { maandag: 1, dinsdag: 2, woensdag: 3, donderdag: 4, vrijdag: 5, zaterdag: 6, zondag: 0 };
-    const parts = label.toLowerCase().split(' ');
-    if (parts.length < 2) return;
-    const targetDay = dayMap[parts[0]];
-    const [hh, mm] = (parts[1] || '12:00').split(':');
-    if (targetDay === undefined) return;
+  const selectBestTime = (timeArr) => {
+    const [targetDay, hh, mm] = timeArr;
     const now = new Date();
     let daysAhead = targetDay - now.getDay();
     if (daysAhead <= 0) daysAhead += 7;
-    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, Number(hh), Number(mm || 0));
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead, hh, mm || 0);
     const pad = n => String(n).padStart(2, '0');
     setScheduleDatetime(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`);
   };
 
   // ─── Aggregate Status ───────────────────────────────────
   const getAggregateStatus = () => {
-    if (!items.length) return { label: 'Leeg', color: 'default' };
+    if (!items.length) return { label: t('contentStudio.status.empty', 'Leeg'), color: 'default' };
     const published = items.filter(i => i.approval_status === 'published').length;
     const scheduled = items.filter(i => i.approval_status === 'scheduled').length;
-    if (published === items.length) return { label: 'Live', color: 'success' };
-    if (published > 0) return { label: 'Deels live', color: 'info' };
-    if (scheduled === items.length) return { label: 'Ingepland', color: 'warning' };
-    if (scheduled > 0) return { label: 'Deels ingepland', color: 'warning' };
-    return { label: 'Concept', color: 'default' };
+    if (published === items.length) return { label: t('contentStudio.status.live', 'Live'), color: 'success' };
+    if (published > 0) return { label: t('contentStudio.status.partialLive', 'Deels live'), color: 'info' };
+    if (scheduled === items.length) return { label: t('contentStudio.status.allScheduled', 'Ingepland'), color: 'warning' };
+    if (scheduled > 0) return { label: t('contentStudio.status.partialScheduled', 'Deels ingepland'), color: 'warning' };
+    return { label: t('contentStudio.status.draft', 'Concept'), color: 'default' };
   };
 
   // === Opdracht 10: Auto-save draft every 10s ===
@@ -1201,7 +1207,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   {/* Blog Header */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <LanguageIcon sx={{ fontSize: 20, color: '#5E8B7E' }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Blog Editor</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{t('contentStudio.editor.blogEditor', 'Blog Editor')}</Typography>
                     {(() => {
                       const score = seoData?.overallScore ?? activeItem.seo_score;
                       return score != null ? (
@@ -2040,23 +2046,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {(() => {
-                      const defaults = BEST_TIME_DEFAULTS[activeItem.target_platform] || BEST_TIME_DEFAULTS.instagram;
-                      // HH:MM uit scheduleDatetime (datetime-local format: YYYY-MM-DDTHH:MM)
+                      const defaults = BEST_TIME_DATA[activeItem.target_platform] || BEST_TIME_DATA.instagram;
                       const selectedHm = scheduleDatetime ? scheduleDatetime.slice(11, 16) : null;
-                      // Extract HH:MM uit chip label "Dinsdag 11:00" → "11:00"
-                      const extractHm = (label) => {
-                        const m = label.match(/(\d{1,2}):(\d{2})/);
-                        return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
-                      };
-                      const times = [defaults.best, ...defaults.alt];
-                      const timesHm = times.map(extractHm);
+                      const timeArrs = [defaults.best, ...defaults.alt];
+                      const timesHm = timeArrs.map(([, h, m]) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
                       const hasMatch = selectedHm && timesHm.includes(selectedHm);
-                      return times.map((t, i) => {
+                      return timeArrs.map((ta, i) => {
                         const isSelected = hasMatch ? (timesHm[i] === selectedHm) : (i === 0 && !selectedHm);
                         return (
-                          <Chip key={i} label={t} color={isSelected ? 'success' : 'default'} size="small"
+                          <Chip key={i} label={formatBestTime(t, ta)} color={isSelected ? 'success' : 'default'} size="small"
                             variant={isSelected ? 'filled' : 'outlined'}
-                            onClick={() => selectBestTime(t)} sx={{ cursor: 'pointer' }} />
+                            onClick={() => selectBestTime(ta)} sx={{ cursor: 'pointer' }} />
                         );
                       });
                     })()}

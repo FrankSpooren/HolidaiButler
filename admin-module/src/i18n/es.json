@@ -842,6 +842,15 @@
     }
   },
   "common": {
+    "days": {
+      "sunday": "Domingo",
+      "monday": "Lunes",
+      "tuesday": "Martes",
+      "wednesday": "Miércoles",
+      "thursday": "Jueves",
+      "friday": "Viernes",
+      "saturday": "Sábado"
+    },
     "loading": "Cargando...",
     "error": "Ha ocurrido un error",
     "retry": "Reintentar",
@@ -1533,6 +1542,18 @@
       "blog": "Blog",
       "video_script": "Guión de vídeo",
       "newsletter": "Boletín"
+    },
+    "trends": {
+      "breakout": "Explosivo",
+      "rising": "En alza",
+      "stable": "Estable",
+      "declining": "En descenso",
+      "breakoutRising": "Explosivo + En alza"
+    },
+    "period": {
+      "7d": "7 días",
+      "30d": "30 días",
+      "90d": "90 días"
     },
     "actions": {
       "cancel": "Cancelar",
