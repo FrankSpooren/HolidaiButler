@@ -13258,11 +13258,14 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
  */
 router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
+    const itemId = Number(req.params.id);
     await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE id = :id`,
-      { replacements: { id: Number(req.params.id) } }
+      `UPDATE content_items SET approval_status = 'deleted', scheduled_at = NULL, updated_at = NOW() WHERE id = :id`,
+      { replacements: { id: itemId } }
     );
-    res.json({ success: true, data: { id: Number(req.params.id), deleted: true } });
+    // Sync concept status so parent reflects deletion
+    await syncConceptStatus(itemId);
+    res.json({ success: true, data: { id: itemId, deleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item delete error:', error);
     res.status(500).json({ success: false, error: { code: 'CONTENT_DELETE_ERROR', message: error.message } });
