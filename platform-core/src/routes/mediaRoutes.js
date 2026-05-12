@@ -396,6 +396,21 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
             else qualityTier = 'ultra';
           }
 
+          // Check for existing file with same name + size (dedup prevention)
+          const [existing] = await mysqlSequelize.query(
+            'SELECT id, filename FROM media WHERE destination_id = :destId AND original_name = :origName AND size_bytes = :size AND (archived = 0 OR archived IS NULL) LIMIT 1',
+            { replacements: { destId: destinationId, origName: file.originalname, size: file.size }, type: QueryTypes.SELECT }
+          );
+          if (existing) {
+            logger.info(`[Media] Skipping duplicate upload: ${file.originalname} (${file.size} bytes) already exists as media id ${existing.id}`);
+            // Return existing item instead of creating duplicate
+            const [existingFull] = await mysqlSequelize.query('SELECT * FROM media WHERE id = :id', { replacements: { id: existing.id }, type: QueryTypes.SELECT });
+            results.push({ ...existingFull, url: `/media-files/${destinationId}/${existingFull.filename}`, skipped_duplicate: true });
+            // Clean up uploaded file
+            try { const fs = await import('fs'); fs.default.unlinkSync(file.path); } catch { /* ignore */ }
+            continue;
+          }
+
           await mysqlSequelize.query(
             `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height, category, media_type, quality_tier, uploaded_by)
              VALUES (:destId, :filename, :originalName, :mimeType, :sizeBytes, :width, :height, :category, :mediaType, :qualityTier, :uploadedBy)`,
@@ -912,34 +927,100 @@ router.post('/pexels/import/:pexels_id', adminAuth('editor'), async (req, res) =
   // CLEANUP TOOLS (ML-3.5) — 3 endpoints
   // ============================================================
 
-  // 19. GET /media/cleanup/duplicates — Group media with same perceptual hash
+  // 19. GET /media/cleanup/duplicates — Smart duplicate detection
+  // Uses: (A) exact original_name + size_bytes match, (B) hamming distance ≤ 5 on perceptual_hash
+  // Filters false positives: hash match requires same original_name OR same size OR hamming ≤ 3
   router.get('/cleanup/duplicates', adminAuth('editor'), async (req, res) => {
     try {
       const destId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
       const { mysqlSequelize } = await import('../config/database.js');
       const { QueryTypes } = await import('sequelize');
 
-      const groups = await mysqlSequelize.query(
-        `SELECT perceptual_hash, COUNT(*) as cnt, GROUP_CONCAT(id ORDER BY created_at ASC) as media_ids
-         FROM media WHERE destination_id = :destId AND (archived = 0 OR archived IS NULL) AND perceptual_hash IS NOT NULL
-         GROUP BY perceptual_hash HAVING cnt > 1
-         ORDER BY cnt DESC LIMIT 50`,
+      // Helper: calculate hamming distance between two hex hash strings
+      function hammingDistance(h1, h2) {
+        if (!h1 || !h2 || h1.length !== h2.length) return 64;
+        let dist = 0;
+        for (let i = 0; i < h1.length; i += 2) {
+          const b1 = parseInt(h1.substr(i, 2), 16);
+          const b2 = parseInt(h2.substr(i, 2), 16);
+          let xor = b1 ^ b2;
+          while (xor) { dist += xor & 1; xor >>= 1; }
+        }
+        return dist;
+      }
+
+      // Strategy A: exact original_name + size_bytes match (catches NULL hash duplicates)
+      const nameGroups = await mysqlSequelize.query(
+        `SELECT original_name, size_bytes, COUNT(*) as cnt, GROUP_CONCAT(id ORDER BY created_at ASC) as media_ids
+         FROM media WHERE destination_id = :destId AND (archived = 0 OR archived IS NULL)
+         GROUP BY original_name, size_bytes HAVING cnt > 1
+         ORDER BY cnt DESC LIMIT 100`,
         { replacements: { destId }, type: QueryTypes.SELECT }
       );
 
-      // Enrich with media details
+      // Strategy B: hamming distance on perceptual_hash (catches resized duplicates)
+      const allHashed = await mysqlSequelize.query(
+        `SELECT id, filename, original_name, size_bytes, width, height, perceptual_hash, created_at, destination_id
+         FROM media WHERE destination_id = :destId AND (archived = 0 OR archived IS NULL) AND perceptual_hash IS NOT NULL
+         ORDER BY created_at ASC`,
+        { replacements: { destId }, type: QueryTypes.SELECT }
+      );
+
+      // Build hamming groups: compare each pair, group if hamming ≤ 5 AND (same name OR same size OR hamming ≤ 3)
+      const usedIds = new Set();
+      const hammingGroups = [];
+      for (let i = 0; i < allHashed.length; i++) {
+        if (usedIds.has(allHashed[i].id)) continue;
+        const group = [allHashed[i]];
+        usedIds.add(allHashed[i].id);
+        for (let j = i + 1; j < allHashed.length; j++) {
+          if (usedIds.has(allHashed[j].id)) continue;
+          const dist = hammingDistance(allHashed[i].perceptual_hash, allHashed[j].perceptual_hash);
+          if (dist <= 5) {
+            // Anti-false-positive: require additional evidence
+            const sameName = allHashed[i].original_name === allHashed[j].original_name;
+            const sameSize = allHashed[i].size_bytes === allHashed[j].size_bytes;
+            if (sameName || sameSize || dist <= 3) {
+              group.push(allHashed[j]);
+              usedIds.add(allHashed[j].id);
+            }
+          }
+        }
+        if (group.length > 1) hammingGroups.push(group);
+      }
+
+      // Merge Strategy A + B results, deduplicate groups
+      const seenGroupKeys = new Set();
       const enriched = [];
-      for (const group of groups) {
-        const ids = group.media_ids.split(',').map(Number);
+
+      // Process name+size groups first
+      for (const g of nameGroups) {
+        const ids = g.media_ids.split(',').map(Number);
+        const key = ids.sort().join(',');
+        if (seenGroupKeys.has(key)) continue;
+        seenGroupKeys.add(key);
         const items = await mysqlSequelize.query(
           `SELECT id, filename, original_name, size_bytes, width, height, created_at, destination_id
-           FROM media WHERE id IN (${ids.join(',')})`,
+           FROM media WHERE id IN (\${ids.join(',')})`,
           { type: QueryTypes.SELECT }
         );
         enriched.push({
-          perceptual_hash: group.perceptual_hash,
-          count: group.cnt,
-          items: items.map(it => ({ ...it, url: `/media-files/${it.destination_id}/${it.filename}` }))
+          match_type: 'name_size',
+          count: items.length,
+          items: items.map(it => ({ ...it, url: `/media-files/\${it.destination_id}/\${it.filename}` }))
+        });
+      }
+
+      // Add hamming groups not already covered
+      for (const group of hammingGroups) {
+        const ids = group.map(g => g.id).sort();
+        const key = ids.join(',');
+        if (seenGroupKeys.has(key)) continue;
+        seenGroupKeys.add(key);
+        enriched.push({
+          match_type: 'perceptual_hash',
+          count: group.length,
+          items: group.map(it => ({ ...it, url: `/media-files/\${it.destination_id}/\${it.filename}` }))
         });
       }
 

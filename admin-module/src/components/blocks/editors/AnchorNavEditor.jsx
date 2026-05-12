@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material';
 import { SelectField, SwitchField } from '../fields/index.js';
 
 export default function AnchorNavEditor({ data, onChange }) {
+  data = data || {};
   const u = (f, v) => onChange({ ...data, [f]: v });
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>

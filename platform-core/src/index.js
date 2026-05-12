@@ -161,6 +161,7 @@ import blogRoutes from './routes/blogs.js';
 import searchRoutes from './routes/search.js';
 import relatedRoutes from './routes/related.js';
 import itineraryRoutes from './routes/itinerary.js';
+import TEMPLATE_DEFAULTS from './services/templates/templateDefaults.js';
 import poiImagesRoutes from "./routes/poiImages.js";
 import monitoringRoutes from "./routes/monitoring.js";
 import { initializeCircuitBreakers } from './services/circuitBreakerInit.js';
@@ -307,7 +308,113 @@ app.use('/api/v1/newsletter', newsletterRoutes); // Newsletter Subscribe (Fase V
 app.use('/api/v1/blogs', blogRoutes); // Public Blog API (Content Studio blogs)
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/related', relatedRoutes);
-app.use('/api/v1/itinerary', itineraryRoutes); // Itinerary OSRM routing (VII-E2 B2) // Related Items (VII-E2 A4) // Unified Search (VII-E2 A1)
+app.use('/api/v1/itinerary', itineraryRoutes);
+
+// Page Quality Validation (VII-E4 Cluster 3)
+app.get('/api/v1/admin-portal/pages/:id/validate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+    const [page] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+    const { validatePage } = await import('./services/validation/pageQualityValidator.js');
+    const result = await validatePage(page);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Apply Template Defaults to existing page (VII-E4 Cluster 2, option b)
+app.post('/api/v1/admin-portal/pages/:id/apply-template', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmed = false } = req.body;
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+    const [page] = await mysqlSequelize.query('SELECT * FROM pages WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
+    if (!page) return res.status(404).json({ error: 'Page not found' });
+
+    // Calpe protection
+    const [dest] = await mysqlSequelize.query('SELECT code FROM destinations WHERE id = :destId', { replacements: { destId: page.destination_id }, type: QueryTypes.SELECT });
+    if (dest?.code === 'calpe') return res.status(403).json({ error: 'Calpe pages are protected' });
+
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const template = TEMPLATES[page.template_type || 'blank'];
+    if (!template || !template.default_layout) return res.status(400).json({ error: 'No template defaults for this template_type' });
+
+    const currentLayout = typeof page.layout === 'string' ? JSON.parse(page.layout) : (page.layout || { blocks: [] });
+    const currentBlockCount = currentLayout.blocks?.length || 0;
+    const newBlockCount = template.default_layout.blocks?.length || 0;
+
+    // If page has content and not confirmed, return diff preview
+    if (!confirmed && currentBlockCount > 1) {
+      return res.json({
+        requires_confirmation: true,
+        diff: { current_blocks: currentBlockCount, new_blocks: newBlockCount, template_type: page.template_type },
+        message: 'Pagina heeft ' + currentBlockCount + ' blocks die vervangen worden door ' + newBlockCount + ' template-defaults.',
+      });
+    }
+
+    // Apply template defaults
+    await mysqlSequelize.query(
+      'UPDATE pages SET layout = :layout, updated_at = NOW() WHERE id = :id',
+      { replacements: { layout: JSON.stringify(template.default_layout), id }, type: QueryTypes.UPDATE }
+    );
+
+    res.json({ success: true, applied: true, template_type: page.template_type, new_block_count: newBlockCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Template defaults for Page Editor (VII-E3)
+app.get('/api/v1/admin-portal/templates', async (req, res) => {
+  try {
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const templates = Object.entries(TEMPLATES).map(([key, t]) => ({
+      template_type: key,
+      name: t.name,
+      description: t.description,
+      category: t.category,
+      url_pattern: t.url_pattern,
+      required_blocks: t.required_blocks,
+      recommended_blocks: t.recommended_blocks,
+      block_count: t.default_layout?.blocks?.length || 0,
+      schema_type: t.schema_type,
+    }));
+    res.json({ success: true, templates });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create page from template (VII-E3)
+app.post('/api/v1/admin-portal/pages/from-template', async (req, res) => {
+  try {
+    const { template_type, destination_id, slug, title_nl, title_en } = req.body;
+    if (!template_type || !destination_id || !slug) {
+      return res.status(400).json({ error: 'template_type, destination_id, slug required' });
+    }
+    const TEMPLATES = (await import('./services/templates/templateDefaults.js')).default;
+    const template = TEMPLATES[template_type];
+    if (!template) return res.status(404).json({ error: 'Template not found' });
+
+    const { mysqlSequelize } = await import('./config/database.js');
+    const { QueryTypes } = (await import('sequelize')).default;
+
+    const layout = JSON.stringify(template.default_layout || { blocks: [] });
+    await mysqlSequelize.query(
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, layout, status, template_type)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :layout, 'draft', :tmpl)`,
+      { replacements: { destId: destination_id, slug, titleNl: title_nl || '', titleEn: title_en || '', layout, tmpl: template_type }, type: QueryTypes.INSERT }
+    );
+
+    res.json({ success: true, message: 'Page created from template', template_type, slug });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+}); // Itinerary OSRM routing (VII-E2 B2) // Related Items (VII-E2 A4) // Unified Search (VII-E2 A1)
 app.use("/api/v1/public/media-collections", createPublicCollectionRouter()); // Public collection sharing (ML-1.4)
 
 // OAuth helper — public base URL for callbacks (behind Apache reverse proxy req.get('host') returns localhost)

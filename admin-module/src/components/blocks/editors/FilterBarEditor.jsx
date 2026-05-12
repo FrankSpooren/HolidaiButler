@@ -18,6 +18,7 @@ const FILTER_TYPES = [
  * FilterBarEditor — Admin block editor for Filter Bar block (VII-E2 A2)
  */
 export default function FilterBarEditor({ data, onChange }) {
+  data = data || {};
   const updateField = (field, value) => {
     onChange({ ...data, [field]: value });
   };

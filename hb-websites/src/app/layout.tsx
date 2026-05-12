@@ -76,6 +76,8 @@ export default async function RootLayout({
 }) {
   const headersList = await headers();
   const tenantSlug = headersList.get('x-tenant-slug') ?? 'calpe';
+  const pathname = headersList.get('x-pathname') || '';
+  const isPreview = pathname.startsWith('/preview');
   const locale = headersList.get('x-tenant-locale') ?? 'en';
 
   let tenant;
@@ -112,14 +114,14 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col bg-background text-foreground font-body antialiased">
         <HoliBotProviderWrapper>
-        {/* Desktop header */}
-        {tenant && (
+        {/* Desktop header — hidden on /preview */}
+        {!isPreview && tenant && (
           <div className="hidden md:block">
             <Header tenant={tenant} locale={locale} />
           </div>
         )}
-        {/* Mobile header */}
-        {tenant && (() => {
+        {/* Mobile header — hidden on /preview */}
+        {!isPreview && tenant && (() => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const mh = (tenant.branding as any)?.mobileHomepage;
           const greeting = mh?.greeting
@@ -141,7 +143,7 @@ export default async function RootLayout({
         <main className="flex-1 pb-[78px] md:pb-0">
           {children}
           {/* Calpe: standalone MobileHomepage (originele template). Texel: page builder mobile blocks */}
-          {tenantSlug !== 'texel' && (
+          {!isPreview && tenantSlug !== 'texel' && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <MobileHomepage
               locale={locale}
@@ -151,20 +153,20 @@ export default async function RootLayout({
             />
           )}
         </main>
-        {tenant && (
+        {!isPreview && tenant && (
           <div className="hidden md:block">
             <Footer tenant={tenant} locale={locale} />
           </div>
         )}
-        <MobileBottomNav
+        {!isPreview && <MobileBottomNav
           locale={locale}
           primaryColor={tenant?.branding?.colors?.primary}
           chatbotColor={
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (tenant?.branding as any)?.chatbotConfig?.color || undefined
           }
-        />
-        {tenant?.featureFlags.holibot && (
+        />}
+        {!isPreview && tenant?.featureFlags.holibot && (
           <ChatbotWidget
             tenantSlug={tenantSlug}
             locale={locale}

@@ -20,6 +20,7 @@ const CONTEXT_OPTIONS = [
 ];
 
 export default function RelatedItemsEditor({ data, onChange }) {
+  data = data || {};
   const u = (field, value) => onChange({ ...data, [field]: value });
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
