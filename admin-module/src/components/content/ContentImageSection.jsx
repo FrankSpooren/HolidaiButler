@@ -24,9 +24,10 @@ import client from '../../api/client.js';
 const PAGE_SIZE = 50;
 const POI_PAGE_SIZE = 40;
 
-export default function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false }) {
+export default function ContentImageSection({ itemId, item, onUpdate, isContentOnlyDest = false, conceptId, siblingItems = [] }) {
   const { t } = useTranslation();
   const [images, setImages] = useState([]);
+  const [pickerSelection, setPickerSelection] = useState(new Set()); // multi-select in picker
 
   const [suggestions, setSuggestions] = useState([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -217,6 +218,8 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
 
   // Platform-specific max image limits
   const PLATFORM_IMAGE_LIMITS = { facebook: 10, instagram: 10, linkedin: 9, x: 4, tiktok: 1, youtube: 1, pinterest: 1, website: 20 };
+  const platform = item?.target_platform || 'website';
+  const maxImages = PLATFORM_IMAGE_LIMITS[platform] || 10;
 
   const handleSelectImage = async (mediaId) => {
     const isSocial = item?.content_type === 'social_post' || item?.content_type === 'video_script';
@@ -305,9 +308,31 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
           {t('contentStudio.images.selected', 'Geselecteerde afbeelding')}
           {images.length > 0 && <Chip label={images.length} size="small" sx={{ ml: 1, height: 18, fontSize: 11 }} />}
         </Typography>
-        <Button size="small" variant="outlined" onClick={() => setMediaPickerOpen(true)} startIcon={<AddIcon />}>
-          {t('contentStudio.images.addImage', 'Voeg afbeelding toe')}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {images.length > 0 && siblingItems.length > 1 && (
+            <Button size="small" variant="text" sx={{ fontSize: 11, textTransform: 'none' }}
+              onClick={async () => {
+                const mediaIds = images.map(m => {
+                  if (typeof m === 'object' && typeof m.id === 'string' && m.id.startsWith('http')) return m.id;
+                  return typeof m === 'object' ? m.id : m;
+                });
+                let copied = 0;
+                for (const sib of siblingItems) {
+                  if (sib.id === itemId) continue;
+                  try {
+                    await contentService.attachImages(sib.id, mediaIds);
+                    copied++;
+                  } catch { /* skip failed */ }
+                }
+                if (onUpdate) onUpdate();
+              }}>
+              Gebruik voor alle platformen
+            </Button>
+          )}
+          <Button size="small" variant="outlined" onClick={() => setMediaPickerOpen(true)} startIcon={<AddIcon />}>
+            {t('contentStudio.images.addImage', 'Voeg afbeelding toe')}
+          </Button>
+        </Box>
       </Box>
 
       {images.length > 0 ? (
@@ -448,12 +473,14 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
       </Dialog>
 
       {/* Unified Image Picker Dialog — All Sources — Enterprise v2.0 */}
-      <Dialog open={mediaPickerOpen} onClose={() => setMediaPickerOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={mediaPickerOpen} onClose={() => { setMediaPickerOpen(false); setPickerSelection(new Set()); }} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-          <span>{t('contentStudio.images.selectFromLibrary', 'Selecteer afbeelding')}</span>
-          {mediaTotal > 0 && (
-            <Chip label={`${mediaItems.length} van ${mediaTotal}`} size="small" variant="outlined"
-              sx={{ fontSize: 11, height: 22 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <span>{t('contentStudio.images.selectFromLibrary', 'Selecteer afbeeldingen')}</span>
+            <Chip label={`max ${maxImages}`} size="small" variant="outlined" color="info" sx={{ fontSize: 10, height: 20 }} />
+          </Box>
+          {pickerSelection.size > 0 && (
+            <Chip label={`${pickerSelection.size} geselecteerd`} size="small" color="primary" sx={{ fontSize: 11, height: 22 }} />
           )}
         </DialogTitle>
         <DialogContent sx={{ pb: 1 }}>
@@ -492,36 +519,37 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
               sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', maxHeight: 480, overflowY: 'auto', alignContent: 'flex-start', p: 0.5 }}>
               {mediaItems.map((m, idx) => {
                 const isAlreadySelected = currentImageIds.has(m.id) || currentImageIds.has(`poi:${m.id}`);
+                const pickerId = m.source === 'poi' ? `poi:${m.id}` : (m.source === 'pexels' || m.source === 'unsplash') ? `ext:${m.id}` : m.id;
+                const isInSelection = pickerSelection.has(pickerId);
                 return (
                   <Box key={`${m.id}-${idx}`}
                     sx={{ cursor: isAlreadySelected ? 'default' : 'pointer', width: 150, textAlign: 'center', opacity: isAlreadySelected ? 0.45 : 1, position: 'relative' }}
-                    onClick={async () => {
+                    onClick={() => {
                       if (isAlreadySelected) return;
-                      if (m.source === 'unsplash' || m.source === 'pexels') {
-                        try {
-                          const res = await client.post('/content/images/download-external', {
-                            url: m.url, source: m.source, destination_id: destId,
-                            photographer: m.photographer || '', source_link: m.source_link || '',
-                          });
-                          const savedId = res.data?.data?.id;
-                          if (savedId) await handleAttachImage(savedId);
-                        } catch { await handleAttachImage(m.url); }
-                      } else {
-                        const attachId = m.source === 'poi' ? `poi:${m.id}` : m.id;
-                        await handleAttachImage(attachId);
-                      }
-                      setMediaPickerOpen(false);
+                      setPickerSelection(prev => {
+                        const next = new Set(prev);
+                        if (next.has(pickerId)) { next.delete(pickerId); } else {
+                          if (next.size + images.length < maxImages) next.add(pickerId);
+                        }
+                        return next;
+                      });
                     }}>
                     <Box component="img" src={m.thumbnail || m.url} alt={m.alt_text || m.poi_name || ''}
                       sx={{ width: 150, height: 112, objectFit: 'cover', borderRadius: 1,
-                        border: isAlreadySelected ? '2px solid' : '2px solid transparent',
-                        borderColor: isAlreadySelected ? 'success.main' : 'transparent',
+                        border: '2px solid',
+                        borderColor: isAlreadySelected ? 'success.main' : isInSelection ? 'primary.main' : 'transparent',
                         '&:hover': { borderColor: isAlreadySelected ? 'success.main' : 'primary.main', transform: isAlreadySelected ? 'none' : 'scale(1.03)' },
                         transition: 'all 0.2s' }}
                       onError={e => { e.target.style.display = 'none'; }} />
                     {isAlreadySelected && (
                       <Chip label="Actief" size="small" color="success"
                         sx={{ position: 'absolute', top: 4, right: 4, height: 18, fontSize: 9 }} />
+                    )}
+                    {isInSelection && (
+                      <Box sx={{ position: 'absolute', top: 4, left: 4, width: 22, height: 22, borderRadius: '50%', bgcolor: 'primary.main', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
+                        {[...pickerSelection].indexOf(pickerId) + 1}
+                      </Box>
                     )}
                     <Typography variant="caption" noWrap sx={{ display: 'block', mt: 0.3, fontWeight: 500 }}>
                       {m.poi_name || m.original_name || m.photographer || m.filename || '\u2014'}
@@ -557,8 +585,45 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
             </Typography>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMediaPickerOpen(false)}>{t('common.close', 'Sluiten')}</Button>
+        <DialogActions sx={{ justifyContent: 'space-between', px: 3 }}>
+          <Typography variant="caption" color="text.secondary">
+            {images.length} van {maxImages} actief{pickerSelection.size > 0 ? ` — ${pickerSelection.size} geselecteerd om toe te voegen` : ''}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {pickerSelection.size > 0 && (
+              <Button variant="contained" size="small" onClick={async () => {
+                const toAttach = [];
+                for (const pickerId of pickerSelection) {
+                  if (pickerId.startsWith('ext:')) {
+                    const extId = pickerId.replace('ext:', '');
+                    const m = mediaItems.find(mi => String(mi.id) === String(extId));
+                    if (m) {
+                      try {
+                        const res = await client.post('/content/images/download-external', {
+                          url: m.url, source: m.source, destination_id: destId,
+                          photographer: m.photographer || '', source_link: m.source_link || '',
+                        });
+                        const savedId = res.data?.data?.id;
+                        if (savedId) toAttach.push(savedId);
+                      } catch { toAttach.push(m.url); }
+                    }
+                  } else {
+                    toAttach.push(pickerId);
+                  }
+                }
+                if (toAttach.length > 0) {
+                  await contentService.attachImages(itemId, toAttach);
+                  await loadImages();
+                  if (onUpdate) onUpdate();
+                }
+                setPickerSelection(new Set());
+                setMediaPickerOpen(false);
+              }}>
+                {pickerSelection.size} toevoegen
+              </Button>
+            )}
+            <Button onClick={() => { setMediaPickerOpen(false); setPickerSelection(new Set()); }}>{t('common.close', 'Sluiten')}</Button>
+          </Box>
         </DialogActions>
       </Dialog>
     </Paper>
