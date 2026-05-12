@@ -842,6 +842,15 @@
     }
   },
   "common": {
+    "days": {
+      "sunday": "Sonntag",
+      "monday": "Montag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "thursday": "Donnerstag",
+      "friday": "Freitag",
+      "saturday": "Samstag"
+    },
     "loading": "Laden...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Erneut versuchen",
@@ -1525,7 +1534,26 @@
       "en": "Englisch",
       "nl": "Niederländisch",
       "de": "Deutsch",
-      "es": "Spanisch"
+      "es": "Spanisch",
+      "fr": "Französisch"
+    },
+    "contentTypes": {
+      "social_post": "Social Post",
+      "blog": "Blog",
+      "video_script": "Videoskript",
+      "newsletter": "Newsletter"
+    },
+    "trends": {
+      "breakout": "Durchbruch",
+      "rising": "Steigend",
+      "stable": "Stabil",
+      "declining": "Rückläufig",
+      "breakoutRising": "Durchbruch + Steigend"
+    },
+    "period": {
+      "7d": "7 Tage",
+      "30d": "30 Tage",
+      "90d": "90 Tage"
     },
     "actions": {
       "cancel": "Abbrechen",

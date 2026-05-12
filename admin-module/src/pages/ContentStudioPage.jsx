@@ -75,16 +75,16 @@ import ContentStudioOverview from '../components/content/ContentStudioOverview.j
 import PlatformPreview from '../components/content/PlatformPreview.jsx';
 
 const DIRECTION_CONFIG = {
-  breakout: { icon: WhatshotIcon, color: 'error', label: 'Breakout' },
-  rising: { icon: TrendingUpIcon, color: 'success', label: 'Rising' },
-  stable: { icon: TrendingFlatIcon, color: 'info', label: 'Stable' },
-  declining: { icon: TrendingDownIcon, color: 'warning', label: 'Declining' },
+  breakout: { icon: WhatshotIcon, color: 'error', i18nKey: 'contentStudio.trends.breakout', fallback: 'Breakout' },
+  rising: { icon: TrendingUpIcon, color: 'success', i18nKey: 'contentStudio.trends.rising', fallback: 'Rising' },
+  stable: { icon: TrendingFlatIcon, color: 'info', i18nKey: 'contentStudio.trends.stable', fallback: 'Stable' },
+  declining: { icon: TrendingDownIcon, color: 'warning', i18nKey: 'contentStudio.trends.declining', fallback: 'Declining' },
 };
 
 const PERIOD_OPTIONS = [
-  { value: '7d', label: '7 dagen' },
-  { value: '30d', label: '30 dagen' },
-  { value: '90d', label: '90 dagen' },
+  { value: '7d', i18nKey: 'contentStudio.period.7d', fallback: '7 dagen' },
+  { value: '30d', i18nKey: 'contentStudio.period.30d', fallback: '30 dagen' },
+  { value: '90d', i18nKey: 'contentStudio.period.90d', fallback: '90 dagen' },
 ];
 
 const STATUS_COLORS = {
@@ -397,12 +397,13 @@ function StatusChip({ status, size = 'small', sx: extraSx = {} }) {
 }
 
 function DirectionChip({ direction }) {
+  const { t } = useTranslation();
   const config = DIRECTION_CONFIG[direction] || DIRECTION_CONFIG.stable;
   const Icon = config.icon;
   return (
     <Chip
       icon={<Icon sx={{ fontSize: 16 }} />}
-      label={config.label}
+      label={t(config.i18nKey, config.fallback)}
       color={config.color}
       size="small"
       variant="outlined"
@@ -432,7 +433,7 @@ function SummaryCards({ summary, loading }) {
   const dirDist = summary.directionDistribution || [];
   const breakoutCount = dirDist.find(d => d.trend_direction === 'breakout')?.count || 0;
   const risingCount = dirDist.find(d => d.trend_direction === 'rising')?.count || 0;
-  cards.push({ label: 'Breakout + Rising', value: `${breakoutCount} + ${risingCount}` });
+  cards.push({ label: t('contentStudio.trends.breakoutRising', 'Breakout + Rising'), value: `${breakoutCount} + ${risingCount}` });
 
   return (
     <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -614,10 +615,10 @@ function AddKeywordDialog({ open, onClose, onSubmit, destinationId }) {
         <FormControl fullWidth>
           <InputLabel>{t('contentStudio.form.direction', 'Richting')}</InputLabel>
           <Select value={direction} onChange={e => setDirection(e.target.value)} label={t('contentStudio.form.direction', 'Richting')}>
-            <MenuItem value="breakout">Breakout</MenuItem>
-            <MenuItem value="rising">Rising</MenuItem>
-            <MenuItem value="stable">Stable</MenuItem>
-            <MenuItem value="declining">Declining</MenuItem>
+            <MenuItem value="breakout">{t('contentStudio.trends.breakout', 'Breakout')}</MenuItem>
+            <MenuItem value="rising">{t('contentStudio.trends.rising', 'Rising')}</MenuItem>
+            <MenuItem value="stable">{t('contentStudio.trends.stable', 'Stable')}</MenuItem>
+            <MenuItem value="declining">{t('contentStudio.trends.declining', 'Declining')}</MenuItem>
           </Select>
         </FormControl>
         <TextField label={t('contentStudio.form.searchVolume', 'Zoekvolume')} type="number" value={volume} onChange={e => setVolume(e.target.value)} fullWidth />
@@ -2210,7 +2211,7 @@ export default function ContentStudioPage() {
           {tab === 1 && (
             <FormControl size="small" sx={{ minWidth: 110 }}>
               <Select value={period} onChange={e => { setPeriod(e.target.value); setTrendPage(0); }}>
-                {PERIOD_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                {PERIOD_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{t(o.i18nKey, o.fallback)}</MenuItem>)}
               </Select>
             </FormControl>
           )}
