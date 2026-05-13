@@ -5,6 +5,7 @@
 
 import { Mistral } from '@mistralai/mistralai';
 import logger from '../../utils/logger.js';
+import { sanitizeAIText } from '../agents/contentRedacteur/contentSanitizer.js';
 
 class EmbeddingService {
   constructor() {
@@ -94,7 +95,7 @@ class EmbeddingService {
       }
       const timeMs = Date.now() - startTime;
       logger.info(`Chat completion generated in ${timeMs}ms`);
-      return result;
+      return sanitizeAIText(result);
     } catch (error) {
       logger.error('Failed to generate chat completion:', error);
       throw error;
@@ -128,7 +129,7 @@ class EmbeddingService {
         if (event.data?.choices?.[0]?.delta?.content) {
           const content = event.data.choices[0].delta.content;
           totalTokens++;
-          yield content;
+          yield sanitizeAIText(content);
         }
       }
 
