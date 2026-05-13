@@ -12,6 +12,7 @@
  * @module agents/dataSync/qaGenerator
  * @version 1.0.0
  */
+import { sanitizeAIText } from '../contentRedacteur/contentSanitizer.js';
 
 import { logAgent, logError } from "../../orchestrator/auditTrail/index.js";
 import apifyIntegration from "./apifyIntegration.js";
@@ -348,7 +349,7 @@ Answer:`;
 
         enhanced.push({
           ...qa,
-          answer: response.choices[0]?.message?.content || qa.answer,
+          answer: sanitizeAIText(response.choices[0]?.message?.content || qa.answer),
           source: QA_SOURCE.GENERATED
         });
       } catch (error) {
@@ -541,7 +542,8 @@ Respond in JSON format: {"question": "...", "answer": "..."}`;
       });
 
       const content = response.choices[0]?.message?.content;
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      return { question: sanitizeAIText(parsed.question), answer: sanitizeAIText(parsed.answer) };
     } catch (error) {
       return { question: qa.question, answer: qa.answer };
     }
