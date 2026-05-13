@@ -60,11 +60,21 @@ import useDestinationStore from '../../stores/destinationStore.js';
  * - Dependency warnings (excluded_with, recommended_with)
  * - "All" tab showing search results across categories
  */
-export default function BlockSelectorDialog({ open, onClose, onSelect, currentBlocks = [] }) {
+export default function BlockSelectorDialog({ open, onClose, onSelect, currentBlocks = [], pageDestinationId }) {
   const { t } = useTranslation();
   const [categoryTab, setCategoryTab] = useState(0);
   const [search, setSearch] = useState('');
-  const featureFlags = useDestinationStore(s => s.getSelectedFeatureFlags());
+  const destinations = useDestinationStore(s => s.destinations);
+  const globalFlags = useDestinationStore(s => s.getSelectedFeatureFlags());
+
+  // Use the page's own destination featureFlags if available, fallback to global selector
+  const featureFlags = useMemo(() => {
+    if (pageDestinationId && destinations.length > 0) {
+      const pageDest = destinations.find(d => d.id === pageDestinationId || d.id === Number(pageDestinationId));
+      if (pageDest?.featureFlags) return pageDest.featureFlags;
+    }
+    return globalFlags;
+  }, [pageDestinationId, destinations, globalFlags]);
 
   // Current block types in page (for dependency checks)
   const currentBlockTypes = useMemo(
@@ -96,10 +106,12 @@ export default function BlockSelectorDialog({ open, onClose, onSelect, currentBl
   }, [categoryBlocks, search]);
 
   // Check feature flag availability per block
+  // Use !== false so blocks are only locked when explicitly disabled,
+  // not when the flag key is missing (e.g. stale persisted store data)
   const isBlockAvailable = (block) => {
     if (!block.featureFlag) return true;
     if (!featureFlags || Object.keys(featureFlags).length === 0) return true;
-    return featureFlags[block.featureFlag] === true;
+    return featureFlags[block.featureFlag] !== false;
   };
 
   // Dependency warnings
@@ -206,10 +218,9 @@ export default function BlockSelectorDialog({ open, onClose, onSelect, currentBl
                       >
                         {/* Thumbnail */}
                         {thumbnail ? (
-                          <Box
-                            sx={{ width: '100%', height: 100, p: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', borderBottom: 1, borderColor: 'divider' }}
-                            dangerouslySetInnerHTML={{ __html: thumbnail }}
-                          />
+                          <Box sx={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', borderBottom: 1, borderColor: 'divider', overflow: 'hidden' }}>
+                            <img src={thumbnail} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </Box>
                         ) : (
                           <Box sx={{ width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
                             <IconComponent sx={{ fontSize: 40, color: 'primary.main' }} />
