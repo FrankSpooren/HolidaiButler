@@ -28,15 +28,16 @@ export default defineConfig({
         manualChunks: {
           // React core
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // MUI core — split icons from components to reduce initial load
+          // MUI core
           'vendor-mui-core': ['@mui/material'],
           'vendor-mui-icons': ['@mui/icons-material'],
-          // Charts
-          'vendor-charts': ['recharts'],
-          // Data management
+          // Data management (i18next stays — only nl.json sync, rest lazy)
           'vendor-data': ['@tanstack/react-query', 'axios', 'zustand', 'i18next', 'react-i18next'],
           // DnD + Rich text
           'vendor-interactive': ['@dnd-kit/core'],
+          // Sentry — separate chunk, lazy init
+          'vendor-sentry': ['@sentry/react'],
+          // recharts removed — Vite auto-splits per lazy-loaded page
         },
       },
     },
