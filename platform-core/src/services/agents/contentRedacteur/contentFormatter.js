@@ -108,7 +108,7 @@ function stripMarkdown(text) {
     .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
     .replace(/`(.+?)`/g, '$1')       // code
     .replace(/>\s+/g, '')            // blockquotes
-    .replace(/[-*+]\s+/g, '• ')      // list items
+    .replace(/^[-*+]\s+/gm, '')       // list markers at line start
     .trim();
 }
 
