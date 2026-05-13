@@ -79,9 +79,11 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
     // Strip AI artifacts
     clean = clean.replace(/^```html\s*\n?/i, '');  // strip opening ```html
     clean = clean.replace(/\n?```\s*$/g, '');       // strip closing ```
-    clean = clean.replace(/[•◦▪▫▸▹⦁⬤·∙⋅⁃]/g, '-');  // all bullet variants
+    clean = clean.replace(/\s*[•◦▪▫▸▹⦁⬤·∙⋅⁃]\s*/g, ', ');  // inline bullets → comma
+    clean = clean.replace(/,\s*,/g, ',');
+    clean = clean.replace(/^\s*,\s*/gm, '');
     clean = clean.replace(/\s*—\s*/g, ', ');
-    clean = clean.replace(/\s*–\s*/g, ' - ');
+    clean = clean.replace(/\s*–\s*/g, ', ');
     clean = clean.replace(/\n*\((?:Picture this|Image suggestion|Visual|Photo)[^)]{20,}\)\s*$/gi, '');
     clean = clean.replace(/^(META_TITLE|META_DESCRIPTION|SLUG)\s*:.+$/gm, '');
 
@@ -131,10 +133,12 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
 
   // Em-dashes and en-dashes → comma or regular dash (AI artifact)
   clean = clean.replace(/\s*—\s*/g, ', ');   // em-dash → comma
-  clean = clean.replace(/\s*–\s*/g, ' - ');  // en-dash → hyphen
+  clean = clean.replace(/\s*–\s*/g, ', ');    // en-dash → comma
 
   // Strip AI artifacts: bullet dots, smart quotes, special Unicode
-  clean = clean.replace(/[•◦▪▫▸▹⦁⬤·∙⋅⁃]/g, '-');  // all bullet/dot variants
+  clean = clean.replace(/\s*[•◦▪▫▸▹⦁⬤·∙⋅⁃]\s*/g, ', ');  // inline bullets → comma
+  clean = clean.replace(/,\s*,/g, ',');           // cleanup double commas
+  clean = clean.replace(/^\s*,\s*/gm, '');        // comma at start of line
   clean = clean.replace(/[""]/g, '"');         // smart double quotes → regular
   clean = clean.replace(/['']/g, "'");         // smart apostrophes → regular
 
