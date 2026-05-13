@@ -8542,3 +8542,38 @@ Content Studio had twee verschillende content item popups:
 | 4.35.0 | 2026-04-06 | Simple Analytics Event Tracking v3.0 — Complete Coverage. sendBeacon fallback, 50 events, 27 getrackte bestanden. |
 | 4.34.0 | 2026-04-03 | Content Studio Multi-Source Image Integratie. Pexels + Flickr als image bronnen naast Unsplash. imageSelector.js cascading fallback. 2 nieuwe admin endpoints (248 totaal). |
 | 4.33.0 | 2026-04-02 | POI Data Pipeline Optimalisatie + Events Distance + i18n Static Pages. Apify maxImages:10, downloadNewImages(), 6 nieuwe DB kolommen, prijsfilter, POI detail action buttons, Texel sync gepauzeerd. 33 bestanden. |
+
+
+## Sessie 13-05-2026: AI Text Gateway Sanitization + Bug Fixes
+
+### CLAUDE.md v4.88.0 | MS v8.33
+
+**3 Bug Fixes:**
+1. `ContentImageSection.jsx:522` — `String(m.id)` fix: numerieke media IDs uit Media Library crashten `.startsWith()` bij picker confirm
+2. `contentSanitizer.js` — Bullets (`•◦▪` etc.) en en-dashes (`–`) nu vervangen door komma i.p.v. hyphen (`-`)
+3. `contentFormatter.js:111` — `stripMarkdown()` converteerde list markers (`- `) terug naar `•` (herintroductie na sanitizing)
+
+**Gateway-level AI Text Sanitization (Optie C):**
+- Nieuwe `sanitizeAIText()` functie in `contentSanitizer.js` — lichtgewicht, zonder platform-specifieke logica
+- Toegepast in `embeddingService.generateChatCompletion()` return value + `generateStreamingChatCompletion()` chunks
+- 5 bypass-callers (direct Mistral API) beveiligd:
+  - `qaGenerator.js` — Q&A antwoorden + vertalingen
+  - `translationService.js` — Mistral fallback vertalingen
+  - `holibotInsightsService.js` — Insight keywords + sample messages
+  - `visualAnalyzer.js` — Image descriptions (2 paden)
+  - `mediaProcessingWorker.js` — Alt-text (5 talen)
+- **Resultaat**: AI-output bescherming van 2/11 naar 11/11 paden
+- Toekomstige paden via embeddingService automatisch beschermd
+
+**Bestanden gewijzigd (10):**
+- `admin-module/src/components/content/ContentImageSection.jsx`
+- `platform-core/src/services/agents/contentRedacteur/contentSanitizer.js`
+- `platform-core/src/services/agents/contentRedacteur/contentFormatter.js`
+- `platform-core/src/services/holibot/embeddingService.js`
+- `platform-core/src/services/agents/dataSync/qaGenerator.js`
+- `platform-core/src/services/translationService.js`
+- `platform-core/src/services/visual/holibotInsightsService.js`
+- `platform-core/src/services/visual/visualAnalyzer.js`
+- `platform-core/src/services/media/mediaProcessingWorker.js`
+
+**Commits:** 3 (pickerId fix, sanitizer/formatter fix, gateway sanitization)

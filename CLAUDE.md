@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.87.0
-> **Laatst bijgewerkt**: 11 mei 2026
+> **Versie**: 4.88.0
+> **Laatst bijgewerkt**: 13 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -431,7 +431,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 314 |
 | adminPortal.js | v3.51.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.83.0 |
+| CLAUDE.md | v4.88.0 |
 | Master Strategie | v8.30 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
@@ -901,6 +901,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.88.0** | **2026-05-13** | **AI Text Gateway Sanitization (Optie C) + 2 Bug Fixes**. (1) ContentImageSection pickerId `String()` fix (numerieke media IDs crashten `.startsWith()`). (2) contentSanitizer bullets/en-dashes naar komma i.p.v. hyphen. (3) contentFormatter `stripMarkdown()` stopte met `•` herintroduceren. (4) **Gateway-level `sanitizeAIText()`**: lichtgewicht sanitizer zonder platform-logica, toegepast in `embeddingService.generateChatCompletion()` + streaming. 5 bypass-callers beveiligd: qaGenerator, translationService, holibotInsightsService, visualAnalyzer, mediaProcessingWorker. **AI-output bescherming**: 2/11 → 11/11 paden. 7 bestanden gewijzigd. |
 | **4.87.0** | **2026-05-11** | **Content Studio Popup Consolidatie + 4 Bug Fixes**. Twee duplicate content item popups (ContentItemDialog 904 LOC + ConceptDialog 1881 LOC) geconsolideerd naar één ConceptDialog. **ContentItemDialog volledig verwijderd** (-916 LOC uit ContentStudioPage.jsx). **6 governance-features gemigreerd** naar ConceptDialog: Beoordeling (Approve/Reject/Retry/Share met SEO-gate), Workflow Status (4-staps visuele indicator + audit trail), Comments (team-opmerkingen), Versiegeschiedenis (revisions + restore), Delen naar andere bestemming, Share dialog. Acties-kolom "Bewerken" omgeleid naar ConceptDialog. **4 bug fixes**: (1) SEO-drempel 80→70 + geen harde blokkade (Approve altijd beschikbaar), (2) Titel opslaan gebroken (updateItem→updateConcept), (3) Preview images afgesneden (objectFit cover→contain), (4) FB Approve geblokkeerd (gevolg van #1). 3 bestanden gewijzigd (ConceptDialog.jsx +284 LOC, ContentStudioPage.jsx -916 LOC, PlatformPreview.jsx). |
 | **4.86.0** | **2026-05-11** | **Fase VII-E4: Editor UX-Upgrade COMPLEET**. C1 Block Picker: search input, feature-flag gating (optie b), dependency warnings, Alles-tab met counts. C2 Template: apply-template-defaults endpoint met diff-preview + confirmation (optie b). C3 Quality Validation: pageQualityValidator.js (6 dimensies: content/SEO/a11y/data/performance/template), warnings-only (optie b), PageQualityPanel.jsx in editor. C5 WYSIWYG Preview: iframe laadt echte pagina i.p.v. wireframe, Apache CSP frame-ancestors globaal. DB migratie: Texel homepage 11 blocks (desktop/mobile split) naar 7 universele responsive blocks. |
 | **4.85.0** | **2026-05-11** | **Fase VII-E3: Page Builder Templates & Page Library COMPLEET**. 24 template configs (9 bestaand upgraded + 15 nieuw). templateDefaults.js service. template_type + metadata kolommen pages tabel. Slug-based routing /event/[id]/[slug] + /poi/[id]/[slug] (307 redirect). Template API: GET /admin-portal/templates + POST /pages/from-template. 6 schema.org generators (EventDetail, PoiDetail, Article, CollectionPage, TouristTrip + category-aware subtype mapping). Admin pageTemplates.js uitgebreid (9→24 templates). Categorieen: basic, discovery, events, editorial, commerce, detail, mobile, campaign. |
