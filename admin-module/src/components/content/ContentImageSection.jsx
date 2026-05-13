@@ -519,7 +519,7 @@ export default function ContentImageSection({ itemId, item, onUpdate, isContentO
               sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', maxHeight: 480, overflowY: 'auto', alignContent: 'flex-start', p: 0.5 }}>
               {mediaItems.map((m, idx) => {
                 const isAlreadySelected = currentImageIds.has(m.id) || currentImageIds.has(`poi:${m.id}`);
-                const pickerId = m.source === 'poi' ? `poi:${m.id}` : (m.source === 'pexels' || m.source === 'unsplash') ? `ext:${m.id}` : m.id;
+                const pickerId = m.source === 'poi' ? `poi:${m.id}` : (m.source === 'pexels' || m.source === 'unsplash') ? `ext:${m.id}` : String(m.id);
                 const isInSelection = pickerSelection.has(pickerId);
                 return (
                   <Box key={`${m.id}-${idx}`}
