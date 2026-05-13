@@ -9,6 +9,7 @@ import { mysqlSequelize } from '../../config/database.js';
 import { QueryTypes } from 'sequelize';
 import path from 'path';
 import fs from 'fs';
+import { sanitizeAIText } from '../agents/contentRedacteur/contentSanitizer.js';
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
 
@@ -230,11 +231,11 @@ async function aiTag(media, filePath) {
     const updates = [];
     const params = [];
     if (tags.length > 0) { updates.push('tags_ai = ?'); params.push(JSON.stringify(tags)); }
-    if (parsed.alt_text_en) { updates.push('alt_text_en = ?'); params.push(parsed.alt_text_en.substring(0, 500)); }
-    if (parsed.alt_text_nl) { updates.push('alt_text_nl = ?'); params.push(parsed.alt_text_nl.substring(0, 500)); }
-    if (parsed.alt_text_de) { updates.push('alt_text_de = ?'); params.push(parsed.alt_text_de.substring(0, 500)); }
-    if (parsed.alt_text_es) { updates.push('alt_text_es = ?'); params.push(parsed.alt_text_es.substring(0, 500)); }
-    if (parsed.alt_text_fr) { updates.push('alt_text_fr = ?'); params.push(parsed.alt_text_fr.substring(0, 500)); }
+    if (parsed.alt_text_en) { updates.push('alt_text_en = ?'); params.push(sanitizeAIText(parsed.alt_text_en).substring(0, 500)); }
+    if (parsed.alt_text_nl) { updates.push('alt_text_nl = ?'); params.push(sanitizeAIText(parsed.alt_text_nl).substring(0, 500)); }
+    if (parsed.alt_text_de) { updates.push('alt_text_de = ?'); params.push(sanitizeAIText(parsed.alt_text_de).substring(0, 500)); }
+    if (parsed.alt_text_es) { updates.push('alt_text_es = ?'); params.push(sanitizeAIText(parsed.alt_text_es).substring(0, 500)); }
+    if (parsed.alt_text_fr) { updates.push('alt_text_fr = ?'); params.push(sanitizeAIText(parsed.alt_text_fr).substring(0, 500)); }
     if (parsed.weather_conditions) { updates.push('weather_conditions = ?'); params.push(JSON.stringify(parsed.weather_conditions)); }
     if (parsed.seasons) { updates.push('seasons = ?'); params.push(JSON.stringify(parsed.seasons)); }
     if (parsed.time_of_day && parsed.time_of_day !== 'unknown') { updates.push('time_of_day = ?'); params.push(parsed.time_of_day); }

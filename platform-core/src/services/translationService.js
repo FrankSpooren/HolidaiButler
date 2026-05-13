@@ -5,6 +5,7 @@
  */
 
 import logger from '../utils/logger.js';
+import { sanitizeAIText } from './agents/contentRedacteur/contentSanitizer.js';
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
@@ -119,7 +120,7 @@ async function translateWithMistral(texts, sourceLang, targetLangs) {
     // Merge into translations object
     for (const t of texts) {
       if (!translations[t.key]) translations[t.key] = {};
-      translations[t.key][targetLang] = parsed[t.key] || '';
+      translations[t.key][targetLang] = sanitizeAIText(parsed[t.key] || '');
     }
 
     logger.info(`[TranslationService] Mistral: ${texts.length} texts ${sourceLang}→${targetLang}`);

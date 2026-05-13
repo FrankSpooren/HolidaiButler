@@ -7,6 +7,7 @@ import { QueryTypes } from 'sequelize';
 import logger from '../../utils/logger.js';
 import videoFrameExtractor from './videoFrameExtractor.js';
 import visualDiscoveryConfig from '../../config/visualDiscoveryConfig.js';
+import { sanitizeAIText } from '../agents/contentRedacteur/contentSanitizer.js';
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_API_URL = process.env.MISTRAL_API_URL || 'https://api.mistral.ai/v1';
@@ -195,8 +196,10 @@ const visualAnalyzer = {
     const result = await response.json();
     const text = result.choices?.[0]?.message?.content || '{}';
 
-    // Parse JSON from response (handle markdown code blocks)
-    return this._parseJsonResponse(text);
+    // Parse JSON from response (handle markdown code blocks), sanitize text fields
+    const parsed = this._parseJsonResponse(text);
+    if (parsed.description) parsed.description = sanitizeAIText(parsed.description);
+    return parsed;
   },
 
   /**

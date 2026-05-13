@@ -7,6 +7,7 @@
 import { mysqlSequelize } from '../../config/database.js';
 import { QueryTypes } from 'sequelize';
 import logger from '../../utils/logger.js';
+import { sanitizeAIText } from '../agents/contentRedacteur/contentSanitizer.js';
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_API_URL = process.env.MISTRAL_API_URL || 'https://api.mistral.ai/v1';
@@ -128,7 +129,11 @@ const holibotInsightsService = {
       // Parse JSON
       try {
         const parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) return parsed.slice(0, 15);
+        if (Array.isArray(parsed)) return parsed.slice(0, 15).map(item => ({
+          ...item,
+          keyword: sanitizeAIText(item.keyword),
+          sample_messages: Array.isArray(item.sample_messages) ? item.sample_messages.map(sanitizeAIText) : item.sample_messages,
+        }));
       } catch (e) {
         // Try extracting from markdown
         const match = text.match(/\[[\s\S]*\]/);

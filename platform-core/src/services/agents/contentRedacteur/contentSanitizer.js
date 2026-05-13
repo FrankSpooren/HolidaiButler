@@ -250,6 +250,50 @@ export function detectMarkdownArtifacts(content) {
   return { isDirty: issues.length > 0, issues };
 }
 
+/**
+ * sanitizeAIText - Gateway-level sanitizer for ALL Mistral AI output.
+ * Lightweight: strips formatting artifacts without platform-specific logic.
+ * Applied at the AI client level so every code path is automatically protected.
+ * @param {string} text - Raw AI-generated text
+ * @returns {string} Clean text without bullets, dashes, markdown, smart quotes
+ */
+export function sanitizeAIText(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  let clean = text;
+
+  // Bullet characters -> comma
+  clean = clean.replace(/\s*[•◦▪▫▸▹⦁⬤·∙⋅⁃]\s*/g, ', ');
+
+  // Em-dash and en-dash -> comma
+  clean = clean.replace(/\s*—\s*/g, ', ');
+  clean = clean.replace(/\s*–\s*/g, ', ');
+
+  // Smart quotes -> regular
+  clean = clean.replace(/["\u201C\u201D]/g, '"');
+  clean = clean.replace(/['\u2018\u2019]/g, "'");
+
+  // Markdown: bold, italic, headers, code, blockquotes, links
+  clean = clean.replace(/\*\*(.+?)\*\*/g, '$1');
+  clean = clean.replace(/__(.+?)__/g, '$1');
+  clean = clean.replace(/(?<!\w)\*(?!\s)(.+?)(?<!\s)\*(?!\w)/g, '$1');
+  clean = clean.replace(/^#{1,6}\s+/gm, '');
+  clean = clean.replace(/`([^`]+)`/g, '$1');
+  clean = clean.replace(/^>\s*/gm, '');
+  clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+  // List markers at start of line
+  clean = clean.replace(/^[-*+]\s+/gm, '');
+  clean = clean.replace(/^\s*\d+\.\s+/gm, '');
+
+  // Cleanup: double commas, leading commas, excess whitespace
+  clean = clean.replace(/,\s*,/g, ',');
+  clean = clean.replace(/^\s*,\s*/gm, '');
+  clean = clean.replace(/\n{3,}/g, '\n\n');
+
+  return clean.trim();
+}
+
 export { PLATFORM_RULES };
 
-export default { sanitizeContent, detectMarkdownArtifacts, PLATFORM_RULES };
+export default { sanitizeContent, sanitizeAIText, detectMarkdownArtifacts, PLATFORM_RULES };
