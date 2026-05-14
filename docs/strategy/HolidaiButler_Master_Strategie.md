@@ -547,6 +547,8 @@ Frontend stuurt string "texel" via `VITE_DESTINATION_ID`, backend verwachtte num
 
 ## Deel 3: Openstaande Fasen - Instructies
 
+> **Hoofdreferentie voor v4.94+**: `docs/strategy/Fase_B_Multi_Tenant_Scale_Command.md` (v1.0, 14-05-2026). Bevat 7 work-blokken met acceptance criteria + USP-impact (EU-First + tourism niche) + risico + rollback per blok. Per-blok approval gates verplicht.
+
 ### Fase 7: Reviews Integratie (19/02/2026)
 
 **Status**: ✅ COMPLEET (19 februari 2026)
