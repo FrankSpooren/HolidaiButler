@@ -327,34 +327,51 @@ class PublisherAgent extends BaseAgent {
   }
 
   /**
-   * Process scheduled publish — called by BullMQ worker
-   * Finds content items with scheduled_at <= now and publishes them
+   * Orphan safety-net publisher — v4.97 Blok 4.3.
+   *
+   * Hoofdpad = BullMQ delayed-jobs (contentPublishScheduler) die exact op
+   * scheduled_at firen. Deze cron is fallback voor:
+   *   - Redis-restart waarbij delayed-jobs persisten verloren gaan
+   *   - destinations met publisher.delayed_jobs_enabled=FALSE (feature-flag rollback)
+   *   - jobs die door BullMQ worker-crash zijn gemist
+   *
+   * Pickt alleen items op die >ORPHAN_THRESHOLD_MINUTES past zijn gepland maar
+   * nog steeds in 'scheduled' state. Voorkomt race-condition met BullMQ
+   * (welke binnen seconden firet) terwijl orphans binnen 1u worden afgehandeld
+   * conform Fase_B Blok 4 acceptance SLA.
+   *
+   * Defense-in-depth: publishItem heeft eigen dedupe-guard (publish_url/published_at)
+   * + status-guard (alleen scheduled/publishing/approved/failed) zodat dubbele
+   * publicatie ook bij race onmogelijk is.
    */
   async processScheduledPublications() {
-    // v4.93.0 DEDUPE in query: filter items die al published_at OR publish_url hebben
-    // Defense-in-depth: zelfs als query niet zou filteren, publishItem dedupe-guard zou blocken
+    const ORPHAN_THRESHOLD_MINUTES = 5;
     const [scheduled] = await mysqlSequelize.query(
-      `SELECT id, destination_id FROM content_items
+      `SELECT id, destination_id, scheduled_at FROM content_items
        WHERE approval_status = 'scheduled'
-         AND scheduled_at <= NOW()
+         AND scheduled_at <= NOW() - INTERVAL :threshold MINUTE
          AND published_at IS NULL
          AND (publish_url IS NULL OR publish_url = '')`,
-      { type: mysqlSequelize.QueryTypes.SELECT }
+      { replacements: { threshold: ORPHAN_THRESHOLD_MINUTES }, type: mysqlSequelize.QueryTypes.SELECT }
     );
 
     const items = Array.isArray(scheduled) ? scheduled : (scheduled ? [scheduled] : []);
+    if (items.length === 0) return [];
+
+    logger.warn(`[De Uitgever][SafetyNet] Orphan detector picked up ${items.length} items >${ORPHAN_THRESHOLD_MINUTES}min past scheduled_at — BullMQ delayed-job mogelijk gemist`);
     const results = [];
     for (const item of items) {
       try {
-        const result = await this.publishItem(item.id);
-        results.push({ id: item.id, status: 'published', ...result });
+        // force=true: scheduled_at is in past, FUTURE-SCHEDULE-GUARD zou false-positive zijn.
+        const result = await this.publishItem(item.id, { force: true });
+        results.push({ id: item.id, status: 'published', orphanRecovery: true, ...result });
       } catch (err) {
-        results.push({ id: item.id, status: 'failed', error: err.message });
+        results.push({ id: item.id, status: 'failed', orphanRecovery: true, error: err.message });
       }
     }
 
     if (results.length > 0) {
-      logger.info(`[De Uitgever] Processed ${results.length} scheduled publications`);
+      logger.info(`[De Uitgever][SafetyNet] Processed ${results.length} orphaned publications (cron fallback)`);
     }
     return results;
   }

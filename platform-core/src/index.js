@@ -39,6 +39,7 @@ import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
 import realtimeService from "./services/realtimeService.js";
 import webhookDispatcher from "./services/webhookDispatcher.js";
+import contentPublishScheduler from "./services/contentPublishScheduler.js";
 import { initializeAutomation } from './automation/index.js';
 import { initializeOrchestrator, shutdownOrchestrator } from './services/orchestrator/index.js';
 import apiGateway from './gateway/index.js';
@@ -595,6 +596,11 @@ initializePlatform().then(() => {
   } catch (wdErr) {
     logger.error('[Webhook] Dispatcher init faalde (non-blocking): ' + wdErr.message);
   }
+  // v4.97 Blok 4: backfill delayed-jobs voor reeds-scheduled items (non-blocking).
+  // Voorkomt orphan-detector lag van >5min bij Redis-restart of eerste deploy.
+  contentPublishScheduler.backfillScheduled()
+    .then((res) => logger.info(`[ContentPublishScheduler] backfill ${JSON.stringify(res)}`))
+    .catch((err) => logger.warn(`[ContentPublishScheduler] backfill non-blocking error: ${err.message}`));
   const server = httpServer.listen(PORT, () => {
     const envDisplay = (process.env.NODE_ENV || 'development').toUpperCase().padEnd(42);
     const portDisplay = `http://localhost:${PORT}`.padEnd(28);

@@ -24,6 +24,7 @@ import logger from '../utils/logger.js';
 import realtimeService from './realtimeService.js';
 import workflowConfigService from './workflowConfigService.js';
 import { canTransitionXState, DEFAULT_TRANSITIONS } from './contentWorkflowMachine.js';
+import contentPublishScheduler from './contentPublishScheduler.js';
 
 // ---------------------------------------------------------------------
 // 1. TRANSITION MATRIX — explicit, complete, audited
@@ -257,6 +258,31 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     }
   } catch (rtErr) {
     logger.debug(`[approvalStateMachine] realtime emit non-blocking error: ${rtErr.message}`);
+  }
+
+  // v4.97 Blok 4: BullMQ delayed-job orchestration voor exacte publicatie-timing.
+  // - scheduled (new of reschedule): voeg/vervang delayed job
+  // - weg van scheduled (approved/deleted/rejected): cancel job (idempotent)
+  try {
+    const [[schedMeta]] = await mysqlSequelize.query(
+      'SELECT destination_id, scheduled_at FROM content_items WHERE id = :id LIMIT 1',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (newStatus === 'scheduled' && schedMeta?.scheduled_at) {
+      await contentPublishScheduler.scheduleItem({
+        itemId: Number(itemId),
+        scheduledAt: schedMeta.scheduled_at,
+        destinationId: schedMeta?.destination_id || null,
+      });
+    } else if (fromStatus === 'scheduled' && newStatus !== 'scheduled') {
+      // approved (unschedule), deleted, rejected, publishing (worker handelt af), published, failed
+      // Skip cancel als naar 'publishing' (worker is gestart, niet halverwege onderbreken)
+      if (newStatus !== 'publishing') {
+        await contentPublishScheduler.cancelItem(Number(itemId));
+      }
+    }
+  } catch (schedErr) {
+    logger.warn(`[approvalStateMachine] scheduler op item ${itemId} faalde (non-blocking, cron pickt op): ${schedErr.message}`);
   }
 
   return { itemId, fromStatus, toStatus: newStatus, affected: 1 };
