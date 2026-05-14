@@ -1749,19 +1749,46 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Alert>
                   )}
 
-                  {/* Stap 2: Publiceer alle / Plan alle in */}
+                  {/* Stap 2: Publiceer alle / Plan alle in - v4.94 FSM-driven (Blok 1.3) */}
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 2 — Publicatie</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-                    <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
-                      onClick={handlePublishAll} disabled={publishing || items.every(i => i.approval_status === 'published')} fullWidth>
-                      Publiceer alle
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<ScheduleIcon />}
-                      onClick={() => { setPublishTarget(null); setScheduleDialogOpen(true); }}
-                      disabled={publishing} fullWidth>
-                      Plan alle in
-                    </Button>
-                  </Box>
+                  {(() => {
+                    const stap2Actions = getAvailableActions(items);
+                    const allPublished = items.length > 0 && items.every(i => i.approval_status === 'published');
+                    const allScheduled = items.length > 0 && items.every(i => ['scheduled', 'publishing', 'published'].includes(i.approval_status));
+                    const publishDisabled = publishing || !stap2Actions.canPublish;
+                    const scheduleDisabled = publishing || !stap2Actions.canSchedule;
+                    const publishLabel = allPublished
+                      ? '✓ Alles gepubliceerd'
+                      : (!stap2Actions.canPublish ? 'Niet publiceerbaar' : 'Publiceer alle');
+                    const scheduleLabel = allScheduled
+                      ? '✓ Alles ingepland'
+                      : (!stap2Actions.canSchedule ? 'Niet inplanbaar' : 'Plan alle in');
+                    return (
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                        <Tooltip title={publishDisabled && !publishing ? (allPublished ? 'Alle platform-versies zijn al gepubliceerd' : 'Items moeten in status Goedgekeurd of Ingepland staan') : ''}>
+                          <span style={{ flex: 1 }}>
+                            <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
+                              onClick={handlePublishAll} disabled={publishDisabled} fullWidth
+                              sx={publishDisabled && allPublished ? {
+                                opacity: 0.85,
+                                '&.Mui-disabled': { bgcolor: 'success.main', color: 'common.white', opacity: 0.8 },
+                              } : {}}>
+                              {publishLabel}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title={scheduleDisabled && !publishing ? (allScheduled ? 'Alle platform-versies zijn al ingepland of gepubliceerd' : 'Items moeten in status Goedgekeurd staan om in te plannen') : ''}>
+                          <span style={{ flex: 1 }}>
+                            <Button variant="outlined" size="small" startIcon={<ScheduleIcon />}
+                              onClick={() => { setPublishTarget(null); setScheduleDialogOpen(true); }}
+                              disabled={scheduleDisabled} fullWidth>
+                              {scheduleLabel}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    );
+                  })()}
 
                   {/* Stap 3: Per-platform acties */}
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 3 — Per platform</Typography>
