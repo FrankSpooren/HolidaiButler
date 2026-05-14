@@ -13,7 +13,8 @@ import { sanitizeContent } from './contentSanitizer.js';
 import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import { mysqlSequelize } from '../../../config/database.js';
-import { buildBrandContext } from './brandContext.js';
+import { buildBrandContext, buildBrandContextStructured } from './brandContext.js';
+import { buildAntiHallucinationInstructions, buildSystemPromptHeader } from '../../contentSafeguards/promptGuardrails.js';
 import featureFlagService from '../../featureFlagService.js';
 import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
@@ -635,14 +636,22 @@ function buildSystemPrompt(contentType, platform, toneInstruction, keywords, bra
   const brandBlock = brandContext ? `\n${brandContext}\n` : '';
   const groundingBlock = groundingContext ? `\n${groundingContext}\n` : '';
 
+  // Optie D Layer 1: prepend strict anti-hallucination guardrails (multi-locale)
+  const _guardrails = buildAntiHallucinationInstructions(outputLanguage, {
+    hasReferenceMaterial: Boolean(brandContext || groundingContext),
+    strictMode: true,
+  });
+
   const base = `You are an enterprise-grade content writer for a premium content platform.
+
+${_guardrails}
 ${brandBlock}
 ${toneInstruction}
 ${groundingBlock}
 ABSOLUTE RULES:
 - Write ALL content in ${{ nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' }[outputLanguage] || 'English'}. This is the destination's primary language. Do NOT write in English unless the destination's language IS English.
 - Write original, high-quality content — NO plagiarism
-- Facts must be accurate — do NOT hallucinate. If reference material is provided, use those facts.
+- Facts must be accurate — STRICTLY follow the REFERENCE MATERIAL above. Where reference material lacks a specific fact, use generic wording, NEVER fabricate it.
 - Preserve proper nouns (names, street names, local terms)
 - EU AI Act compliance: this is AI-generated content
 - If a target audience is specified, tailor language, tone, and content to their interests and pain points
@@ -882,6 +891,29 @@ async function improveContent(content, seoResult, options = {}) {
   const MAX_ROUNDS = 2; // Two improvement rounds — balance between quality and response time
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
+  // Optie D Bug A fix: improveContent needs brand context to detect/correct hallucinations
+  // Without this, AI improves SEO but preserves invented facts (Rad van Fortuin etc.)
+  let _improveBrandCtx = '';
+  let _improveSources = [];
+  let _improveHasIS = false;
+  let _improveLang = 'en';
+  try {
+    if (destinationId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destinationId) } }
+      );
+      if (_destRow?.default_language) _improveLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords,
+        includeReferenceInString: false,
+      });
+      _improveBrandCtx = _bc.contextString;
+      _improveSources = _bc.sources;
+      _improveHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
   // Platform character limits — enforce during improvement
   const PLATFORM_CHAR_LIMITS = {
     facebook: 500, instagram: 2200, linkedin: 3000, x: 280,
@@ -925,9 +957,23 @@ async function improveContent(content, seoResult, options = {}) {
       ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags. Preserve existing HTML structure. Do NOT strip HTML tags.`
       : '';
 
-    const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
+    // Optie D Layer 1: wrap system prompt with strict anti-hallucination + REFERENCE MATERIAL
+    const _improveHeader = buildSystemPromptHeader(
+      _improveLang,
+      _improveBrandCtx,
+      _improveSources,
+      { hasInternalSources: _improveHasIS, strictMode: true }
+    );
+
+    const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken (SEO/format) WHILE ensuring factual accuracy against REFERENCE MATERIAL.
+
+${_improveHeader}
 
 ${toneInstruction}
+
+CRITICAL CONTENT RULES (in addition to anti-hallucination above):
+- If the original content mentions specific facts (names, activities, events, dates, prices, locations) NOT in REFERENCE MATERIAL → REWRITE those parts using only generic language or facts from REFERENCE MATERIAL.
+- Hallucinated content from the original MUST be removed or replaced with verified facts.
 
 CRITICAL FORMATTING RULES:
 - NEVER use markdown: no **, no ##, no ---, no \`, no []()
@@ -1157,7 +1203,34 @@ export async function generateAlternative(contentItem) {
     ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags.`
     : '';
 
+  // Optie D Layer 1: fetch brand context for factual grounding
+  let _altBrandCtx = '';
+  let _altSources = [];
+  let _altHasIS = false;
+  let _altLang = 'en';
+  try {
+    if (destinationId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destinationId) } }
+      );
+      if (_destRow?.default_language) _altLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _altBrandCtx = _bc.contextString;
+      _altSources = _bc.sources;
+      _altHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
+  const _altHeader = buildSystemPromptHeader(_altLang, _altBrandCtx, _altSources, {
+    hasInternalSources: _altHasIS, strictMode: true,
+  });
+
   const systemPrompt = `You are a creative content remixer. Your job is to write a COMPLETELY DIFFERENT version of an existing piece of content — same topic, same target keywords, but a fundamentally different angle, narrative structure, opening hook and tone within the brand voice.
+
+${_altHeader}
 
 ${toneInstruction}
 
@@ -1380,6 +1453,27 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
   ]);
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);
 
+  // Optie D Layer 1: brand context for repurpose (shared across all platforms in loop)
+  let _repurposeBrandCtx = '';
+  let _repurposeSources = [];
+  let _repurposeHasIS = false;
+  let _repurposeLang = 'en';
+  try {
+    if (destId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destId) } }
+      );
+      if (_destRow?.default_language) _repurposeLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _repurposeBrandCtx = _bc.contextString;
+      _repurposeSources = _bc.sources;
+      _repurposeHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
   // Get the full original content text
   const originalBody = sourceItem.body_en || sourceItem.body_nl || sourceItem.body_de || sourceItem.body_es || '';
   if (!originalBody) {
@@ -1395,8 +1489,15 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
     const example = PLATFORM_EXAMPLES[platform] || '';
 
+    // Optie D Layer 1: prepend strict guardrails + REFERENCE MATERIAL block
+    const _rpHeader = buildSystemPromptHeader(_repurposeLang, _repurposeBrandCtx, _repurposeSources, {
+      hasInternalSources: _repurposeHasIS, strictMode: true,
+    });
+
     const systemPrompt = `You are a top-tier ${platform} content specialist for a premium tourism platform.
 You REWRITE content from scratch for ${platform} — you do NOT summarize, truncate, or slightly edit the original.
+
+${_rpHeader}
 
 ${toneInstruction}
 
@@ -1598,7 +1699,34 @@ export async function generateFromTitle(sourceItem, targetPlatforms, destination
     const example = PLATFORM_EXAMPLES[platform] || '';
 
     try {
+      // Optie D Layer 1: prepend guardrails + REFERENCE MATERIAL
+      let _gftBrandCtx = '';
+      let _gftSources = [];
+      let _gftHasIS = false;
+      let _gftLang = 'en';
+      try {
+        if (destinationId) {
+          const [[_destRow]] = await _mysqlForAudit.query(
+            'SELECT default_language FROM destinations WHERE id = :id',
+            { replacements: { id: Number(destinationId) } }
+          );
+          if (_destRow?.default_language) _gftLang = _destRow.default_language;
+          const _bc = await buildBrandContextStructured(destinationId, {
+            contentKeywords: sourceItem.keyword_cluster ? (typeof sourceItem.keyword_cluster === 'string' ? JSON.parse(sourceItem.keyword_cluster) : sourceItem.keyword_cluster) : [],
+            includeReferenceInString: false,
+          });
+          _gftBrandCtx = _bc.contextString;
+          _gftSources = _bc.sources;
+          _gftHasIS = _bc.hasInternalSources;
+        }
+      } catch (_e) { /* optional */ }
+      const _gftHeader = buildSystemPromptHeader(_gftLang, _gftBrandCtx, _gftSources, {
+        hasInternalSources: _gftHasIS, strictMode: true,
+      });
+
       const prompt = `You are a professional social media content creator.
+
+${_gftHeader}
 
 TASK: Write a ${platform} post for the topic: "${title}"
 
