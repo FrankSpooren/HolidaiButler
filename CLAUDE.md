@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.89.0
-> **Laatst bijgewerkt**: 13 mei 2026
+> **Versie**: 4.90.0
+> **Laatst bijgewerkt**: 14 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -431,7 +431,7 @@ User → X-Destination-ID → destinationConfig.holibot.chromaCollection → Chr
 | Admin endpoints | 314 |
 | adminPortal.js | v3.51.0 |
 | MongoDB collections (agent-gerelateerd) | 15 |
-| CLAUDE.md | v4.89.0 |
+| CLAUDE.md | v4.90.0 |
 | Master Strategie | v8.30 |
 | Architecture stack | A2A v1.2 + MCP + Temporal + NATS + OTel + AsyncAPI 3.0 (131 specs) |
 | Hetzner host | CPX42 (8 vCPU, 16 GB, 40 GB SSD) |
@@ -901,6 +901,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **4.90.0** | **2026-05-14** | **Optie D — Validated RAG met Citation Enforcement (Platform-Standard)**. Enterprise-grade anti-hallucination stack platform-breed (Calpe/Texel/BUTE/WarreWijzer). **Layer 1**: `promptGuardrails.js` (5 locales NL/EN/DE/FR/ES, strikte multi-rule regels) geïnjecteerd in alle 5 AI generate paden (generateContent, improveContent, generateAlternative, repurposeContent, generateFromTitle). Bug A gefixt: improveContent kreeg geen brandContext → AI behield hallucinaties tijdens SEO-verbetering. **Layer 1+**: `brandKnowledgeSearch.js` (ChromaDB semantic retrieval, backfill endpoint POST /brand-sources/rebuild-embeddings). **Layer 3 (D-2)**: `outputValidator.js` met Mistral-NER + entity grounding + per-zin cosine similarity (Layer 3+). Threshold via feature flag `ai_content.hallucination_threshold` (default 0.10). **Layer 5**: EU AI Act Article 50 — `provenanceService.js` met SHA-256 signature + tamper detection, content_items.provenance JSON kolom (migration 007). **D-4**: GET /brand-sources/ai-quality dashboard endpoint (per-destination metrics + recent failures). **Audit**: ai_generation_log met validation_passed + ungrounded_entities + retries. **Foundation services**: `featureFlagService.js` (polymorphic scope + audit), `websiteScraperService.js` (cheerio + readability + turndown voor Wix SSR), `mistralAgentsService.js` (EU web_search fallback beta), `aiQualityOrchestrator.js` (retry orchestratie). **Frontend**: ConceptDialog i18n melding `t('contentStudio.rewriteResult.*')` met code-mapping (4 locales nl/en/de/es). **BUTE bewijs**: item 250 De strippenkaart — AI verwijst nu naar Landgoed De Bonte Belevenis + 16 mei + Fiets mee (uit butefair.nl scrape KB#5), validator detecteert Zeehondenspeurtocht + Kid Bingo als ungrounded (30% rate, FAIL > 10%), provenance signature 3bc18460..., source_ids [5,4,3]. **DB**: migration 006 (feature_flags + audit + ai_generation_log + brand_knowledge ALTER), 006a (UNIQUE fix), 007 (provenance). **Deps**: cheerio + @mozilla/readability + jsdom + turndown. 28 bestanden, 15.7K insertions. |
 | **4.89.0** | **2026-05-13** | **Vite Chunk Splitting**: i18n lazy-load (alleen actieve taal sync, 4 talen on-demand), recharts uit manualChunks (auto-split per lazy page), Sentry lazy init + apart chunk. Initiële load 1.86MB→863KB (-54%), gzip 570KB→263KB. 3 bestanden. |
 | **4.88.0** | **2026-05-13** | **AI Text Gateway Sanitization (Optie C) + 2 Bug Fixes**. (1) ContentImageSection pickerId `String()` fix (numerieke media IDs crashten `.startsWith()`). (2) contentSanitizer bullets/en-dashes naar komma i.p.v. hyphen. (3) contentFormatter `stripMarkdown()` stopte met `•` herintroduceren. (4) **Gateway-level `sanitizeAIText()`**: lichtgewicht sanitizer zonder platform-logica, toegepast in `embeddingService.generateChatCompletion()` + streaming. 5 bypass-callers beveiligd: qaGenerator, translationService, holibotInsightsService, visualAnalyzer, mediaProcessingWorker. **AI-output bescherming**: 2/11 → 11/11 paden. 7 bestanden gewijzigd. |
 | **4.87.0** | **2026-05-11** | **Content Studio Popup Consolidatie + 4 Bug Fixes**. Twee duplicate content item popups (ContentItemDialog 904 LOC + ConceptDialog 1881 LOC) geconsolideerd naar één ConceptDialog. **ContentItemDialog volledig verwijderd** (-916 LOC uit ContentStudioPage.jsx). **6 governance-features gemigreerd** naar ConceptDialog: Beoordeling (Approve/Reject/Retry/Share met SEO-gate), Workflow Status (4-staps visuele indicator + audit trail), Comments (team-opmerkingen), Versiegeschiedenis (revisions + restore), Delen naar andere bestemming, Share dialog. Acties-kolom "Bewerken" omgeleid naar ConceptDialog. **4 bug fixes**: (1) SEO-drempel 80→70 + geen harde blokkade (Approve altijd beschikbaar), (2) Titel opslaan gebroken (updateItem→updateConcept), (3) Preview images afgesneden (objectFit cover→contain), (4) FB Approve geblokkeerd (gevolg van #1). 3 bestanden gewijzigd (ConceptDialog.jsx +284 LOC, ContentStudioPage.jsx -916 LOC, PlatformPreview.jsx). |
