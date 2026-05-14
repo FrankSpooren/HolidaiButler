@@ -14,6 +14,9 @@ import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import { mysqlSequelize } from '../../../config/database.js';
 import { buildBrandContext, buildBrandContextStructured } from './brandContext.js';
+import { validateContent as _validateContent } from '../../outputValidator.js';
+import { buildProvenance as _buildProvenance } from '../../provenanceService.js';
+import { validateAndRetryWithProvenance as _validateRetry } from '../../aiQualityOrchestrator.js';
 import { buildAntiHallucinationInstructions, buildSystemPromptHeader } from '../../contentSafeguards/promptGuardrails.js';
 import featureFlagService from '../../featureFlagService.js';
 import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
@@ -398,6 +401,60 @@ export async function generateContent(suggestion, options = {}) {
 
     // Sanitize — safety net strips any remaining markdown artifacts
     const sanitizedBody = sanitizeContent(body, contentType, platform);
+
+    // Optie D Layer 3 + Layer 5: validate + sign provenance (non-blocking)
+    let _genValidation = null;
+    let _genProvenance = null;
+    let _genSoftWarning = false;
+    try {
+      const _bcStruct = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _genSoftWarning = !_bcStruct.hasInternalSources;
+      _genValidation = await _validateContent(sanitizedBody || '', _bcStruct.sources || [], {
+        locale: destSourceLang, skipPerSentence: true,
+      });
+      _genProvenance = _buildProvenance({
+        content: sanitizedBody || '',
+        model: modelName,
+        operation: 'generate',
+        sourceIds: (_bcStruct.sources || []).map(s => s.id).filter(Boolean),
+        sourceMetadata: _bcStruct.sources || [],
+        validation: _genValidation,
+        locale: destSourceLang,
+        destinationId,
+      });
+      try {
+        await _mysqlForAudit.query(
+          `INSERT INTO ai_generation_log
+            (destination_id, content_type, platform, locale, operation, model,
+             internal_sources_count, has_internal_sources, soft_warning_shown,
+             validation_passed, validation_reasons, status, created_at)
+           VALUES (:destId, :ctype, :platform, :locale, 'generate', :model,
+                   :srcCount, :hasIS, :softWarn, :validPassed, :validReasons, :status, NOW())`,
+          { replacements: {
+            destId: Number(destinationId) || null,
+            ctype: contentType,
+            platform: platform || null,
+            locale: destSourceLang,
+            model: modelName,
+            srcCount: (_bcStruct.sources || []).length,
+            hasIS: _bcStruct.hasInternalSources ? 1 : 0,
+            softWarn: _genSoftWarning ? 1 : 0,
+            validPassed: _genValidation?.passed === true ? 1 : (_genValidation?.passed === false ? 0 : null),
+            validReasons: _genValidation ? JSON.stringify({
+              reasons: _genValidation.reasons,
+              ungrounded_entities: _genValidation.ungroundedEntities,
+              hallucination_rate: _genValidation.hallucinationRate,
+              entity_count: _genValidation.entityCount,
+            }) : null,
+            status: _genValidation?.passed === false ? 'validation_failed' : 'success',
+          }}
+        );
+      } catch (_logErr) { /* non-blocking */ }
+    } catch (_e) {
+      logger.warn('[generateContent] validation/provenance failed: ' + _e.message);
+    }
 
     // Format for target platform
     const formattedBody = formatForPlatform(sanitizedBody, platform);
@@ -1137,6 +1194,63 @@ export async function improveExistingContent(contentItem) {
   const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords, targetPlatform: contentItem.target_platform });
 
   if (improved) {
+    // Optie D Layer 3 + Layer 5: validate output for hallucinations + sign provenance
+    let _validation = null;
+    let _provenance = null;
+    let _softWarning = false;
+    try {
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _softWarning = !_bc.hasInternalSources;
+      _validation = await _validateContent(improved.body_en || '', _bc.sources || [], {
+        locale: contentItem.target_language || contentItem.language || 'nl',
+        skipPerSentence: true, // performance: NER + grounding only on hot path
+      });
+      _provenance = _buildProvenance({
+        content: improved.body_en || '',
+        model: embeddingService.chatModel || 'mistral-small-latest',
+        operation: 'improve',
+        sourceIds: (_bc.sources || []).map(s => s.id).filter(Boolean),
+        sourceMetadata: _bc.sources || [],
+        validation: _validation,
+        locale: contentItem.target_language || contentItem.language || 'nl',
+        destinationId,
+      });
+      // Audit log (non-blocking)
+      try {
+        await _mysqlForAudit.query(
+          `INSERT INTO ai_generation_log
+            (destination_id, content_item_id, content_type, platform, locale, operation, model,
+             internal_sources_count, has_internal_sources, soft_warning_shown,
+             validation_passed, validation_reasons, status, created_at)
+           VALUES (:destId, :itemId, :ctype, :platform, :locale, 'improve', :model,
+                   :srcCount, :hasIS, :softWarn, :validPassed, :validReasons, :status, NOW())`,
+          { replacements: {
+            destId: Number(destinationId) || null,
+            itemId: contentItem.id || null,
+            ctype: contentType,
+            platform: contentItem.target_platform || null,
+            locale: contentItem.target_language || contentItem.language || 'nl',
+            model: embeddingService.chatModel || null,
+            srcCount: (_bc.sources || []).length,
+            hasIS: _bc.hasInternalSources ? 1 : 0,
+            softWarn: _softWarning ? 1 : 0,
+            validPassed: _validation?.passed === true ? 1 : (_validation?.passed === false ? 0 : null),
+            validReasons: _validation ? JSON.stringify({
+              reasons: _validation.reasons,
+              ungrounded_entities: _validation.ungroundedEntities,
+              hallucination_rate: _validation.hallucinationRate,
+              entity_count: _validation.entityCount,
+            }) : null,
+            status: _validation?.passed === false ? 'validation_failed' : 'success',
+          }}
+        );
+      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); }
+    } catch (_e) {
+      logger.warn('[improveExistingContent] validation/provenance failed: ' + _e.message);
+    }
+
     return {
       improved: true,
       original_score: currentSeo.overallScore,
@@ -1148,6 +1262,11 @@ export async function improveExistingContent(contentItem) {
       seo_grade: improved.seo_grade,
       seo_checks: improved.seo_checks,
       improvement_details: improved.improvement_details,
+      // Optie D additions
+      validation: _validation,
+      provenance: _provenance,
+      soft_warning: _softWarning,
+      hallucination_warning: _validation && !_validation.passed,
     };
   }
 
