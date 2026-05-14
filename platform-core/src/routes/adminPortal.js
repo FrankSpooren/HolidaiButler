@@ -12994,9 +12994,22 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
     if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
     if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
 
+    // v4.93.0 Fase A1 — DTO/Resource hydration via ContentItemResource (Issue B fix)
+    // This endpoint was missing DTO integration (v4.92 patch landde alleen op LIST endpoint)
+    let _detailDtoImages = [];
+    try {
+      const _detailDto = await ContentItemResource.V1(item);
+      _detailDtoImages = _detailDto.images || [];
+      item.images = _detailDtoImages;
+      item.provenance = _detailDto.provenance;
+      item._resource_version = 'V1';
+    } catch (_dtoErr) {
+      logger.warn('[content/items/:id] ContentItemResource.V1 failed: ' + _dtoErr.message);
+    }
+
     // Resolve media_ids to image URLs — support both POI (imageurls) and Media Library (media) tables
     const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
-    item.resolved_images = [];
+    item.resolved_images = _detailDtoImages.length > 0 ? _detailDtoImages : [];
     const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
     const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
     const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
@@ -15101,7 +15114,7 @@ router.post('/content/items/:id/publish-now', adminAuth('editor'), async (req, r
   try {
     const { id } = req.params;
     const publisher = (await import('../services/agents/publisher/index.js')).default;
-    const result = await publisher.publishItem(Number(id));
+    const result = await publisher.publishItem(Number(id), { force: true }); // v4.93.0 publish-now is expliciete force-action
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('[AdminPortal] Publish-now error:', error);
@@ -15228,7 +15241,7 @@ router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['p
 
     // Direct publish — same as publish-now
     const publisher = (await import('../services/agents/publisher/index.js')).default;
-    const result = await publisher.publishItem(Number(id));
+    const result = await publisher.publishItem(Number(id), { force: true }); // v4.93.0 publish-now is expliciete force-action
     res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
   } catch (error) {
     logger.error('[AdminPortal] Republish error:', error);

@@ -14,6 +14,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import PublishIcon from '@mui/icons-material/Publish';
 import CancelIcon from '@mui/icons-material/Cancel';
+import CheckIcon from '@mui/icons-material/Check';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
@@ -26,6 +28,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
+import WorkflowStatusChip from '../components/common/WorkflowStatusChip.jsx';
 import {
   useContentCalendar, useScheduleItem, usePublishNow, useCancelSchedule,
   useRescheduleItem, useSocialAccounts,
@@ -1142,18 +1145,42 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                       <PlatformIcon sx={{ fontSize: 18 }} />
                       <Typography variant="subtitle2" sx={{ flex: 1 }}>{item.title || item.content_type}</Typography>
-                      <Chip label={item.approval_status} size="small" sx={{ bgcolor: STATUS_COLORS[item.approval_status], color: 'common.white', fontSize: 11 }} />
+                      <WorkflowStatusChip status={item.approval_status} item={item} size="small" sx={{ fontSize: 11 }} />
                     </Box>
                     <Typography variant="caption" color="text.secondary">
                       {item.approval_status === 'failed' ? `Mislukt${item.publish_error ? ': ' + item.publish_error.substring(0, 60) : ''}` :
                        item.approval_status === 'published' && item.published_at ? `Gepubliceerd: ${new Date(item.published_at).toLocaleString('nl-NL')}` :
                        item.scheduled_at ? `Gepland: ${new Date(item.scheduled_at).toLocaleString('nl-NL')}` : ''}
                     </Typography>
+                    {/* v4.93.0 MISSED indicator: scheduled_at in past + niet gepubliceerd */}
+                    {item.scheduled_at && !item.published_at && new Date(item.scheduled_at) < new Date() && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, p: 0.5, bgcolor: '#fff3e0', borderRadius: 1, border: '1px solid #ed6c02' }}>
+                        <ErrorOutlineIcon sx={{ fontSize: 16, color: '#ed6c02' }} />
+                        <Typography variant="caption" sx={{ color: '#ed6c02', fontWeight: 600 }}>
+                          GEMIST: niet gepubliceerd op gepland tijdstip — herplan of publiceer nu
+                        </Typography>
+                      </Box>
+                    )}
                     <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
                       {item.concept_id && onEditConcept && (
                         <Button size="small" variant="outlined" startIcon={<EditIcon />}
                           onClick={() => { setSelectedDay(null); onEditConcept(item.concept_id, item.target_platform); }}>
                           {t('contentStudio.calendar.edit', 'Bewerken')}
+                        </Button>
+                      )}
+                      {/* v4.93.0 Approve voor concept-stage items in Kalender */}
+                      {['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested'].includes(item.approval_status) && (
+                        <Button size="small" variant="contained" color="success" startIcon={<CheckIcon />}
+                          onClick={async () => {
+                            try {
+                              await contentService.updateItem(item.id, { approval_status: 'approved' });
+                              setAutoFillSnack('Goedgekeurd');
+                              await refetch();
+                            } catch (e) {
+                              setAutoFillSnack(`Goedkeuring mislukt: ${e.message}`);
+                            }
+                          }}>
+                          {t('contentStudio.calendar.approve', 'Goedkeuren')}
                         </Button>
                       )}
                       {item.approval_status === 'approved' && (
