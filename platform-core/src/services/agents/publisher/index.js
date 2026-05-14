@@ -29,7 +29,7 @@ class PublisherAgent extends BaseAgent {
    * @param {number} contentItemId
    * @returns {Object} Publish result with post URL
    */
-  async publishItem(contentItemId) {
+  async publishItem(contentItemId, options = {}) {
     const [items] = await mysqlSequelize.query(
       `SELECT ci.*, sa.id as social_account_id, sa.access_token_encrypted, sa.account_id as platform_account_id,
               sa.metadata as account_metadata, sa.status as account_status, sa.target_language as account_target_language
@@ -44,6 +44,40 @@ class PublisherAgent extends BaseAgent {
       throw new Error(`Content item ${contentItemId} not found`);
     }
     const contentItem = item[0] || items;
+
+    // v4.93.0 CRITICAL DEDUPE GUARD — voorkomt elke duplicate publicatie
+    // Indien item al gepubliceerd (publish_url OR published_at gezet) → block re-publish
+    if (contentItem.publish_url || contentItem.published_at) {
+      const err = new Error(`Item ${contentItemId} reeds gepubliceerd (publish_url: ${contentItem.publish_url || 'set'}, published_at: ${contentItem.published_at || 'set'}). Re-publish geblokkeerd door dedupe-guard.`);
+      err.code = 'ALREADY_PUBLISHED';
+      err.statusCode = 409;
+      logger.warn(`[Publisher] DEDUPE-GUARD blocked re-publish of item ${contentItemId}: ${err.message}`);
+      throw err;
+    }
+
+    // v4.93.0 STATUS GUARD — alleen items in publish-able state mogen
+    if (!['approved', 'scheduled', 'publishing', 'failed'].includes(contentItem.approval_status)) {
+      const err = new Error(`Item ${contentItemId} state '${contentItem.approval_status}' is not publish-able. Allowed: approved, scheduled, publishing, failed.`);
+      err.code = 'INVALID_STATE_FOR_PUBLISH';
+      err.statusCode = 409;
+      logger.warn(`[Publisher] STATUS-GUARD blocked publish of item ${contentItemId}: ${err.message}`);
+      throw err;
+    }
+
+    // v4.93.0 FUTURE-SCHEDULE GUARD — block publish wanneer scheduled_at in toekomst
+    // Voorkomt vroege publicatie via direct publishItem() calls (bv. tests, manual triggers)
+    // Override via options.force=true voor expliciete "publish-now" use cases (UI button)
+    if (contentItem.scheduled_at && !options?.force) {
+      const scheduledTime = new Date(contentItem.scheduled_at).getTime();
+      const now = Date.now();
+      if (scheduledTime > now) {
+        const err = new Error(`Item ${contentItemId} is scheduled for ${contentItem.scheduled_at} (in toekomst). Publish geweigerd. Wacht tot scheduled tijd, of gebruik publishNow met expliciete force=true override.`);
+        err.code = 'PUBLISH_TOO_EARLY';
+        err.statusCode = 409;
+        logger.warn(`[Publisher] FUTURE-SCHEDULE-GUARD blocked publish of item ${contentItemId}: scheduled_at=${contentItem.scheduled_at}, now=${new Date(now).toISOString()}`);
+        throw err;
+      }
+    }
 
     if (!contentItem.social_account_id) {
       throw new Error(`No active social account for platform '${contentItem.target_platform}' on destination ${contentItem.destination_id}`);
@@ -257,8 +291,14 @@ class PublisherAgent extends BaseAgent {
    * Finds content items with scheduled_at <= now and publishes them
    */
   async processScheduledPublications() {
+    // v4.93.0 DEDUPE in query: filter items die al published_at OR publish_url hebben
+    // Defense-in-depth: zelfs als query niet zou filteren, publishItem dedupe-guard zou blocken
     const [scheduled] = await mysqlSequelize.query(
-      `SELECT id, destination_id FROM content_items WHERE approval_status = 'scheduled' AND scheduled_at <= NOW()`,
+      `SELECT id, destination_id FROM content_items
+       WHERE approval_status = 'scheduled'
+         AND scheduled_at <= NOW()
+         AND published_at IS NULL
+         AND (publish_url IS NULL OR publish_url = '')`,
       { type: mysqlSequelize.QueryTypes.SELECT }
     );
 

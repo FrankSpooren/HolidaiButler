@@ -19,6 +19,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import AnimatedScoreChip from '../common/AnimatedScoreChip.jsx';
+import WorkflowStatusChip from '../common/WorkflowStatusChip.jsx';
+import WorkflowProgressIndicator from '../common/WorkflowProgressIndicator.jsx';
+import { getAvailableActions, getStatusLabel as _wfGetStatusLabel } from '../../lib/workflowStatus.js';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PeopleIcon from '@mui/icons-material/People';
 import BarChartIcon from '@mui/icons-material/BarChart';
@@ -27,6 +30,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckIcon from '@mui/icons-material/Check';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InsertEmoticonIcon from '@mui/icons-material/InsertEmoticon';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ShareIcon from '@mui/icons-material/Share';
@@ -406,23 +410,39 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   const handleStatusUpdate = async (status, scope = 'all') => {
     try {
       if (status === 'approved' && scope === 'all' && concept?.id) {
-        // Approve ALL platforms at once via concept-level endpoint
-        await contentService.approveConcept(concept.id);
-        // Optimistic update: mark all items approved in local state
-        setItems(prev => prev.map(it => it.approval_status !== 'published' && it.approval_status !== 'deleted'
-          ? { ...it, approval_status: 'approved' } : it));
+        // Approve ALL platforms at once via concept-level endpoint (FSM-aware)
+        const result = await contentService.approveConcept(concept.id);
+        const approvedCount = result?.data?.approved_items ?? result?.approved_items ?? 0;
+        // KRITIEKE FIX: alleen draft/pending_review items optimistic markeren
+        // (scheduled/publishing/published BEHOUDEN hun state — geen demotion)
+        const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
+        setItems(prev => prev.map(it =>
+          approvableStates.includes(it.approval_status)
+            ? { ...it, approval_status: 'approved' }
+            : it
+        ));
+        await loadConcept();
+        const itemIdReload = items[activeTab]?.id;
+        if (itemIdReload) loadApprovalLog(itemIdReload);
+        // Accurate snackbar based on server response
+        if (approvedCount === 0) {
+          setSnackMsg({ severity: 'info', text: 'Alle items al goedgekeurd of voorbij goedkeuringsfase' });
+        } else if (approvedCount === items.length) {
+          setSnackMsg({ severity: 'success', text: 'Alle kanalen goedgekeurd' });
+        } else {
+          setSnackMsg({ severity: 'success', text: `${approvedCount} van ${items.length} kanalen goedgekeurd (overige reeds verder in workflow)` });
+        }
       } else {
         // Single item update (reject, or single-platform action)
         const itemId = items[activeTab]?.id;
         if (!itemId) return;
         await contentService.updateItem(itemId, { approval_status: status });
-        // Optimistic update for single item
         setItems(prev => prev.map((it, idx) => idx === activeTab ? { ...it, approval_status: status } : it));
+        await loadConcept();
+        const itemIdReload = items[activeTab]?.id;
+        if (itemIdReload) loadApprovalLog(itemIdReload);
+        setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
       }
-      await loadConcept();
-      const itemIdReload = items[activeTab]?.id;
-      if (itemIdReload) loadApprovalLog(itemIdReload);
-      setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Alle kanalen goedgekeurd' : 'Afgewezen' });
     } catch (err) {
       setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
     }
@@ -1123,7 +1143,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 )}
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', mt: 0.5 }}>
                   <Chip label={t(`contentStudio.contentTypes.${concept.content_type}`, CONTENT_TYPE_FALLBACKS[concept.content_type] || concept.content_type)} size="small" variant="outlined" />
-                  <Chip label={aggStatus.label} size="small" color={aggStatus.color} />
+                  {/* v4.93.0 Workflow Progress (Stijl B) — vervangt aggStatus chip */}
+                  <WorkflowProgressIndicator items={items} compact />
                   <Typography variant="caption" color="text.secondary">
                     {items.length} {items.length === 1 ? 'platform' : 'platformen'}
                   </Typography>
@@ -1191,12 +1212,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <cfg.Icon sx={{ fontSize: 18, color: cfg.color }} />
                       <span>{cfg.label}</span>
-                      <Chip label={item.approval_status === 'published' ? '✓' : item.approval_status === 'scheduled' ? '⏳' : item.approval_status === 'approved' ? '✔' : item.approval_status === 'failed' ? '✗' : '—'}
-                        size="small" variant={item.approval_status === 'scheduled' ? 'outlined' : 'filled'}
-                        color={STATUS_COLORS[item.approval_status] || 'default'}
-                        sx={{ height: 18, fontSize: 10, ml: 0.5, minWidth: 24, fontWeight: 700,
-                          ...(item.approval_status === 'scheduled' ? { borderColor: '#ed6c02', color: '#ed6c02', borderWidth: 2 } : {})
-                        }} />
+                      {/* v4.93.0 WorkflowStatusChip vervangt emoji chip */}
+                      <WorkflowStatusChip status={item.approval_status} item={item} size="small" showIcon={false}
+                        sx={{ height: 18, fontSize: 10, ml: 0.5, '& .MuiChip-label': { px: 0.75 } }} />
                     </Box>
                   } sx={{ borderBottom: activeTab === idx ? `3px solid ${cfg.color}` : 'none' }} />
                 );
@@ -1684,11 +1702,29 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   {/* Stap 1: Approve / Afwijzen / Deel (alle platformen) */}
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 1 — Beoordeling</Typography>
                   <Box sx={{ display: 'flex', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="contained" color="success"
-                      onClick={() => handleStatusUpdate('approved', 'all')} startIcon={<CheckIcon />}
-                      disabled={items.every(i => i.approval_status === 'approved' || i.approval_status === 'published')}>
-                      Approve alle
-                    </Button>
+                    {(() => {
+                      // v4.93.0 FSM-driven action availability (Frank punt 1E)
+                      const wfActions = getAvailableActions(items);
+                      const allPublished = items.length > 0 && items.every(i => i.approval_status === 'published');
+                      const allApprovedOrHigher = !wfActions.canApprove;
+                      return (
+                        <Button size="small" variant="contained"
+                          color="success"
+                          onClick={() => handleStatusUpdate('approved', 'all')}
+                          startIcon={allApprovedOrHigher ? <CheckCircleIcon /> : <CheckIcon />}
+                          disabled={allApprovedOrHigher}
+                          sx={allApprovedOrHigher ? {
+                            opacity: 0.85,
+                            '&.Mui-disabled': {
+                              bgcolor: 'success.main',
+                              color: 'common.white',
+                              opacity: 0.8,
+                            },
+                          } : {}}>
+                          {allPublished ? '✓ Alles gepubliceerd' : allApprovedOrHigher ? '✓ Alle goedgekeurd' : 'Approve alle'}
+                        </Button>
+                      );
+                    })()}
                     <Button size="small" variant="outlined" color="error"
                       onClick={() => handleStatusUpdate('rejected', 'single')} startIcon={<CloseIcon />}
                       disabled={!activeItem || activeItem.approval_status === 'rejected'}>
@@ -1783,7 +1819,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         )}
                         <Chip
                           icon={isScheduled ? <ScheduleIcon sx={{ fontSize: '12px !important' }} /> : undefined}
-                          label={isPublished ? 'Live' : isScheduled ? 'Ingepland' : it.approval_status === 'approved' ? 'Goedgekeurd' : it.approval_status === 'failed' ? 'Mislukt' : it.approval_status === 'draft' ? 'Concept' : it.approval_status === 'rejected' ? 'Afgewezen' : it.approval_status}
+                          label={_wfGetStatusLabel(it.approval_status, 'nl', it)}
                           size="small" variant={isScheduled ? 'outlined' : 'filled'}
                           color={STATUS_COLORS[it.approval_status] || 'default'}
                           sx={{ height: 20, fontSize: 10, fontWeight: 600,
