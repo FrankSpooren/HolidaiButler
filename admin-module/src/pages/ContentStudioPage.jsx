@@ -51,6 +51,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import { useTranslation } from 'react-i18next';
+import WorkflowStatusChip from '../components/common/WorkflowStatusChip.jsx';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
 import useDestinationStore from '../stores/destinationStore.js';
@@ -385,15 +386,8 @@ function formatCheckName(name, t) {
 }
 
 function StatusChip({ status, size = 'small', sx: extraSx = {} }) {
-  const { t } = useTranslation();
-  const customSx = STATUS_SX[status] || {};
-  return (
-    <Chip
-      label={t(`contentStudio.status.${status}`, status)}
-      size={size}
-      sx={{ fontWeight: 600, fontSize: 11, ...customSx, ...extraSx }}
-    />
-  );
+  // v4.93.0 — delegates to single source of truth WorkflowStatusChip
+  return <WorkflowStatusChip status={status} size={size} showIcon={false} sx={{ fontSize: 11, ...extraSx }} />;
 }
 
 function DirectionChip({ direction }) {
