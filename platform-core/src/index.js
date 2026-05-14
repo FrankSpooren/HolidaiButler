@@ -55,6 +55,7 @@ import consentRoutes from './routes/consent.js';
 import imageRefreshRoutes from './routes/imageRefresh.js';
 import imageResizeRoutes from './routes/imageResize.js';
 import adminPortalRoutes from './routes/adminPortal.js';
+import brandSourcesRoutes from './routes/brandSources.js';
 import paymentRoutes from './routes/payment.js';
 import ticketingRoutes from './routes/ticketing.js';
 import reservationRoutes from './routes/reservations.js';
@@ -289,6 +290,7 @@ app.use('/api/v1/consent', consentRoutes); // User Privacy Consent Management
 app.use('/api/consent', consentRoutes); // Legacy route (no v1)
 app.use('/api/admin/images/refresh', imageRefreshRoutes); // POI Image Refresh (Admin)
 app.use('/api/v1/img', imageResizeRoutes); // Image resize proxy (Fase II-B.4)
+app.use('/api/v1/admin-portal/brand-sources', brandSourcesRoutes); // Brand Sources (scraping + KB mgmt)
 app.use('/api/v1/admin-portal', adminPortalRoutes); // Admin Portal (Fase 8C-0)
 app.use('/api/v1/payments', paymentRoutes); // Payment Engine (Fase III-A)
 app.use('/api/v1/tickets', ticketingRoutes); // Ticketing Module (Fase III-B)

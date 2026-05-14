@@ -2,25 +2,33 @@
  * Brand Context Builder — Assembles full brand profile context for AI prompts
  * Includes: company profile, tone of voice, audience persona, knowledge base chunks.
  *
- * @version 1.0.0
+ * v2.0 — Structured response support
+ *   - buildBrandContext() returns string (backward compatible)
+ *   - buildBrandContextStructured() returns { contextString, hasInternalSources,
+ *     sources, internalSourcesCount } for callers that need source metadata
+ *   - Honors brand_knowledge.is_active flag (added in migration 006)
+ *   - Excludes filtered sources from contextString (matched only via promptGuardrails REFERENCE block)
+ *
+ * @version 2.0.0
  */
 
 import { mysqlSequelize } from '../../../config/database.js';
 import { buildToneInstruction } from './toneOfVoice.js';
 import logger from '../../../utils/logger.js';
 
-/**
- * Build full brand context for content generation prompts.
- * @param {number} destinationId
- * @param {number|null} personaId - Optional audience persona to target
- * @param {string[]} contentKeywords - Keywords from the content being generated (for knowledge matching)
- * @returns {string} Context block for system prompt
- */
-export async function buildBrandContext(destinationId, personaId = null, contentKeywords = []) {
+// -------------------------------------------------------------------
+// Internal — builds full structured context
+// -------------------------------------------------------------------
+
+async function _buildContextInternal(destinationId, personaId, contentKeywords, options = {}) {
+  const { includeReferenceInString = true, maxKbChunks = 10, maxCharsPerChunk = 1500 } = options;
+
   const parts = [];
+  let sources = [];
+  let hasInternalSources = false;
 
   try {
-    // 1. Brand Profile (from destinations.brand_profile JSON)
+    // 1. Brand Profile
     const [[dest]] = await mysqlSequelize.query(
       'SELECT name, display_name, brand_profile, default_language FROM destinations WHERE id = :id',
       { replacements: { id: Number(destinationId) } }
@@ -28,7 +36,13 @@ export async function buildBrandContext(destinationId, personaId = null, content
 
     if (dest) {
       let profile = {};
-      try { profile = typeof dest.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest.brand_profile || {}); } catch (err) { console.debug('[brandContext.js] empty:', err.message); }
+      try {
+        profile = typeof dest.brand_profile === 'string'
+          ? JSON.parse(dest.brand_profile)
+          : (dest.brand_profile || {});
+      } catch (err) {
+        logger.debug('[brandContext] profile parse:', err.message);
+      }
 
       parts.push(`BRAND: ${profile.company_name || dest.display_name || dest.name}`);
       if (profile.industry) parts.push(`INDUSTRY: ${profile.industry}`);
@@ -56,7 +70,7 @@ export async function buildBrandContext(destinationId, personaId = null, content
     parts.push('');
     parts.push(toneInstruction);
 
-    // 3. Audience Persona (if selected)
+    // 3. Audience Persona
     if (personaId) {
       const [[persona]] = await mysqlSequelize.query(
         'SELECT * FROM audience_personas WHERE id = :id',
@@ -74,23 +88,37 @@ export async function buildBrandContext(destinationId, personaId = null, content
         if (persona.tone_notes) parts.push(`- Preferred tone: ${persona.tone_notes}`);
 
         let channels = [];
-        try { channels = typeof persona.preferred_channels === 'string' ? JSON.parse(persona.preferred_channels) : (persona.preferred_channels || []); } catch (err) { console.debug('[brandContext.js] empty:', err.message); }
+        try {
+          channels = typeof persona.preferred_channels === 'string'
+            ? JSON.parse(persona.preferred_channels)
+            : (persona.preferred_channels || []);
+        } catch (err) {
+          logger.debug('[brandContext] channels parse:', err.message);
+        }
         if (channels.length) parts.push(`- Preferred channels: ${channels.join(', ')}`);
       }
     }
 
-    // 4. Knowledge Base — relevant chunks
+    // 4. Knowledge Base — only ACTIVE sources
     const [knowledgeItems] = await mysqlSequelize.query(
-      'SELECT source_name, content_text FROM brand_knowledge WHERE destination_id = :destId AND content_text IS NOT NULL ORDER BY created_at DESC LIMIT 10',
-      { replacements: { destId: Number(destinationId) } }
+      `SELECT id, source_name, source_url, source_type, content_text
+       FROM brand_knowledge
+       WHERE destination_id = :destId
+         AND content_text IS NOT NULL
+         AND is_active = 1
+       ORDER BY created_at DESC
+       LIMIT :maxItems`,
+      { replacements: { destId: Number(destinationId), maxItems: maxKbChunks } }
     );
 
     if (knowledgeItems.length > 0) {
-      // If content keywords provided, prioritize matching items
+      hasInternalSources = true;
+
+      // Keyword-prioritized ordering
       let relevant = knowledgeItems;
-      if (contentKeywords.length > 0) {
-        const kwLower = contentKeywords.map(k => k.toLowerCase());
-        relevant = knowledgeItems.sort((a, b) => {
+      if (Array.isArray(contentKeywords) && contentKeywords.length > 0) {
+        const kwLower = contentKeywords.map(k => String(k).toLowerCase());
+        relevant = [...knowledgeItems].sort((a, b) => {
           const aText = (a.content_text || '').toLowerCase();
           const bText = (b.content_text || '').toLowerCase();
           const aMatches = kwLower.filter(k => aText.includes(k)).length;
@@ -99,13 +127,20 @@ export async function buildBrandContext(destinationId, personaId = null, content
         });
       }
 
-      // Take top 5 items, max 1500 chars each
-      const chunks = relevant.slice(0, 5).map(k => {
-        const text = (k.content_text || '').substring(0, 1500);
-        return `[Source: ${k.source_name}]: ${text}`;
-      });
+      const topSources = relevant.slice(0, 5);
 
-      if (chunks.length > 0) {
+      // Structured source list (for promptGuardrails REFERENCE block)
+      sources = topSources.map(k => ({
+        id: k.id,
+        source_name: k.source_name || `Source ${k.id}`,
+        source_url: k.source_url || null,
+        source_type: k.source_type || 'reference',
+        content_text: (k.content_text || '').substring(0, maxCharsPerChunk),
+      }));
+
+      // Backward-compat: include REFERENCE block in contextString
+      if (includeReferenceInString) {
+        const chunks = sources.map(s => `[Source: ${s.source_name}]: ${s.content_text}`);
         parts.push('');
         parts.push('REFERENCE MATERIAL (use these facts when relevant — do NOT invent data):');
         parts.push(chunks.join('\n\n'));
@@ -115,7 +150,62 @@ export async function buildBrandContext(destinationId, personaId = null, content
     logger.warn('[BrandContext] Error building brand context (non-blocking):', error.message);
   }
 
-  return parts.join('\n');
+  return {
+    contextString: parts.join('\n'),
+    hasInternalSources,
+    sources,
+    internalSourcesCount: sources.length,
+  };
 }
 
-export default { buildBrandContext };
+// -------------------------------------------------------------------
+// Public API
+// -------------------------------------------------------------------
+
+/**
+ * Build brand context as a single string (backward compatible).
+ * REFERENCE MATERIAL block is included inline.
+ *
+ * @param {number} destinationId
+ * @param {number|null} personaId
+ * @param {string[]} contentKeywords
+ * @returns {Promise<string>}
+ */
+export async function buildBrandContext(destinationId, personaId = null, contentKeywords = []) {
+  const result = await _buildContextInternal(destinationId, personaId, contentKeywords, {
+    includeReferenceInString: true,
+  });
+  return result.contextString;
+}
+
+/**
+ * Build brand context with structured response — for callers needing source metadata.
+ * Use this when you intend to render REFERENCE MATERIAL via promptGuardrails
+ * (which adds anti-hallucination rules around it).
+ *
+ * @param {number} destinationId
+ * @param {Object} [opts]
+ * @param {number|null} [opts.personaId]
+ * @param {string[]} [opts.contentKeywords]
+ * @param {boolean} [opts.includeReferenceInString=false] - If true, also include REFERENCE in contextString
+ * @param {number} [opts.maxKbChunks=10]
+ * @param {number} [opts.maxCharsPerChunk=1500]
+ * @returns {Promise<{contextString: string, hasInternalSources: boolean, sources: Array, internalSourcesCount: number}>}
+ */
+export async function buildBrandContextStructured(destinationId, opts = {}) {
+  const {
+    personaId = null,
+    contentKeywords = [],
+    includeReferenceInString = false,
+    maxKbChunks = 10,
+    maxCharsPerChunk = 1500,
+  } = opts;
+
+  return _buildContextInternal(destinationId, personaId, contentKeywords, {
+    includeReferenceInString,
+    maxKbChunks,
+    maxCharsPerChunk,
+  });
+}
+
+export default { buildBrandContext, buildBrandContextStructured };
