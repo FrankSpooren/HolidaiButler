@@ -23,6 +23,7 @@ import ShuffleIcon from '@mui/icons-material/Shuffle';
 import AnimatedScoreChip from '../common/AnimatedScoreChip.jsx';
 import WorkflowStatusChip from '../common/WorkflowStatusChip.jsx';
 import WorkflowProgressIndicator from '../common/WorkflowProgressIndicator.jsx';
+import SentenceCitations from './SentenceCitations.jsx';
 import { getAvailableActions, getStatusLabel as _wfGetStatusLabel } from '../../lib/workflowStatus.js';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PeopleIcon from '@mui/icons-material/People';
@@ -1378,6 +1379,13 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     onChange={val => { setEditBody(val); setDirty(true); }}
                     placeholder="Begin met schrijven..."
                     sx={{ '& .ProseMirror': { minHeight: 300 } }}
+                  />
+
+                  {/* v4.94-v4.95 Blok 6.1: sentence-level hover-citations (EU AI Act transparantie) */}
+                  <SentenceCitations
+                    provenance={activeItem?.provenance}
+                    body={editBody}
+                    destinationId={destinationId}
                   />
 
                   {/* Word counter */}

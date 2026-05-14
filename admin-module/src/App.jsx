@@ -24,6 +24,7 @@ const PagesNavigationPage = lazy(() => import('./pages/PagesNavigationPage.jsx')
 const MediaPage = lazy(() => import('./pages/MediaPage.jsx'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage.jsx'));
 const ContentStudioPage = lazy(() => import('./pages/ContentStudioPage.jsx'));
+const AIQualityPage = lazy(() => import('./pages/AIQualityPage.jsx'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'));
 
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/media" element={<MediaPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/content-studio" element={<ContentStudioPage />} />
+              <Route path="/ai-quality" element={<AIQualityPage />} />
             </Route>
           </Route>
 

@@ -339,4 +339,221 @@ router.get('/ai-quality', adminAuth('editor'), async (req, res) => {
   }
 });
 
+
+
+// -------------------------------------------------------------------
+// v4.94-v4.95 Blok 6.2: AI Quality Dashboard endpoints
+// -------------------------------------------------------------------
+
+/**
+ * GET /ai-quality/trend?days=30|90 — daily trend van pass-rate +
+ * hallucination-rate over tijd. Per dag: passed, failed, soft_warning,
+ * total. Voor grafiek-rendering in dashboard.
+ */
+router.get('/ai-quality/trend', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getDestId(req);
+    if (!isAuthorizedForDest(req, destId)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized for this destination' } });
+    }
+    const days = Math.min(Math.max(Number(req.query?.days || 30), 1), 365);
+
+    const [trend] = await mysqlSequelize.query(
+      `SELECT
+         DATE(created_at) AS date,
+         COUNT(*) AS total,
+         SUM(CASE WHEN validation_passed = 1 THEN 1 ELSE 0 END) AS passed,
+         SUM(CASE WHEN validation_passed = 0 THEN 1 ELSE 0 END) AS failed,
+         SUM(CASE WHEN soft_warning_shown = 1 THEN 1 ELSE 0 END) AS soft_warning,
+         AVG(duration_ms) AS avg_duration_ms,
+         AVG(internal_sources_count) AS avg_sources
+       FROM ai_generation_log
+       WHERE destination_id = :destId
+         AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+       GROUP BY DATE(created_at)
+       ORDER BY date ASC`,
+      { replacements: { destId, days } }
+    );
+
+    const series = trend.map(r => {
+      const total = Number(r.total || 0);
+      const passed = Number(r.passed || 0);
+      const failed = Number(r.failed || 0);
+      const validated = passed + failed;
+      return {
+        date: r.date,
+        total,
+        passed,
+        failed,
+        soft_warning: Number(r.soft_warning || 0),
+        pass_rate: validated > 0 ? Number((passed / validated).toFixed(3)) : null,
+        hallucination_rate: validated > 0 ? Number((failed / validated).toFixed(3)) : null,
+        avg_duration_ms: r.avg_duration_ms ? Math.round(Number(r.avg_duration_ms)) : null,
+        avg_sources: r.avg_sources ? Number(Number(r.avg_sources).toFixed(2)) : 0,
+      };
+    });
+
+    res.json({ success: true, data: { destination_id: destId, period_days: days, series } });
+  } catch (err) {
+    logger.error('[BrandSources] ai-quality/trend error:', err.message);
+    res.status(500).json({ success: false, error: { code: 'TREND_ERROR', message: err.message } });
+  }
+});
+
+/**
+ * GET /ai-quality/top-entities?days=30 — meest voorkomende ungrounded entities
+ * (uit validation_reasons.ungrounded_entities). Frequentie-ranked top-N.
+ */
+router.get('/ai-quality/top-entities', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getDestId(req);
+    if (!isAuthorizedForDest(req, destId)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized for this destination' } });
+    }
+    const days = Math.min(Math.max(Number(req.query?.days || 30), 1), 365);
+    const limit = Math.min(Math.max(Number(req.query?.limit || 10), 1), 100);
+
+    const [rows] = await mysqlSequelize.query(
+      `SELECT validation_reasons FROM ai_generation_log
+       WHERE destination_id = :destId
+         AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+         AND validation_passed = 0
+         AND validation_reasons IS NOT NULL`,
+      { replacements: { destId, days } }
+    );
+
+    const tally = new Map();
+    for (const r of rows) {
+      let parsed = null;
+      try { parsed = typeof r.validation_reasons === 'string' ? JSON.parse(r.validation_reasons) : r.validation_reasons; } catch {}
+      const entities = parsed?.ungrounded_entities || [];
+      if (!Array.isArray(entities)) continue;
+      for (const e of entities) {
+        const key = String(e).toLowerCase().trim();
+        if (!key || key.length < 2) continue;
+        tally.set(key, (tally.get(key) || 0) + 1);
+      }
+    }
+    const sorted = Array.from(tally.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([entity, count]) => ({ entity, count }));
+
+    res.json({ success: true, data: { destination_id: destId, period_days: days, total_failed_rows: rows.length, top_entities: sorted } });
+  } catch (err) {
+    logger.error('[BrandSources] ai-quality/top-entities error:', err.message);
+    res.status(500).json({ success: false, error: { code: 'TOP_ENTITIES_ERROR', message: err.message } });
+  }
+});
+
+/**
+ * GET /ai-quality/retry-stats?days=30 — retry-rate metrics uit validation_reasons.retries
+ */
+router.get('/ai-quality/retry-stats', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getDestId(req);
+    if (!isAuthorizedForDest(req, destId)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized for this destination' } });
+    }
+    const days = Math.min(Math.max(Number(req.query?.days || 30), 1), 365);
+
+    const [rows] = await mysqlSequelize.query(
+      `SELECT validation_reasons, validation_passed FROM ai_generation_log
+       WHERE destination_id = :destId
+         AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+         AND validation_reasons IS NOT NULL`,
+      { replacements: { destId, days } }
+    );
+
+    let total = 0, withRetry = 0, retryPassed = 0, sumRetries = 0;
+    const dist = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (const r of rows) {
+      total += 1;
+      let parsed = null;
+      try { parsed = typeof r.validation_reasons === 'string' ? JSON.parse(r.validation_reasons) : r.validation_reasons; } catch {}
+      const retries = Number(parsed?.retries || 0);
+      sumRetries += retries;
+      if (retries > 0) {
+        withRetry += 1;
+        if (r.validation_passed === 1) retryPassed += 1;
+      }
+      const bucket = Math.min(retries, 3);
+      dist[bucket] = (dist[bucket] || 0) + 1;
+    }
+
+    res.json({ success: true, data: {
+      destination_id: destId,
+      period_days: days,
+      total_logs: total,
+      with_retry: withRetry,
+      retry_rate: total > 0 ? Number((withRetry / total).toFixed(3)) : 0,
+      retry_success_rate: withRetry > 0 ? Number((retryPassed / withRetry).toFixed(3)) : null,
+      avg_retries: total > 0 ? Number((sumRetries / total).toFixed(2)) : 0,
+      retry_distribution: dist,
+    } });
+  } catch (err) {
+    logger.error('[BrandSources] ai-quality/retry-stats error:', err.message);
+    res.status(500).json({ success: false, error: { code: 'RETRY_STATS_ERROR', message: err.message } });
+  }
+});
+
+/**
+ * GET /ai-quality/export.csv?days=30 — CSV export per destination
+ * Bevat: id, content_item_id, operation, model, validation_passed, sources_count,
+ *        duration_ms, retries, hallucination_rate, ungrounded_entities, created_at
+ */
+router.get('/ai-quality/export.csv', adminAuth('editor'), async (req, res) => {
+  try {
+    const destId = getDestId(req);
+    if (!isAuthorizedForDest(req, destId)) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized for this destination' } });
+    }
+    const days = Math.min(Math.max(Number(req.query?.days || 30), 1), 365);
+
+    const [rows] = await mysqlSequelize.query(
+      `SELECT id, content_item_id, operation, model, validation_passed,
+              internal_sources_count, has_internal_sources, soft_warning_shown,
+              duration_ms, status, validation_reasons, created_at
+       FROM ai_generation_log
+       WHERE destination_id = :destId
+         AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
+       ORDER BY created_at DESC`,
+      { replacements: { destId, days } }
+    );
+
+    const escape = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).replace(/"/g, '""');
+      return /[",\n]/.test(s) ? '"' + s + '"' : s;
+    };
+    const headers = [
+      'id', 'created_at', 'content_item_id', 'operation', 'model',
+      'validation_passed', 'sources_count', 'has_internal_sources',
+      'soft_warning', 'duration_ms', 'status', 'retries',
+      'hallucination_rate', 'ungrounded_entities',
+    ];
+    const lines = [headers.join(',')];
+    for (const r of rows) {
+      let parsed = null;
+      try { parsed = typeof r.validation_reasons === 'string' ? JSON.parse(r.validation_reasons) : r.validation_reasons; } catch {}
+      const ungrounded = Array.isArray(parsed?.ungrounded_entities) ? parsed.ungrounded_entities.join('|') : '';
+      const cols = [
+        r.id, r.created_at, r.content_item_id, r.operation, r.model,
+        r.validation_passed === null ? '' : (r.validation_passed ? 1 : 0),
+        r.internal_sources_count, r.has_internal_sources, r.soft_warning_shown,
+        r.duration_ms, r.status, parsed?.retries || 0,
+        parsed?.hallucination_rate || 0, ungrounded,
+      ].map(escape);
+      lines.push(cols.join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="ai-quality-dest${destId}-${days}d-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(lines.join('\n'));
+  } catch (err) {
+    logger.error('[BrandSources] ai-quality/export.csv error:', err.message);
+    res.status(500).json({ success: false, error: { code: 'CSV_EXPORT_ERROR', message: err.message } });
+  }
+});
+
 export default router;
