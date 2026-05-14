@@ -1249,8 +1249,15 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   {improveResult && (
                     <Alert severity={improveResult.improved ? 'success' : 'info'} onClose={() => setImproveResult(null)} sx={{ py: 0.5 }}>
                       {improveResult.improved
-                        ? `Content verbeterd! Score: ${improveResult.original_score || '?'} → ${seoData?.overallScore || improveResult.final_score || '?'}/100`
-                        : `Niet verbeterd: ${improveResult.reason || 'Score was al hoog genoeg'}`}
+                        ? t('contentStudio.rewriteResult.improved', {
+                            original: improveResult.original_score ?? '?',
+                            final: seoData?.overallScore ?? improveResult.final_score ?? '?',
+                          })
+                        : (improveResult.code === 'SCORE_ALREADY_HIGH'
+                            ? t('contentStudio.rewriteResult.notImprovedScoreHigh', { threshold: improveResult.threshold ?? 75 })
+                            : improveResult.code === 'AI_UNABLE'
+                              ? t('contentStudio.rewriteResult.notImprovedAiUnable')
+                              : t('contentStudio.rewriteResult.notImprovedFallback', { reason: improveResult.reason || '' }))}
                     </Alert>
                   )}
 
@@ -1428,8 +1435,15 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   {improveResult && (
                     <Alert severity={improveResult.improved ? 'success' : 'info'} onClose={() => setImproveResult(null)} sx={{ py: 0.5 }}>
                       {improveResult.improved
-                        ? `Content verbeterd! Score: ${improveResult.original_score || '?'} → ${seoData?.overallScore || improveResult.final_score || improveResult.seo_score || '?'}/100`
-                        : `Niet verbeterd: ${improveResult.reason || 'Score was al hoog genoeg'}`}
+                        ? t('contentStudio.rewriteResult.improved', {
+                            original: improveResult.original_score ?? '?',
+                            final: seoData?.overallScore ?? improveResult.final_score ?? improveResult.seo_score ?? '?',
+                          })
+                        : (improveResult.code === 'SCORE_ALREADY_HIGH'
+                            ? t('contentStudio.rewriteResult.notImprovedScoreHigh', { threshold: improveResult.threshold ?? 75 })
+                            : improveResult.code === 'AI_UNABLE'
+                              ? t('contentStudio.rewriteResult.notImprovedAiUnable')
+                              : t('contentStudio.rewriteResult.notImprovedFallback', { reason: improveResult.reason || '' }))}
                     </Alert>
                   )}
 
