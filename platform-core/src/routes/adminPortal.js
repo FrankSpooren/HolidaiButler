@@ -170,6 +170,8 @@ import {
   adminApiRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import ContentItemResource from '../resources/ContentItemResource.js';
+import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError } from '../services/approvalStateMachine.js';
 import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
 import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
@@ -12863,6 +12865,14 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       { replacements }
     );
 
+    // v4.92.0 DTO Pattern: dual-hydrate via ContentItemResource for guaranteed image objects
+    try {
+      const dtoItems = await ContentItemResource.collection(items);
+      for (let i = 0; i < items.length && i < dtoItems.length; i++) {
+        items[i].images = dtoItems[i].images;  // canonical name
+        // resolved_images legacy alias set after legacy block below
+      }
+    } catch (_e) { logger.warn('[content/items list] ContentItemResource hydration failed: ' + _e.message); }
     // Parse JSON fields + resolve images
     const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     for (const item of items) {
@@ -12871,8 +12881,17 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       if (typeof item.media_ids === 'string') item.media_ids = JSON.parse(item.media_ids);
       if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
 
-      // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup
-      item.resolved_images = [];
+      // v4.92.0 DTO Pattern: hydrate via ContentItemResource (single source of truth)
+      let _dtoImages = [];
+      try {
+        const _dto = await ContentItemResource.V1(item);
+        _dtoImages = _dto.images || [];
+        item.images = _dtoImages;
+        item.provenance = _dto.provenance;
+      } catch (_e) { logger.warn('[content/items GET] ContentItemResource hydration failed: ' + _e.message); }
+
+      // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup (legacy fallback)
+      item.resolved_images = _dtoImages.length > 0 ? _dtoImages : [];
       const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
       const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
       const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
@@ -13300,13 +13319,21 @@ router.post('/content/concepts/:id/approve', adminAuth('editor'), writeAccess(['
       }
     }
 
-    // Approve all items at once
-    const itemIds = items.map(i => i.id);
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
-       WHERE concept_id = :conceptId AND approval_status NOT IN ('deleted', 'published')`,
-      { replacements: { conceptId, userId } }
-    );
+    // Approve all items — but only those in approve-able states (FSM whitelist)
+    // Issue D fix: exclude scheduled/publishing/published items (no regression)
+    const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
+    const itemIds = items.filter(i => approvableStates.includes(i.approval_status)).map(i => i.id);
+    const skippedCount = items.length - itemIds.length;
+    if (itemIds.length > 0) {
+      await mysqlSequelize.query(
+        `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
+         WHERE id IN (:itemIds)`,
+        { replacements: { itemIds, userId } }
+      );
+    }
+    if (skippedCount > 0) {
+      logger.info(`[ConceptApprove] Concept ${conceptId}: approved ${itemIds.length} items, skipped ${skippedCount} (already scheduled/publishing/published)`);
+    }
 
     // Sync concept status
     await syncConceptStatusByConceptId(conceptId);
@@ -13340,18 +13367,14 @@ async function syncConceptStatus(itemId) {
 
 async function syncConceptStatusByConceptId(conceptId) {
   try {
+    // v4.92.0 Issue C fix: use FSM deriveConceptStatus which considers BOTH
+    // approval_status AND scheduled_at to detect "approved but actually scheduled" inconsistencies
     const [items] = await mysqlSequelize.query(
-      "SELECT approval_status FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'",
+      "SELECT approval_status, scheduled_at FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'",
       { replacements: { conceptId: Number(conceptId) } }
     );
     if (items.length === 0) return;
-    // Derive: highest priority status among all items
-    let highest = 0;
-    for (const it of items) {
-      const idx = CONCEPT_STATUS_PRIORITY.indexOf(it.approval_status);
-      if (idx > highest) highest = idx;
-    }
-    const derivedStatus = CONCEPT_STATUS_PRIORITY[highest] || 'draft';
+    const derivedStatus = _fsmDeriveConceptStatus(items);
     await mysqlSequelize.query(
       'UPDATE content_concepts SET approval_status = :status, updated_at = NOW() WHERE id = :conceptId',
       { replacements: { status: derivedStatus, conceptId: Number(conceptId) } }
@@ -15224,9 +15247,10 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
+    // Issue C fix: set approval_status='scheduled' alongside scheduled_at to maintain state consistency
     const [, meta] = await mysqlSequelize.query(
-      `UPDATE content_items SET scheduled_at = :scheduledAt, updated_at = NOW()
-       WHERE id = :id AND approval_status NOT IN ('published','rejected','failed')`,
+      `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW()
+       WHERE id = :id AND approval_status NOT IN ('published','rejected','failed','publishing')`,
       { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
     );
     const affected = meta?.affectedRows ?? 0;
