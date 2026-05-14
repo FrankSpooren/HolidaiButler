@@ -37,7 +37,8 @@ import compression from 'compression';
 import logger from './utils/logger.js';
 import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
-import realtimeService from './services/realtimeService.js';
+import realtimeService from "./services/realtimeService.js";
+import webhookDispatcher from "./services/webhookDispatcher.js";
 import { initializeAutomation } from './automation/index.js';
 import { initializeOrchestrator, shutdownOrchestrator } from './services/orchestrator/index.js';
 import apiGateway from './gateway/index.js';
@@ -588,6 +589,11 @@ initializePlatform().then(() => {
     realtimeService.initialize(httpServer);
   } catch (rtErr) {
     logger.error('[Realtime] Initialisatie faalde (non-blocking): ' + rtErr.message);
+  }
+  try {
+    webhookDispatcher.initialize();
+  } catch (wdErr) {
+    logger.error('[Webhook] Dispatcher init faalde (non-blocking): ' + wdErr.message);
   }
   const server = httpServer.listen(PORT, () => {
     const envDisplay = (process.env.NODE_ENV || 'development').toUpperCase().padEnd(42);

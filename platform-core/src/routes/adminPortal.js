@@ -184,6 +184,9 @@ import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCol
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
 import notificationService from '../services/notificationService.js';
+import workflowConfigService from '../services/workflowConfigService.js';
+import webhookDispatcher from '../services/webhookDispatcher.js';
+import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 
 
 const router = Router();
@@ -17498,6 +17501,218 @@ router.delete('/notifications/:id', adminAuth('destination_admin'), async (req, 
   } catch (error) {
     logger.error('[AdminPortal] Dismiss notification error:', error.message);
     res.status(500).json({ success: false, error: { code: 'DISMISS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.96 Blok 3: Workflow configuration + Webhook management
+// ============================================================
+
+/**
+ * GET /workflow/transitions — get TRANSITIONS-dict voor een destination
+ * Query: ?destinationId=X (default uit req.adminUser)
+ */
+router.get('/workflow/transitions', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const transitions = await workflowConfigService.getTransitions(destId);
+    res.json({ success: true, data: { destinationId: destId, transitions, stateCount: Object.keys(transitions).length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Workflow transitions error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WORKFLOW_TRANSITIONS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /workflow/transitions — update TRANSITIONS-dict voor een destination
+ * Body: { destinationId, transitions, description? }
+ */
+router.put('/workflow/transitions', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { destinationId, transitions, description, preset } = req.body;
+    const destId = Number(destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+
+    let transitionsToSave = transitions;
+    if (preset && WORKFLOW_PRESETS[preset]) {
+      transitionsToSave = WORKFLOW_PRESETS[preset];
+    }
+    if (!transitionsToSave || typeof transitionsToSave !== 'object') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITIONS', message: 'transitions object or preset required' } });
+    }
+    const result = await workflowConfigService.setTransitions({
+      destinationId: destId,
+      transitions: transitionsToSave,
+      userId: req.adminUser?.id,
+      description: description || (preset ? `Preset: ${preset}` : null),
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Workflow transitions update error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WORKFLOW_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /workflow/presets — lijst beschikbare workflow presets
+ */
+router.get('/workflow/presets', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: {
+      presets: Object.keys(WORKFLOW_PRESETS).map(key => ({
+        key,
+        stateCount: Object.keys(WORKFLOW_PRESETS[key]).length,
+        transitions: WORKFLOW_PRESETS[key],
+      })),
+    } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'PRESETS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /workflow/machine-graph — visualization graph (nodes+edges)
+ * Voor @xstate/inspect integratie. Per destination.
+ */
+router.get('/workflow/machine-graph', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const transitions = await workflowConfigService.getTransitions(destId);
+    const graph = getMachineGraph(transitions);
+    res.json({ success: true, data: { destinationId: destId, ...graph } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'GRAPH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks — list webhook endpoints voor een destination
+ */
+router.get('/webhooks', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const [rows] = await mysqlSequelize.query(
+      `SELECT id, destination_id, name, url, events, enabled, failure_count,
+              last_failure_at, last_success_at, description, created_at, updated_at
+       FROM webhook_endpoints WHERE destination_id = :destId ORDER BY id DESC`,
+      { replacements: { destId } }
+    );
+    res.json({ success: true, data: rows.map(r => ({ ...r, events: typeof r.events === 'string' ? JSON.parse(r.events) : r.events })) });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhooks list error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOKS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /webhooks — create webhook endpoint
+ * Body: { destinationId, name, url, events: [], secret?, description? }
+ */
+router.post('/webhooks', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { destinationId, name, url, events, secret, description } = req.body;
+    const destId = Number(destinationId) || req.adminUser?.destination_id;
+    if (!destId || !name || !url || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destinationId, name, url, events[] required' } });
+    }
+    if (!/^https?:\/\//.test(url)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_URL', message: 'url must be http(s)' } });
+    }
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO webhook_endpoints (destination_id, name, url, events, secret, description, created_by_user_id)
+       VALUES (:destId, :name, :url, :events, :secret, :desc, :userId)`,
+      { replacements: {
+        destId, name, url,
+        events: JSON.stringify(events),
+        secret: secret || null,
+        desc: description || null,
+        userId: req.adminUser?.id || null,
+      } }
+    );
+    res.status(201).json({ success: true, data: { id: result?.insertId || result, destinationId: destId, name, url, events, enabled: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhook create error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /webhooks/:id — update webhook endpoint
+ */
+router.patch('/webhooks/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const fields = [];
+    const repl = { id };
+    if (req.body.name !== undefined) { fields.push('name = :name'); repl.name = req.body.name; }
+    if (req.body.url !== undefined) {
+      if (!/^https?:\/\//.test(req.body.url)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_URL', message: 'url must be http(s)' } });
+      }
+      fields.push('url = :url'); repl.url = req.body.url;
+    }
+    if (req.body.events !== undefined) { fields.push('events = :events'); repl.events = JSON.stringify(req.body.events); }
+    if (req.body.secret !== undefined) { fields.push('secret = :secret'); repl.secret = req.body.secret || null; }
+    if (req.body.enabled !== undefined) { fields.push('enabled = :enabled'); repl.enabled = req.body.enabled ? 1 : 0; }
+    if (req.body.description !== undefined) { fields.push('description = :desc'); repl.desc = req.body.description; }
+    if (fields.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No updatable fields' } });
+    fields.push('updated_at = NOW()');
+    await mysqlSequelize.query(
+      `UPDATE webhook_endpoints SET ${fields.join(', ')} WHERE id = :id`,
+      { replacements: repl }
+    );
+    res.json({ success: true, data: { id, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhook update error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /webhooks/:id — delete webhook endpoint
+ */
+router.delete('/webhooks/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await mysqlSequelize.query('DELETE FROM webhook_endpoints WHERE id = :id', { replacements: { id } });
+    res.json({ success: true, data: { id, deleted: true } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks/:id/deliveries — recent deliveries voor 1 endpoint
+ */
+router.get('/webhooks/:id/deliveries', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const limit = Math.min(Number(req.query.limit) || 50, 500);
+    const [rows] = await mysqlSequelize.query(
+      `SELECT id, event_subject, attempt, status, http_status_code, duration_ms,
+              error_message, created_at, delivered_at, next_retry_at
+       FROM webhook_deliveries WHERE webhook_endpoint_id = :id
+       ORDER BY id DESC LIMIT :limit`,
+      { replacements: { id, limit } }
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'DELIVERIES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks/stats — dispatcher stats (admin only)
+ */
+router.get('/webhooks/stats', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: webhookDispatcher.getStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'STATS_ERROR', message: error.message } });
   }
 });
 

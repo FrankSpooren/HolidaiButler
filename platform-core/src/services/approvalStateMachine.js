@@ -22,6 +22,8 @@
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
 import realtimeService from './realtimeService.js';
+import workflowConfigService from './workflowConfigService.js';
+import { canTransitionXState, DEFAULT_TRANSITIONS } from './contentWorkflowMachine.js';
 
 // ---------------------------------------------------------------------
 // 1. TRANSITION MATRIX — explicit, complete, audited
@@ -172,7 +174,21 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     // No-op; allowed
     return { itemId, fromStatus, toStatus: newStatus, affected: 0, skipped: 'same-status' };
   }
-  if (!force && !canTransition(fromStatus, newStatus)) {
+  // v4.96 Blok 3.1+3.2: per-tenant FSM check via workflow_configurations.
+  // Load destination_id om tenant-specifieke transitions op te halen.
+  let tenantTransitions = DEFAULT_TRANSITIONS;
+  try {
+    const [[itemForTenantCheck]] = await mysqlSequelize.query(
+      'SELECT destination_id FROM content_items WHERE id = :id LIMIT 1',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (itemForTenantCheck?.destination_id) {
+      tenantTransitions = await workflowConfigService.getTransitions(itemForTenantCheck.destination_id);
+    }
+  } catch (cfgErr) {
+    logger.debug(`[approvalStateMachine] tenant transitions lookup failed, using DEFAULT: ${cfgErr.message}`);
+  }
+  if (!force && !canTransitionXState(fromStatus, newStatus, tenantTransitions)) {
     throw new InvalidTransitionError(fromStatus, newStatus, itemId);
   }
 

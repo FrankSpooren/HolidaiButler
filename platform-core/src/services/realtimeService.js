@@ -19,6 +19,7 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logger.js';
 import eventBus from './eventBus.js';
+import domainEventBus from './domainEventBus.js';
 import featureFlagService from './featureFlagService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
@@ -185,7 +186,6 @@ class RealtimeService {
       logger.debug(`[Realtime] feature flag check failed (defaulting enabled): ${ffErr.message}`);
     }
     const envelope = {
-      subject: `content.${destinationId}.${action}`,
       destinationId: Number(destinationId),
       action,
       itemId,
@@ -195,7 +195,9 @@ class RealtimeService {
       actorId,
       ts: new Date().toISOString(),
     };
-    eventBus.emit('content-event', envelope);
+    // v4.96 Blok 3.3: publiceer via domainEventBus (NATS-style); bridge naar
+    // eventBus blijft automatisch behouden voor backwards compat consumers.
+    domainEventBus.publish(`content.${destinationId}.${action}`, envelope);
   }
 
   getStatus() {
