@@ -1848,7 +1848,9 @@
       "notImprovedScoreHigh": "No mejorado: Puntuación ya ≥{{threshold}}",
       "notImprovedAiUnable": "No mejorado: La IA no pudo aumentar la puntuación — se recomienda edición manual",
       "notImprovedFallback": "No mejorado: {{reason}}",
-      "noInternalSources": "No hay fuentes de marca disponibles. Para mejorar la calidad: añade documentación de Perfil de Marca y/o URL."
+      "noInternalSources": "No hay fuentes de marca disponibles. Para mejorar la calidad: añade documentación de Perfil de Marca y/o URL.",
+      "hallucinationDetected": "Posible alucinación detectada: {{rate}}% de entidades no encontradas en Perfil de Marca",
+      "provenanceLabel": "Procedencia EU AI Act: {{sig}}…"
     }
   },
   "brandProfile": {
