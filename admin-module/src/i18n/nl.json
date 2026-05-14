@@ -1881,6 +1881,13 @@
     },
     "publish": {
       "pleaseWait": "Even geduld a.u.b."
+    },
+    "rewriteResult": {
+      "improved": "Content verbeterd! Score: {{original}} → {{final}}/100",
+      "notImprovedScoreHigh": "Niet verbeterd: Score reeds ≥{{threshold}}",
+      "notImprovedAiUnable": "Niet verbeterd: AI kon score niet verhogen — handmatige bewerking aanbevolen",
+      "notImprovedFallback": "Niet verbeterd: {{reason}}",
+      "noInternalSources": "Geen merk-bronnen beschikbaar. Voor kwaliteitsverbetering: voeg Merk Profiel documentatie en/of URL toe."
     }
   },
   "brandProfile": {

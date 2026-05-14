@@ -13,7 +13,13 @@ import { sanitizeContent } from './contentSanitizer.js';
 import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import { mysqlSequelize } from '../../../config/database.js';
-import { buildBrandContext } from './brandContext.js';
+import { buildBrandContext, buildBrandContextStructured } from './brandContext.js';
+import { validateContent as _validateContent } from '../../outputValidator.js';
+import { buildProvenance as _buildProvenance } from '../../provenanceService.js';
+import { validateAndRetryWithProvenance as _validateRetry } from '../../aiQualityOrchestrator.js';
+import { buildAntiHallucinationInstructions, buildSystemPromptHeader } from '../../contentSafeguards/promptGuardrails.js';
+import featureFlagService from '../../featureFlagService.js';
+import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
 
 const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
@@ -396,6 +402,60 @@ export async function generateContent(suggestion, options = {}) {
     // Sanitize — safety net strips any remaining markdown artifacts
     const sanitizedBody = sanitizeContent(body, contentType, platform);
 
+    // Optie D Layer 3 + Layer 5: validate + sign provenance (non-blocking)
+    let _genValidation = null;
+    let _genProvenance = null;
+    let _genSoftWarning = false;
+    try {
+      const _bcStruct = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _genSoftWarning = !_bcStruct.hasInternalSources;
+      _genValidation = await _validateContent(sanitizedBody || '', _bcStruct.sources || [], {
+        locale: destSourceLang, skipPerSentence: true,
+      });
+      _genProvenance = _buildProvenance({
+        content: sanitizedBody || '',
+        model: modelName,
+        operation: 'generate',
+        sourceIds: (_bcStruct.sources || []).map(s => s.id).filter(Boolean),
+        sourceMetadata: _bcStruct.sources || [],
+        validation: _genValidation,
+        locale: destSourceLang,
+        destinationId,
+      });
+      try {
+        await _mysqlForAudit.query(
+          `INSERT INTO ai_generation_log
+            (destination_id, content_type, platform, locale, operation, model,
+             internal_sources_count, has_internal_sources, soft_warning_shown,
+             validation_passed, validation_reasons, status, created_at)
+           VALUES (:destId, :ctype, :platform, :locale, 'generate', :model,
+                   :srcCount, :hasIS, :softWarn, :validPassed, :validReasons, :status, NOW())`,
+          { replacements: {
+            destId: Number(destinationId) || null,
+            ctype: contentType,
+            platform: platform || null,
+            locale: destSourceLang,
+            model: modelName,
+            srcCount: (_bcStruct.sources || []).length,
+            hasIS: _bcStruct.hasInternalSources ? 1 : 0,
+            softWarn: _genSoftWarning ? 1 : 0,
+            validPassed: _genValidation?.passed === true ? 1 : (_genValidation?.passed === false ? 0 : null),
+            validReasons: _genValidation ? JSON.stringify({
+              reasons: _genValidation.reasons,
+              ungrounded_entities: _genValidation.ungroundedEntities,
+              hallucination_rate: _genValidation.hallucinationRate,
+              entity_count: _genValidation.entityCount,
+            }) : null,
+            status: _genValidation?.passed === false ? 'validation_failed' : 'success',
+          }}
+        );
+      } catch (_logErr) { /* non-blocking */ }
+    } catch (_e) {
+      logger.warn('[generateContent] validation/provenance failed: ' + _e.message);
+    }
+
     // Format for target platform
     const formattedBody = formatForPlatform(sanitizedBody, platform);
 
@@ -633,14 +693,22 @@ function buildSystemPrompt(contentType, platform, toneInstruction, keywords, bra
   const brandBlock = brandContext ? `\n${brandContext}\n` : '';
   const groundingBlock = groundingContext ? `\n${groundingContext}\n` : '';
 
+  // Optie D Layer 1: prepend strict anti-hallucination guardrails (multi-locale)
+  const _guardrails = buildAntiHallucinationInstructions(outputLanguage, {
+    hasReferenceMaterial: Boolean(brandContext || groundingContext),
+    strictMode: true,
+  });
+
   const base = `You are an enterprise-grade content writer for a premium content platform.
+
+${_guardrails}
 ${brandBlock}
 ${toneInstruction}
 ${groundingBlock}
 ABSOLUTE RULES:
 - Write ALL content in ${{ nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' }[outputLanguage] || 'English'}. This is the destination's primary language. Do NOT write in English unless the destination's language IS English.
 - Write original, high-quality content — NO plagiarism
-- Facts must be accurate — do NOT hallucinate. If reference material is provided, use those facts.
+- Facts must be accurate — STRICTLY follow the REFERENCE MATERIAL above. Where reference material lacks a specific fact, use generic wording, NEVER fabricate it.
 - Preserve proper nouns (names, street names, local terms)
 - EU AI Act compliance: this is AI-generated content
 - If a target audience is specified, tailor language, tone, and content to their interests and pain points
@@ -880,6 +948,29 @@ async function improveContent(content, seoResult, options = {}) {
   const MAX_ROUNDS = 2; // Two improvement rounds — balance between quality and response time
   const modelName = embeddingService.chatModel || 'mistral-small-latest';
 
+  // Optie D Bug A fix: improveContent needs brand context to detect/correct hallucinations
+  // Without this, AI improves SEO but preserves invented facts (Rad van Fortuin etc.)
+  let _improveBrandCtx = '';
+  let _improveSources = [];
+  let _improveHasIS = false;
+  let _improveLang = 'en';
+  try {
+    if (destinationId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destinationId) } }
+      );
+      if (_destRow?.default_language) _improveLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords,
+        includeReferenceInString: false,
+      });
+      _improveBrandCtx = _bc.contextString;
+      _improveSources = _bc.sources;
+      _improveHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
   // Platform character limits — enforce during improvement
   const PLATFORM_CHAR_LIMITS = {
     facebook: 500, instagram: 2200, linkedin: 3000, x: 280,
@@ -923,9 +1014,23 @@ async function improveContent(content, seoResult, options = {}) {
       ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags. Preserve existing HTML structure. Do NOT strip HTML tags.`
       : '';
 
-    const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken — preserve everything that scores 10/10.
+    // Optie D Layer 1: wrap system prompt with strict anti-hallucination + REFERENCE MATERIAL
+    const _improveHeader = buildSystemPromptHeader(
+      _improveLang,
+      _improveBrandCtx,
+      _improveSources,
+      { hasInternalSources: _improveHasIS, strictMode: true }
+    );
+
+    const systemPrompt = `You are a surgical content optimizer. You fix ONLY what's broken (SEO/format) WHILE ensuring factual accuracy against REFERENCE MATERIAL.
+
+${_improveHeader}
 
 ${toneInstruction}
+
+CRITICAL CONTENT RULES (in addition to anti-hallucination above):
+- If the original content mentions specific facts (names, activities, events, dates, prices, locations) NOT in REFERENCE MATERIAL → REWRITE those parts using only generic language or facts from REFERENCE MATERIAL.
+- Hallucinated content from the original MUST be removed or replaced with verified facts.
 
 CRITICAL FORMATTING RULES:
 - NEVER use markdown: no **, no ##, no ---, no \`, no []()
@@ -1038,14 +1143,43 @@ export async function improveExistingContent(contentItem) {
     destinationId
   );
 
-  if (currentSeo.overallScore >= SEO_MINIMUM_SCORE) {
-    return {
+  // Read SEO threshold from feature flag (overrideable per destination, fallback hardcoded)
+  let _minScore = SEO_MINIMUM_SCORE;
+  try {
+    const flagVal = await featureFlagService.getValue('ai_content.seo_min_score', {
+      scopeType: 'destination', scopeId: Number(destinationId) || 0, fallback: SEO_MINIMUM_SCORE,
+    });
+    if (typeof flagVal === 'number' && flagVal > 0) _minScore = flagVal;
+  } catch (_e) { /* fallback to hardcoded */ }
+
+  if (currentSeo.overallScore >= _minScore) {
+    // Structured response for i18n-friendly UI rendering (code + threshold)
+    const result = {
       improved: false,
-      reason: `Score already at ${currentSeo.overallScore}/100 (≥${SEO_MINIMUM_SCORE})`,
+      code: 'SCORE_ALREADY_HIGH',
+      threshold: _minScore,
+      reason: `Score already at ${currentSeo.overallScore}/100 (≥${_minScore})`,
       seo_score: currentSeo.overallScore,
       seo_grade: currentSeo.grade,
       checks: currentSeo.checks,
     };
+    // Audit log (non-blocking)
+    try {
+      await _mysqlForAudit.query(
+        `INSERT INTO ai_generation_log
+          (destination_id, content_item_id, content_type, locale, operation, model,
+           internal_sources_count, external_sources_used, has_internal_sources,
+           soft_warning_shown, validation_passed, status, created_at)
+         VALUES (:destId, :itemId, :ctype, :locale, 'improve', NULL, 0, 0, 0, 0, NULL, 'success', NOW())`,
+        { replacements: {
+          destId: Number(destinationId) || null,
+          itemId: contentItem.id || null,
+          ctype: contentType,
+          locale: primaryLang,
+        }}
+      );
+    } catch (_e) { /* audit non-blocking */ }
+    return result;
   }
 
   const content = {
@@ -1060,6 +1194,63 @@ export async function improveExistingContent(contentItem) {
   const improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords, targetPlatform: contentItem.target_platform });
 
   if (improved) {
+    // Optie D Layer 3 + Layer 5: validate output for hallucinations + sign provenance
+    let _validation = null;
+    let _provenance = null;
+    let _softWarning = false;
+    try {
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _softWarning = !_bc.hasInternalSources;
+      _validation = await _validateContent(improved.body_en || '', _bc.sources || [], {
+        locale: contentItem.target_language || contentItem.language || 'nl',
+        skipPerSentence: true, // performance: NER + grounding only on hot path
+      });
+      _provenance = _buildProvenance({
+        content: improved.body_en || '',
+        model: embeddingService.chatModel || 'mistral-small-latest',
+        operation: 'improve',
+        sourceIds: (_bc.sources || []).map(s => s.id).filter(Boolean),
+        sourceMetadata: _bc.sources || [],
+        validation: _validation,
+        locale: contentItem.target_language || contentItem.language || 'nl',
+        destinationId,
+      });
+      // Audit log (non-blocking)
+      try {
+        await _mysqlForAudit.query(
+          `INSERT INTO ai_generation_log
+            (destination_id, content_item_id, content_type, platform, locale, operation, model,
+             internal_sources_count, has_internal_sources, soft_warning_shown,
+             validation_passed, validation_reasons, status, created_at)
+           VALUES (:destId, :itemId, :ctype, :platform, :locale, 'improve', :model,
+                   :srcCount, :hasIS, :softWarn, :validPassed, :validReasons, :status, NOW())`,
+          { replacements: {
+            destId: Number(destinationId) || null,
+            itemId: contentItem.id || null,
+            ctype: contentType,
+            platform: contentItem.target_platform || null,
+            locale: contentItem.target_language || contentItem.language || 'nl',
+            model: embeddingService.chatModel || null,
+            srcCount: (_bc.sources || []).length,
+            hasIS: _bc.hasInternalSources ? 1 : 0,
+            softWarn: _softWarning ? 1 : 0,
+            validPassed: _validation?.passed === true ? 1 : (_validation?.passed === false ? 0 : null),
+            validReasons: _validation ? JSON.stringify({
+              reasons: _validation.reasons,
+              ungrounded_entities: _validation.ungroundedEntities,
+              hallucination_rate: _validation.hallucinationRate,
+              entity_count: _validation.entityCount,
+            }) : null,
+            status: _validation?.passed === false ? 'validation_failed' : 'success',
+          }}
+        );
+      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); }
+    } catch (_e) {
+      logger.warn('[improveExistingContent] validation/provenance failed: ' + _e.message);
+    }
+
     return {
       improved: true,
       original_score: currentSeo.overallScore,
@@ -1071,11 +1262,18 @@ export async function improveExistingContent(contentItem) {
       seo_grade: improved.seo_grade,
       seo_checks: improved.seo_checks,
       improvement_details: improved.improvement_details,
+      // Optie D additions
+      validation: _validation,
+      provenance: _provenance,
+      soft_warning: _softWarning,
+      hallucination_warning: _validation && !_validation.passed,
     };
   }
 
   return {
     improved: false,
+    code: 'AI_UNABLE',
+    threshold: _minScore,
     reason: 'AI could not improve the score — manual editing recommended',
     seo_score: currentSeo.overallScore,
     seo_grade: currentSeo.grade,
@@ -1124,7 +1322,34 @@ export async function generateAlternative(contentItem) {
     ? `\n- BLOG OUTPUT FORMAT: Return as HTML using <h2>, <h3>, <p>, <a href>, <strong>, <em> tags.`
     : '';
 
+  // Optie D Layer 1: fetch brand context for factual grounding
+  let _altBrandCtx = '';
+  let _altSources = [];
+  let _altHasIS = false;
+  let _altLang = 'en';
+  try {
+    if (destinationId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destinationId) } }
+      );
+      if (_destRow?.default_language) _altLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destinationId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _altBrandCtx = _bc.contextString;
+      _altSources = _bc.sources;
+      _altHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
+  const _altHeader = buildSystemPromptHeader(_altLang, _altBrandCtx, _altSources, {
+    hasInternalSources: _altHasIS, strictMode: true,
+  });
+
   const systemPrompt = `You are a creative content remixer. Your job is to write a COMPLETELY DIFFERENT version of an existing piece of content — same topic, same target keywords, but a fundamentally different angle, narrative structure, opening hook and tone within the brand voice.
+
+${_altHeader}
 
 ${toneInstruction}
 
@@ -1347,6 +1572,27 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
   ]);
   const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);
 
+  // Optie D Layer 1: brand context for repurpose (shared across all platforms in loop)
+  let _repurposeBrandCtx = '';
+  let _repurposeSources = [];
+  let _repurposeHasIS = false;
+  let _repurposeLang = 'en';
+  try {
+    if (destId) {
+      const [[_destRow]] = await _mysqlForAudit.query(
+        'SELECT default_language FROM destinations WHERE id = :id',
+        { replacements: { id: Number(destId) } }
+      );
+      if (_destRow?.default_language) _repurposeLang = _destRow.default_language;
+      const _bc = await buildBrandContextStructured(destId, {
+        contentKeywords: keywords, includeReferenceInString: false,
+      });
+      _repurposeBrandCtx = _bc.contextString;
+      _repurposeSources = _bc.sources;
+      _repurposeHasIS = _bc.hasInternalSources;
+    }
+  } catch (_e) { /* brand context optional */ }
+
   // Get the full original content text
   const originalBody = sourceItem.body_en || sourceItem.body_nl || sourceItem.body_de || sourceItem.body_es || '';
   if (!originalBody) {
@@ -1362,8 +1608,15 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
     const platformRules = PROMPT_PLATFORM_RULES[platform] || PROMPT_PLATFORM_RULES.facebook;
     const example = PLATFORM_EXAMPLES[platform] || '';
 
+    // Optie D Layer 1: prepend strict guardrails + REFERENCE MATERIAL block
+    const _rpHeader = buildSystemPromptHeader(_repurposeLang, _repurposeBrandCtx, _repurposeSources, {
+      hasInternalSources: _repurposeHasIS, strictMode: true,
+    });
+
     const systemPrompt = `You are a top-tier ${platform} content specialist for a premium tourism platform.
 You REWRITE content from scratch for ${platform} — you do NOT summarize, truncate, or slightly edit the original.
+
+${_rpHeader}
 
 ${toneInstruction}
 
@@ -1565,7 +1818,34 @@ export async function generateFromTitle(sourceItem, targetPlatforms, destination
     const example = PLATFORM_EXAMPLES[platform] || '';
 
     try {
+      // Optie D Layer 1: prepend guardrails + REFERENCE MATERIAL
+      let _gftBrandCtx = '';
+      let _gftSources = [];
+      let _gftHasIS = false;
+      let _gftLang = 'en';
+      try {
+        if (destinationId) {
+          const [[_destRow]] = await _mysqlForAudit.query(
+            'SELECT default_language FROM destinations WHERE id = :id',
+            { replacements: { id: Number(destinationId) } }
+          );
+          if (_destRow?.default_language) _gftLang = _destRow.default_language;
+          const _bc = await buildBrandContextStructured(destinationId, {
+            contentKeywords: sourceItem.keyword_cluster ? (typeof sourceItem.keyword_cluster === 'string' ? JSON.parse(sourceItem.keyword_cluster) : sourceItem.keyword_cluster) : [],
+            includeReferenceInString: false,
+          });
+          _gftBrandCtx = _bc.contextString;
+          _gftSources = _bc.sources;
+          _gftHasIS = _bc.hasInternalSources;
+        }
+      } catch (_e) { /* optional */ }
+      const _gftHeader = buildSystemPromptHeader(_gftLang, _gftBrandCtx, _gftSources, {
+        hasInternalSources: _gftHasIS, strictMode: true,
+      });
+
       const prompt = `You are a professional social media content creator.
+
+${_gftHeader}
 
 TASK: Write a ${platform} post for the topic: "${title}"
 
