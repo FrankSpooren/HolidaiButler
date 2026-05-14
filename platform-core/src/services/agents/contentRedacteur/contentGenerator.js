@@ -14,6 +14,8 @@ import { translateTexts } from '../../translationService.js';
 import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import { mysqlSequelize } from '../../../config/database.js';
 import { buildBrandContext } from './brandContext.js';
+import featureFlagService from '../../featureFlagService.js';
+import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
 
 const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
@@ -1038,14 +1040,43 @@ export async function improveExistingContent(contentItem) {
     destinationId
   );
 
-  if (currentSeo.overallScore >= SEO_MINIMUM_SCORE) {
-    return {
+  // Read SEO threshold from feature flag (overrideable per destination, fallback hardcoded)
+  let _minScore = SEO_MINIMUM_SCORE;
+  try {
+    const flagVal = await featureFlagService.getValue('ai_content.seo_min_score', {
+      scopeType: 'destination', scopeId: Number(destinationId) || 0, fallback: SEO_MINIMUM_SCORE,
+    });
+    if (typeof flagVal === 'number' && flagVal > 0) _minScore = flagVal;
+  } catch (_e) { /* fallback to hardcoded */ }
+
+  if (currentSeo.overallScore >= _minScore) {
+    // Structured response for i18n-friendly UI rendering (code + threshold)
+    const result = {
       improved: false,
-      reason: `Score already at ${currentSeo.overallScore}/100 (≥${SEO_MINIMUM_SCORE})`,
+      code: 'SCORE_ALREADY_HIGH',
+      threshold: _minScore,
+      reason: `Score already at ${currentSeo.overallScore}/100 (≥${_minScore})`,
       seo_score: currentSeo.overallScore,
       seo_grade: currentSeo.grade,
       checks: currentSeo.checks,
     };
+    // Audit log (non-blocking)
+    try {
+      await _mysqlForAudit.query(
+        `INSERT INTO ai_generation_log
+          (destination_id, content_item_id, content_type, locale, operation, model,
+           internal_sources_count, external_sources_used, has_internal_sources,
+           soft_warning_shown, validation_passed, status, created_at)
+         VALUES (:destId, :itemId, :ctype, :locale, 'improve', NULL, 0, 0, 0, 0, NULL, 'success', NOW())`,
+        { replacements: {
+          destId: Number(destinationId) || null,
+          itemId: contentItem.id || null,
+          ctype: contentType,
+          locale: primaryLang,
+        }}
+      );
+    } catch (_e) { /* audit non-blocking */ }
+    return result;
   }
 
   const content = {
@@ -1076,6 +1107,8 @@ export async function improveExistingContent(contentItem) {
 
   return {
     improved: false,
+    code: 'AI_UNABLE',
+    threshold: _minScore,
     reason: 'AI could not improve the score — manual editing recommended',
     seo_score: currentSeo.overallScore,
     seo_grade: currentSeo.grade,
