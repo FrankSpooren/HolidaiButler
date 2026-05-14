@@ -13973,18 +13973,19 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
           seo_data, seo_score, seo_meta_title, seo_meta_description, seo_slug,
           social_metadata, media_ids, keyword_cluster,
           target_platform, approval_status, ai_model, ai_generated, poi_id,
-          content_source_type, content_source_id, created_at, updated_at)
+          content_source_type, content_source_id, provenance, created_at, updated_at)
          VALUES (:destId, :conceptId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
           :seoData, :seoScore, :seoMetaTitle, :seoMetaDesc, :seoSlug,
           :socialMeta, :mediaIds, :keywords,
           :platform, 'draft', :aiModel, true, :poiId,
-          'poi', :poiId, NOW(), NOW())`,
+          'poi', :poiId, :provenance, NOW(), NOW())`,
         {
           replacements: {
             destId,
             conceptId: conceptId,
             contentType: item.content_type,
             title: item.title,
+            provenance: item.provenance ? JSON.stringify(item.provenance) : null,
             bodyEn: item.body_en || null,
             bodyNl: item.body_nl || null,
             bodyDe: item.body_de || null,
