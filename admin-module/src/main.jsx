@@ -24,16 +24,26 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
+// v4.98 Blok 5.3: stale-while-revalidate defaults voor instant UI + background fresh fetch.
+// Cache hit = instant render, daarna stille background refetch op stale data.
+// Server-side invalidation via Socket.IO (Blok 2.B) triggert directe refetch
+// indien queryKey gepartitioneerd is per destination (Blok 2.D).
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 30_000,  // 30s before refetch on remount (events refresh sooner via socket invalidate)
+      // SWR-eerste: cached data wordt direct teruggegeven, background refetch
+      // bij staleTime overschrijding. WS-events invaliden vroeg ipv polling.
+      refetchOnWindowFocus: 'always',  // background refetch op tab-refocus
+      refetchOnReconnect: 'always',
+      refetchOnMount: true,             // toon cached + background fresh
+      staleTime: 30_000,                // 30s stale window
+      gcTime: 5 * 60_000,               // 5 min cache retention voor SWR-context
+      networkMode: 'online',
     },
     mutations: {
-      // Default mutations: invalidate broad content cache on success.
       // Specifieke mutations (approve, schedule, ...) overschrijven met onMutate/onError voor optimistic patterns.
+      networkMode: 'online',
     },
   }
 });

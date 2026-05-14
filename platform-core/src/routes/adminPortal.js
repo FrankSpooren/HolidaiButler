@@ -161,7 +161,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { mysqlSequelize } from '../config/database.js';
+import { mysqlSequelize, readReplicaSequelize, getReadDb } from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import {
   verifyAdminToken,
@@ -187,6 +187,7 @@ import notificationService from '../services/notificationService.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
+import tenantCacheService from '../services/tenantCacheService.js';
 
 
 const router = Router();
@@ -13407,6 +13408,17 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
 
     const whereClause = conditions.join(' AND ');
 
+    // v4.98 Blok 5.1: cache-aside per tenant (5min TTL, auto-invalidate op content events)
+    const cacheDestId = destination_id ? Number(destination_id) : req.adminUser?.destination_id || null;
+    if (cacheDestId) {
+      const cached = await tenantCacheService.get({
+        destinationId: cacheDestId,
+        namespace: 'concepts-list',
+        identifier: { status: status || 'all', limit: Number(limit), offset: Number(offset) },
+      });
+      if (cached) return res.json(cached);
+    }
+
     const [[{ total }]] = await mysqlSequelize.query(
       `SELECT COUNT(DISTINCT c.id) as total FROM content_concepts c
        WHERE ${whereClause}
@@ -13445,7 +13457,17 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
       };
     });
 
-    res.json({ success: true, data, meta: { total, limit: Number(limit), offset: Number(offset) } });
+    const payload = { success: true, data, meta: { total, limit: Number(limit), offset: Number(offset) } };
+    if (cacheDestId) {
+      await tenantCacheService.set({
+        destinationId: cacheDestId,
+        namespace: 'concepts-list',
+        identifier: { status: status || 'all', limit: Number(limit), offset: Number(offset) },
+        value: payload,
+        ttlSeconds: 300,
+      });
+    }
+    res.json(payload);
   } catch (error) {
     logger.error('[AdminPortal] Content concepts list error:', error);
     res.status(500).json({ success: false, error: { code: 'CONCEPTS_LIST_ERROR', message: error.message } });
@@ -17713,6 +17735,80 @@ router.get('/webhooks/stats', adminAuth('platform_admin'), async (req, res) => {
     res.json({ success: true, data: webhookDispatcher.getStats() });
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'STATS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.98 Blok 5: cache metrics + read replica observability
+// ============================================================
+
+/**
+ * GET /cache/stats — tenantCacheService hit/miss + per-namespace stats
+ */
+router.get('/cache/stats', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: tenantCacheService.getStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'CACHE_STATS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /cache/invalidate — handmatige invalidate per destination en/of namespace
+ * Body: { destinationId, namespace? }
+ */
+router.post('/cache/invalidate', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.body.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const namespace = req.body.namespace || null;
+    let count;
+    if (namespace) {
+      count = await tenantCacheService.invalidateNamespace(destId, namespace);
+    } else {
+      count = await tenantCacheService.invalidateDestination(destId);
+    }
+    res.json({ success: true, data: { destinationId: destId, namespace, invalidatedKeys: count } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'CACHE_INVALIDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /database/replica-health — read replica status
+ */
+router.get('/database/replica-health', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    if (!readReplicaSequelize) {
+      return res.json({ success: true, data: { configured: false, host: null, healthy: false, note: 'REPLICA_DB_HOST niet gezet — getReadDb() returns master' } });
+    }
+    let healthy = false;
+    let lagSeconds = null;
+    try {
+      const start = Date.now();
+      await readReplicaSequelize.query('SELECT 1 AS ok');
+      const ping = Date.now() - start;
+      healthy = true;
+      // Replica lag via Seconds_Behind_Master (alleen op echte replica beschikbaar)
+      try {
+        const [statusRows] = await readReplicaSequelize.query('SHOW SLAVE STATUS');
+        if (statusRows && statusRows[0] && statusRows[0].Seconds_Behind_Master != null) {
+          lagSeconds = Number(statusRows[0].Seconds_Behind_Master);
+        }
+      } catch { /* SHOW SLAVE STATUS niet beschikbaar bij non-replica */ }
+      res.json({ success: true, data: {
+        configured: true,
+        host: process.env.REPLICA_DB_HOST,
+        healthy: true,
+        pingMs: ping,
+        lagSeconds,
+      } });
+    } catch (err) {
+      res.json({ success: true, data: { configured: true, host: process.env.REPLICA_DB_HOST, healthy: false, error: err.message } });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'REPLICA_HEALTH_ERROR', message: error.message } });
   }
 });
 

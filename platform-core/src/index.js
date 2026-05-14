@@ -40,6 +40,7 @@ import { initializeEventBus } from './services/eventBus.js';
 import realtimeService from "./services/realtimeService.js";
 import webhookDispatcher from "./services/webhookDispatcher.js";
 import contentPublishScheduler from "./services/contentPublishScheduler.js";
+import tenantCacheService from "./services/tenantCacheService.js";
 import { initializeAutomation } from './automation/index.js';
 import { initializeOrchestrator, shutdownOrchestrator } from './services/orchestrator/index.js';
 import apiGateway from './gateway/index.js';
@@ -595,6 +596,12 @@ initializePlatform().then(() => {
     webhookDispatcher.initialize();
   } catch (wdErr) {
     logger.error('[Webhook] Dispatcher init faalde (non-blocking): ' + wdErr.message);
+  }
+  // v4.98 Blok 5.1: tenantCacheService — per-tenant Redis cache met event-driven invalidation
+  try {
+    tenantCacheService.initialize();
+  } catch (tcErr) {
+    logger.error('[TenantCache] init faalde (non-blocking): ' + tcErr.message);
   }
   // v4.97 Blok 4: backfill delayed-jobs voor reeds-scheduled items (non-blocking).
   // Voorkomt orphan-detector lag van >5min bij Redis-restart of eerste deploy.
