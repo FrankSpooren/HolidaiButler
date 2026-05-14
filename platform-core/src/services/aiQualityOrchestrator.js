@@ -18,6 +18,7 @@ import { buildProvenance } from './provenanceService.js';
 import featureFlagService from './featureFlagService.js';
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
+import provenanceAuditMonitor from './provenanceAuditMonitor.js';
 
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_HALLUCINATION_THRESHOLD = 0.10;
@@ -184,9 +185,11 @@ async function writeAuditLog(entry) {
         },
       }
     );
+    provenanceAuditMonitor.recordSuccess();
   } catch (err) {
     // Audit failure must not break generation
     logger.warn(`[AIQuality] Audit log write failed: ${err.message}`);
+    provenanceAuditMonitor.recordFailure(err, 'aiQualityOrchestrator.writeAuditLog');
   }
 }
 

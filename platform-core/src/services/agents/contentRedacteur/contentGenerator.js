@@ -21,6 +21,7 @@ import { buildAntiHallucinationInstructions, buildSystemPromptHeader } from '../
 import featureFlagService from '../../featureFlagService.js';
 import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
+import provenanceAuditMonitor from '../../provenanceAuditMonitor.js';
 
 const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
 
@@ -451,7 +452,8 @@ export async function generateContent(suggestion, options = {}) {
             status: _genValidation?.passed === false ? 'validation_failed' : 'success',
           }}
         );
-      } catch (_logErr) { /* non-blocking */ }
+        provenanceAuditMonitor.recordSuccess();
+      } catch (_logErr) { provenanceAuditMonitor.recordFailure(_logErr, 'contentGenerator.generate'); }
     } catch (_e) {
       logger.warn('[generateContent] validation/provenance failed: ' + _e.message);
     }
@@ -1216,7 +1218,8 @@ export async function improveExistingContent(contentItem) {
           status: _shValidation?.passed === false ? 'validation_failed' : 'success',
         }}
       );
-    } catch (_e) { /* audit non-blocking */ }
+      provenanceAuditMonitor.recordSuccess();
+    } catch (_e) { provenanceAuditMonitor.recordFailure(_e, 'contentGenerator.improve.scoreHigh'); }
 
     return {
       improved: false,
@@ -1358,7 +1361,8 @@ export async function improveExistingContent(contentItem) {
             status: _validation?.passed === false ? 'validation_failed' : 'success',
           }}
         );
-      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); }
+        provenanceAuditMonitor.recordSuccess();
+      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); provenanceAuditMonitor.recordFailure(_logErr, 'contentGenerator.improve.standard'); }
     } catch (_e) {
       logger.warn('[improveExistingContent] validation/provenance failed: ' + _e.message);
     }
@@ -1444,7 +1448,8 @@ export async function improveExistingContent(contentItem) {
         status: 'validation_failed',
       }}
     );
-  } catch (_e) { /* audit non-blocking */ }
+    provenanceAuditMonitor.recordSuccess();
+  } catch (_e) { provenanceAuditMonitor.recordFailure(_e, 'contentGenerator.improve.aiUnable'); }
 
   return {
     improved: false,
