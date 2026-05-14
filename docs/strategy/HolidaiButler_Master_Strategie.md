@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 11 mei 2026
-**Versie**: 8.33
+**Datum**: 14 mei 2026
+**Versie**: 8.34
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -842,6 +842,38 @@ Header always set Access-Control-Allow-Origin "%{ORIGIN_OK}e" env=ORIGIN_OK
 
 ---
 
+### Deel 4.8: Content Workflow Architecture Patterns (v4.93.0)
+
+**5 UI-statussen** (single source of truth via `admin-module/src/lib/workflowStatus.js`):
+
+| UI-status | DB-enum mapping | Color | Stage |
+|-----------|----------------|-------|-------|
+| Concept | draft, pending_review, in_review, reviewed, changes_requested, generating | grey | 1 |
+| Goedgekeurd | approved | green | 2 |
+| Ingepland | scheduled, publishing | blue | 3 |
+| Gepubliceerd | published | dark green | 4 |
+| Afgewezen | rejected | red | 0 (terminal) |
+| Mislukt | failed | orange | 3 (recovery) |
+| Gearchiveerd | archived | grey | 4 (terminal) |
+
+**Rendering pipeline**: ALLE status-displays in Content Studio gebruiken `<WorkflowStatusChip>` of `<WorkflowProgressIndicator>` (Stijl B badge-rij). Geen ad-hoc emoji/enum-string renderings meer.
+
+**FSM Gateway** (`platform-core/src/services/approvalStateMachine.js`): 15-state TRANSITIONS matrix. `canTransition(from, to)`, `transitionStatus(itemId, newStatus, options)`, `bulkTransitionStatus`, `deriveConceptStatus`. Pattern: DDD Aggregate met Invariants.
+
+**Publisher Safety Guards** (defense-in-depth 3-laags):
+1. **Dedupe-guard**: blokkeer als `publish_url` OF `published_at` gezet → 409 ALREADY_PUBLISHED
+2. **Status-guard**: alleen approved/scheduled/publishing/failed → 409 INVALID_STATE
+3. **Future-schedule-guard**: scheduled_at > NOW() blokkeert tenzij `options.force=true` → 409 PUBLISH_TOO_EARLY
+
+**Validated RAG** (anti-hallucination, Optie D — v4.90-v4.93):
+- Layer 1: `promptGuardrails.js` (5 locales strikte regels)
+- Layer 3: `outputValidator.js` (Mistral-NER + entity grounding + per-zin similarity)
+- Layer 5: `provenanceService.js` (EU AI Act SHA-256 signature + tamper detection)
+
+**Multi-tenant Workflow Configuration** (Fase B prep): `workflow_configurations` tabel (migration 009). Per-tenant FSM transitions + approval_steps + publish_rules. Default workflow geseeded voor alle 5 destinations. Activatie post-5e destination (lions club 1-step, corporate 3-step legal/marketing/CEO).
+
+---
+
 ## Deel 5: Lessons Learned
 
 ### Fase 1 (28-01) - Foundation
@@ -1673,6 +1705,7 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|
+| **8.34** | **2026-05-14** | **Integrale Workflow Status + Publisher Safety Guards + Validated RAG (v4.86-v4.93.0)**. Doorlopende sessie. **v4.90.0 Optie D Validated RAG**: 5-laagse anti-hallucinatie architectuur (promptGuardrails 5 locales + brandKnowledgeSearch ChromaDB + outputValidator Mistral-NER + provenanceService SHA-256 EU AI Act + ai-quality dashboard). Foundation: featureFlagService polymorphic scope, websiteScraperService Wix SSR, mistralAgentsService EU fallback, aiQualityOrchestrator. **v4.91 UI Hardening**: ConceptDialog hallucination badge + ungrounded entities chips + auto-retry orchestrator + score-regression guard + handleImprove all paths body update. **v4.92.0 DTO/Resource + FSM + Data Reparatie**: ContentItemResource.V1 (versioned schemas Pattern Laravel API Resources/Spring DTOs), approvalStateMachine.js (15-state FSM, canTransition + transitionStatus gateway), migration 008 data reparatie Jumbo + platform-breed orphaned items. **v4.93.0 Integrale Workflow Status**: 5 UI-statussen (Concept/Goedgekeurd/Ingepland/Gepubliceerd + aux) vervangen 13 DB-enum mix. workflowStatus.js single source of truth (5 locales + colors + icons + FSM actions). WorkflowStatusChip + WorkflowProgressIndicator (Stijl B badge-rij). Platform-brede refactor: ConceptDialog header + per-platform chips + Stap 3 + Approve button (FSM-driven canApprove), ContentStudioPage local StatusChip delegated, ContentCalendarTab chip + popup Approve action + MISSED indicator. **CRITICAL Publisher Safety Guards 3-laags**: dedupe-guard (publish_url/published_at check), status-guard (alleen approved/scheduled/publishing/failed), future-schedule-guard (scheduled_at>NOW blokkeert tenzij force:true). **Migration 009 workflow_configurations** Fase B prep (per-tenant FSM transitions/approval_steps/publish_rules), default workflow seeded voor 5 destinations. **DB migrations**: 006/006a/007/008/009. **Incidenten**: 3 ongeautoriseerde FB publicaties veroorzaakt door autonome publishItem() calls — alle 3 door Frank verwijderd, future-schedule-guard live tegen herhaling. Permanent protocol: 0 backend publish zonder schriftelijke per-actie toestemming. CLAUDE.md v4.93.0. |
 | **8.21** | **2026-04-27** | **Content Studio Enterprise Fixes + BUTE Taal-Pipeline + Publiqio CORS**. Image reorder pijltjes-patroon. BUTE destination-aware generatie (body_<sourceLang>). Backfill 20 items. PATCH enforcement single-language. destination_config in API response. Publiqio Apache CORS fix + ProxyTimeout 120s. MUI Icons bundel 9.5→2.8MB. CLAUDE.md v4.67.0. |
 | **8.20** | **2026-04-27** | **Page Builder Enterprise Deploy + Content Studio Fixes + BUTE Taal-Pipeline + Admin UI Gap-Close**. 94 bestanden productie-deploy (VII-B/C/D code). Content Studio: image reorder, MUI tree-shaking 9.5→2.8MB, same-origin proxy. BUTE: destination-aware taal-pipeline. 12 nieuwe admin UI componenten (Commerce tabs, POI dashboards, ChatbotAdmin, PlatformHealth). tierPromotionAgent #26. circuitBreaker refactor. 94 BullMQ jobs. CLAUDE.md v4.66.0. |
 | **8.19** | **2026-04-25** | **Fase VII-D COMPLEET + P0/P1 Enterprise Fixes**. 7 content-blokken (Gallery/Video/SocialFeed/Downloads/Banner/CardGroup/WeatherWidget). P0: Image srcset (image.ts, 3 blocks), ARIA 22/24 blocks, touch >=44px 7 blocks, container queries 16 blocks. P1: i18n 7 strings. Enterprise audit: 92% ARIA, 100% srcset/touch/schema. CLAUDE.md v4.64.0. |
