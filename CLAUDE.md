@@ -21,6 +21,20 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 ---
 
+## ⏱️ Stream Timeout Prevention (KRITIEK voor Claude Code sessies)
+
+> **Bindende werkprotocol** voor lange sessies — voorkomt stream timeouts en sessie-corruptie.
+
+1. **Doe elke genummerde taak ÉÉN TEGELIJK.** Complete → bevestig → ga verder.
+2. **Schrijf NOOIT een bestand langer dan ~150 regels in één tool-call.** Splits langere bestanden in meerdere append/edit passes.
+3. **Start een nieuwe sessie** wanneer de conversatie lang wordt (20+ tool-calls).
+4. **Houd grep/search output kort.** Gebruik `--include` en `-l` flags. Verwerk niet meer dan 30-50 regels per call.
+5. **Als timeout vuurt: retry dezelfde stap in kortere vorm.** Herstart NIET de complete taak.
+
+**Toepassing**: deze regels gelden voor ELKE Claude Code sessie op dit project, ongeacht agent type. Bij overtreding: stop en herorganiseer in kleinere stappen.
+
+---
+
 ## 🚨 Enterprise Kwaliteitsstandaarden (KRITIEK)
 
 > **Dit zijn bindende afspraken voor alle ontwikkeling en implementatie.**
