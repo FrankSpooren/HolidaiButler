@@ -1848,7 +1848,9 @@
       "notImprovedScoreHigh": "Nicht verbessert: Punktzahl bereits ≥{{threshold}}",
       "notImprovedAiUnable": "Nicht verbessert: KI konnte die Punktzahl nicht erhöhen — manuelle Bearbeitung empfohlen",
       "notImprovedFallback": "Nicht verbessert: {{reason}}",
-      "noInternalSources": "Keine Markenquellen verfügbar. Zur Qualitätsverbesserung: Markenprofil-Dokumentation und/oder URL hinzufügen."
+      "noInternalSources": "Keine Markenquellen verfügbar. Zur Qualitätsverbesserung: Markenprofil-Dokumentation und/oder URL hinzufügen.",
+      "hallucinationDetected": "Mögliche Halluzination erkannt: {{rate}}% der Entitäten nicht im Markenprofil gefunden",
+      "provenanceLabel": "EU AI Act Provenienz: {{sig}}…"
     }
   },
   "brandProfile": {

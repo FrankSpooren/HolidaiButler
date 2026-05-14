@@ -1247,11 +1247,12 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                   </Box>
 
                   {improveResult && (
+                    <>
                     <Alert severity={improveResult.improved ? 'success' : 'info'} onClose={() => setImproveResult(null)} sx={{ py: 0.5 }}>
                       {improveResult.improved
                         ? t('contentStudio.rewriteResult.improved', {
                             original: improveResult.original_score ?? '?',
-                            final: seoData?.overallScore ?? improveResult.final_score ?? '?',
+                            final: seoData?.overallScore ?? improveResult.final_score ?? improveResult.seo_score ?? '?',
                           })
                         : (improveResult.code === 'SCORE_ALREADY_HIGH'
                             ? t('contentStudio.rewriteResult.notImprovedScoreHigh', { threshold: improveResult.threshold ?? 75 })
@@ -1259,6 +1260,45 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                               ? t('contentStudio.rewriteResult.notImprovedAiUnable')
                               : t('contentStudio.rewriteResult.notImprovedFallback', { reason: improveResult.reason || '' }))}
                     </Alert>
+                    {improveResult.hallucination_warning && (
+                      <Alert severity="warning" sx={{ py: 0.5, mt: 0.5 }} icon={false}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Box sx={{ fontWeight: 600 }}>
+                            {t('contentStudio.rewriteResult.hallucinationDetected', {
+                              rate: improveResult.validation?.hallucinationRate
+                                ? Math.round(improveResult.validation.hallucinationRate * 100)
+                                : 0,
+                            })}
+                          </Box>
+                          {Array.isArray(improveResult.validation?.ungroundedEntities) && improveResult.validation.ungroundedEntities.length > 0 && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                              {improveResult.validation.ungroundedEntities.slice(0, 8).map((e, i) => (
+                                <Chip
+                                  key={i}
+                                  label={e.entity}
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                  title={`${e.category}: niet gevonden in Merk Profiel KB`}
+                                />
+                              ))}
+                            </Box>
+                          )}
+                          {improveResult.provenance?.signature && (
+                            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}
+                                 title={`Provenance signature (EU AI Act): ${improveResult.provenance.signature}`}>
+                              {t('contentStudio.rewriteResult.provenanceLabel', { sig: improveResult.provenance.signature.substring(0, 12) })}
+                            </Box>
+                          )}
+                        </Box>
+                      </Alert>
+                    )}
+                    {improveResult.soft_warning && !improveResult.hallucination_warning && (
+                      <Alert severity="info" sx={{ py: 0.5, mt: 0.5 }}>
+                        {t('contentStudio.rewriteResult.noInternalSources')}
+                      </Alert>
+                    )}
+                    </>
                   )}
 
                   {/* TipTap Rich Text Editor */}
@@ -1433,6 +1473,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
                   {/* AI Improve Result */}
                   {improveResult && (
+                    <>
                     <Alert severity={improveResult.improved ? 'success' : 'info'} onClose={() => setImproveResult(null)} sx={{ py: 0.5 }}>
                       {improveResult.improved
                         ? t('contentStudio.rewriteResult.improved', {
@@ -1445,6 +1486,45 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                               ? t('contentStudio.rewriteResult.notImprovedAiUnable')
                               : t('contentStudio.rewriteResult.notImprovedFallback', { reason: improveResult.reason || '' }))}
                     </Alert>
+                    {improveResult.hallucination_warning && (
+                      <Alert severity="warning" sx={{ py: 0.5, mt: 0.5 }} icon={false}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Box sx={{ fontWeight: 600 }}>
+                            {t('contentStudio.rewriteResult.hallucinationDetected', {
+                              rate: improveResult.validation?.hallucinationRate
+                                ? Math.round(improveResult.validation.hallucinationRate * 100)
+                                : 0,
+                            })}
+                          </Box>
+                          {Array.isArray(improveResult.validation?.ungroundedEntities) && improveResult.validation.ungroundedEntities.length > 0 && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                              {improveResult.validation.ungroundedEntities.slice(0, 8).map((e, i) => (
+                                <Chip
+                                  key={i}
+                                  label={e.entity}
+                                  size="small"
+                                  color="warning"
+                                  variant="outlined"
+                                  title={`${e.category}: niet gevonden in Merk Profiel KB`}
+                                />
+                              ))}
+                            </Box>
+                          )}
+                          {improveResult.provenance?.signature && (
+                            <Box sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}
+                                 title={`Provenance signature (EU AI Act): ${improveResult.provenance.signature}`}>
+                              {t('contentStudio.rewriteResult.provenanceLabel', { sig: improveResult.provenance.signature.substring(0, 12) })}
+                            </Box>
+                          )}
+                        </Box>
+                      </Alert>
+                    )}
+                    {improveResult.soft_warning && !improveResult.hallucination_warning && (
+                      <Alert severity="info" sx={{ py: 0.5, mt: 0.5 }}>
+                        {t('contentStudio.rewriteResult.noInternalSources')}
+                      </Alert>
+                    )}
+                    </>
                   )}
 
                   {/* ── Body Editor / Viewer ── */}
