@@ -1231,6 +1231,9 @@ export async function improveExistingContent(contentItem) {
       provenance: _shProvenance,
       soft_warning: _shSoftWarning,
       hallucination_warning: _shValidation && !_shValidation.passed,
+      // v4.91.1 Punt 2: language-neutral body field
+      body: primaryBody || '',
+      target_language: primaryLang,
     };
   }
 
@@ -1245,7 +1248,8 @@ export async function improveExistingContent(contentItem) {
 
   let improved = await improveContent(content, currentSeo, { destinationId, contentType, keywords, targetPlatform: contentItem.target_platform });
 
-  // v4.91.0 auto-retry: if improvement succeeded but validation fails, retry with reinforcement
+  // v4.91.0+v4.91.1 auto-retry with SCORE GUARD: retry only replaces improved if BOTH
+  // score >= AND hallucination rate < previous. Prevents SEO regression (Fix A).
   if (improved) {
     try {
       const _bcRetry = await buildBrandContextStructured(destinationId, {
@@ -1262,26 +1266,42 @@ export async function improveExistingContent(contentItem) {
         const reinforcement = primaryLang === 'nl'
           ? `STRICT RETRY ${_retriesRun}: De vorige output bevatte feiten NIET in REFERENCE MATERIAL: ${ungroundedList}. Schrijf opnieuw en gebruik UITSLUITEND feiten uit REFERENCE MATERIAL. Vervang verzonnen termen door algemene bewoordingen of laat ze weg.`
           : `STRICT RETRY ${_retriesRun}: Previous output contained facts NOT in REFERENCE MATERIAL: ${ungroundedList}. Rewrite using ONLY facts from REFERENCE MATERIAL. Replace fabricated terms with generic wording.`;
-        logger.info(`[improveExistingContent] Auto-retry ${_retriesRun}/${MAX_HALLUCINATION_RETRIES} (rate ${_retryValidation.hallucinationRate.toFixed(2)})`);
+        logger.info(`[improveExistingContent] Auto-retry ${_retriesRun}/${MAX_HALLUCINATION_RETRIES} (rate ${_retryValidation.hallucinationRate.toFixed(2)}, current best score ${improved.seo_score})`);
         const retried = await improveContent(content, currentSeo, {
           destinationId, contentType, keywords, targetPlatform: contentItem.target_platform,
           additionalInstructions: reinforcement,
         });
-        if (retried && retried.body_en) {
+        if (!retried || !retried.body_en) {
+          logger.info(`[improveExistingContent] Retry ${_retriesRun} returned null (no improvement vs original)`);
+          break;
+        }
+        // Validate retry candidate FIRST before deciding to keep
+        const _retriedValidation = await _validateContent(retried.body_en, _bcRetry.sources || [], {
+          locale: primaryLang, skipPerSentence: true,
+        });
+        // FIX A: only replace if BOTH SEO score AND hallucination rate improved
+        const scoreOk = (retried.seo_score || 0) >= (improved.seo_score || 0);
+        const halRateOk = (_retriedValidation.hallucinationRate || 0) < (_retryValidation.hallucinationRate || 1);
+        if (scoreOk && halRateOk) {
+          logger.info(`[improveExistingContent] Retry accepted: score ${improved.seo_score}->${retried.seo_score}, halRate ${_retryValidation.hallucinationRate.toFixed(2)}->${_retriedValidation.hallucinationRate.toFixed(2)}`);
           improved = retried;
-          _retryValidation = await _validateContent(improved.body_en, _bcRetry.sources || [], {
-            locale: primaryLang, skipPerSentence: true,
-          });
+          _retryValidation = _retriedValidation;
         } else {
+          logger.info(`[improveExistingContent] Retry rejected: scoreOk=${scoreOk} (${improved.seo_score} vs ${retried.seo_score}), halRateOk=${halRateOk} (${_retryValidation.hallucinationRate.toFixed(2)} vs ${_retriedValidation.hallucinationRate.toFixed(2)}). Keeping previous.`);
           break;
         }
       }
       if (_retriesRun > 0) {
-        logger.info(`[improveExistingContent] Auto-retry complete: passed=${_retryValidation.passed}, rate=${_retryValidation.hallucinationRate?.toFixed(2)}, retries=${_retriesRun}`);
+        logger.info(`[improveExistingContent] Auto-retry complete: passed=${_retryValidation.passed}, rate=${_retryValidation.hallucinationRate?.toFixed(2)}, retries=${_retriesRun}, finalScore=${improved.seo_score}`);
       }
-      // attach retry result so success-branch audit uses it
       improved._retryValidation = _retryValidation;
       improved._retriesRun = _retriesRun;
+
+      // FIX B: regression check — if final improved score < original, demote to AI_UNABLE pad
+      if (improved.seo_score < currentSeo.overallScore) {
+        logger.warn(`[improveExistingContent] Regression detected: improved.seo_score (${improved.seo_score}) < original (${currentSeo.overallScore}). Demoting to AI_UNABLE.`);
+        improved = null;
+      }
     } catch (_e) {
       logger.warn('[improveExistingContent] auto-retry failed: ' + _e.message);
     }
@@ -1359,6 +1379,9 @@ export async function improveExistingContent(contentItem) {
       provenance: _provenance,
       soft_warning: _softWarning,
       hallucination_warning: _validation && !_validation.passed,
+      // v4.91.1 Punt 2: language-neutral body field
+      body: improved.body_en,
+      target_language: primaryLang,
     };
   }
 
@@ -1438,6 +1461,9 @@ export async function improveExistingContent(contentItem) {
     provenance: _aiUnProvenance,
     soft_warning: _aiUnSoftWarning,
     hallucination_warning: _aiUnValidation && !_aiUnValidation.passed,
+    // v4.91.1 Punt 2: language-neutral body field
+    body: _sanitizedOriginal,
+    target_language: primaryLang,
   };
 }
 

@@ -633,11 +633,20 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       const r = await contentService.improveItem(activeItem.id);
       const data = r.data || r;
       setImproveResult(data);
+
+      // v4.91.1 Fix C + Punt 2: ALWAYS update editBody when response provides a body
+      // (op alle paden: SUCCESS, SCORE_ALREADY_HIGH, AI_UNABLE) — bullets/em-dash worden
+      // gestript ook al kon AI niet verbeteren. Prefer language-neutral `body` field.
+      const respBody = data.body || data.body_en || data.body_nl;
+      if (respBody && typeof respBody === 'string' && respBody.length > 0) {
+        setEditBody(cleanBodyForDisplay(respBody));
+        setDirty(true); // markeer als gewijzigd zodat Save knop actief wordt
+      }
+
       if (data.improved) {
         const refreshed = await contentService.getItem(activeItem.id);
         const itemData = refreshed.data || refreshed;
         setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, ...itemData } : i));
-        setEditBody(cleanBodyForDisplay(itemData[`body_${langTab}`] || itemData.body_en || ''));
         // Reload SEO score to stay consistent
         await loadSeoScore(activeItem.id, activeItem.target_platform);
         if (onUpdate) onUpdate();
@@ -1252,7 +1261,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       {improveResult.improved
                         ? t('contentStudio.rewriteResult.improved', {
                             original: improveResult.original_score ?? '?',
-                            final: seoData?.overallScore ?? improveResult.final_score ?? improveResult.seo_score ?? '?',
+                            final: improveResult.final_score ?? improveResult.seo_score ?? seoData?.overallScore ?? '?',
                           })
                         : (improveResult.code === 'SCORE_ALREADY_HIGH'
                             ? t('contentStudio.rewriteResult.notImprovedScoreHigh', { threshold: improveResult.threshold ?? 75 })
@@ -1478,7 +1487,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       {improveResult.improved
                         ? t('contentStudio.rewriteResult.improved', {
                             original: improveResult.original_score ?? '?',
-                            final: seoData?.overallScore ?? improveResult.final_score ?? improveResult.seo_score ?? '?',
+                            final: improveResult.final_score ?? improveResult.seo_score ?? seoData?.overallScore ?? '?',
                           })
                         : (improveResult.code === 'SCORE_ALREADY_HIGH'
                             ? t('contentStudio.rewriteResult.notImprovedScoreHigh', { threshold: improveResult.threshold ?? 75 })
