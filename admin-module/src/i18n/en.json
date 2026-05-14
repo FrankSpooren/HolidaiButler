@@ -1872,7 +1872,9 @@
       "notImprovedScoreHigh": "Not improved: Score already ≥{{threshold}}",
       "notImprovedAiUnable": "Not improved: AI could not raise the score — manual editing recommended",
       "notImprovedFallback": "Not improved: {{reason}}",
-      "noInternalSources": "No brand sources available. To improve quality: add Brand Profile documentation and/or URL."
+      "noInternalSources": "No brand sources available. To improve quality: add Brand Profile documentation and/or URL.",
+      "hallucinationDetected": "Possible hallucination detected: {{rate}}% of entities not found in Brand Profile",
+      "provenanceLabel": "EU AI Act provenance: {{sig}}…"
     }
   },
   "brandProfile": {
