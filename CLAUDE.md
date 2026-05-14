@@ -668,6 +668,8 @@ analytics.ts, Header, Footer, POICard, POIDetailModal, HoliBotContext
 
 ## 🚀 Strategische Roadmap
 
+> **Actieve referentie**: `docs/strategy/Fase_B_Multi_Tenant_Scale_Command.md` (v1.0, 14-05-2026) — bevat 7 work-blokken voor Fase A residual gaps + Fase B Multi-Tenant Scale + v4.94+ UX/Compliance. Verwijs naar dit document in elke nieuwe sessie. Approval gates per blok verplicht.
+
 > **Geïntegreerd vanuit**: Strategic Roadmap Advisory v2.0 (28-02-2026). Dat document is hiermee overbodig.
 
 ### Fasering
