@@ -5,6 +5,8 @@
  * Opdracht 1+2+3: Volledig rechter paneel met werkende acties, scores, preview
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import useRealtimeContent from '../../hooks/useRealtimeContent.js';
 import {
   Dialog, DialogTitle, DialogActions, DialogContent,
   Box, Typography, Button, IconButton, Tabs, Tab, Chip, TextField,
@@ -407,31 +409,73 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } catch { setApprovalLog([]); }
   }, []);
 
-  const handleStatusUpdate = async (status, scope = 'all') => {
+  // v4.95 Blok 2.B/C/D: TanStack Query mutations + Socket.IO realtime refresh
+  const queryClient = useQueryClient();
+
+  // Subscribe op content events voor deze destination (Socket.IO).
+  // Bij elk event ontvangen we conceptId/itemId; als 't huidige concept matcht,
+  // refetchen we via loadConcept().
+  useRealtimeContent(destinationId, {
+    enabled: open && Boolean(destinationId),
+    onEvent: (eventName, payload) => {
+      if (!conceptId || !payload) return;
+      if (payload.conceptId && Number(payload.conceptId) === Number(conceptId)) {
+        // Refetch huidige concept zonder optimistic-flicker
+        loadConcept();
+      }
+    },
+  });
+
+  // Approve-alle mutation met optimistic update + rollback (Frank acceptance: geen state-flicker).
+  const approveConceptMutation = useMutation({
+    mutationFn: async (cid) => {
+      const result = await contentService.approveConcept(cid);
+      return result;
+    },
+    onMutate: async (cid) => {
+      // Snapshot huidige items voor rollback
+      const snapshot = items.map(it => ({ ...it }));
+      // Alleen draft/pending_review/etc optimistic naar 'approved' (geen demotion van scheduled/published)
+      const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
+      setItems(prev => prev.map(it =>
+        approvableStates.includes(it.approval_status)
+          ? { ...it, approval_status: 'approved' }
+          : it
+      ));
+      return { snapshot };
+    },
+    onError: (err, _cid, ctx) => {
+      // Rollback naar snapshot
+      if (ctx?.snapshot) setItems(ctx.snapshot);
+      setSnackMsg({ severity: 'error', text: err?.message || 'Approve mislukt — wijziging teruggedraaid' });
+    },
+    onSuccess: (result) => {
+      const approvedCount = result?.data?.approved_items ?? result?.approved_items ?? 0;
+      if (approvedCount === 0) {
+        setSnackMsg({ severity: 'info', text: 'Alle items al goedgekeurd of voorbij goedkeuringsfase' });
+      } else if (approvedCount === items.length) {
+        setSnackMsg({ severity: 'success', text: 'Alle kanalen goedgekeurd' });
+      } else {
+        setSnackMsg({ severity: 'success', text: `${approvedCount} van ${items.length} kanalen goedgekeurd (overige reeds verder in workflow)` });
+      }
+    },
+    onSettled: async () => {
+      // Refetch authoritative state + invalidate cache per destination (Blok 2.D queryKey partitioning)
+      await loadConcept();
+      if (destinationId) {
+        queryClient.invalidateQueries({ queryKey: ['concept', destinationId, conceptId] });
+        queryClient.invalidateQueries({ queryKey: ['concepts', destinationId] });
+      }
+      const itemIdReload = items[activeTab]?.id;
+      if (itemIdReload) loadApprovalLog(itemIdReload);
+    },
+  });
+
+    const handleStatusUpdate = async (status, scope = 'all') => {
     try {
       if (status === 'approved' && scope === 'all' && concept?.id) {
-        // Approve ALL platforms at once via concept-level endpoint (FSM-aware)
-        const result = await contentService.approveConcept(concept.id);
-        const approvedCount = result?.data?.approved_items ?? result?.approved_items ?? 0;
-        // KRITIEKE FIX: alleen draft/pending_review items optimistic markeren
-        // (scheduled/publishing/published BEHOUDEN hun state — geen demotion)
-        const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
-        setItems(prev => prev.map(it =>
-          approvableStates.includes(it.approval_status)
-            ? { ...it, approval_status: 'approved' }
-            : it
-        ));
-        await loadConcept();
-        const itemIdReload = items[activeTab]?.id;
-        if (itemIdReload) loadApprovalLog(itemIdReload);
-        // Accurate snackbar based on server response
-        if (approvedCount === 0) {
-          setSnackMsg({ severity: 'info', text: 'Alle items al goedgekeurd of voorbij goedkeuringsfase' });
-        } else if (approvedCount === items.length) {
-          setSnackMsg({ severity: 'success', text: 'Alle kanalen goedgekeurd' });
-        } else {
-          setSnackMsg({ severity: 'success', text: `${approvedCount} van ${items.length} kanalen goedgekeurd (overige reeds verder in workflow)` });
-        }
+        // v4.95 Blok 2.C: delegate naar useMutation (optimistic + rollback + DevTools instrumentation)
+        approveConceptMutation.mutate(concept.id);
       } else {
         // Single item update (reject, or single-platform action)
         const itemId = items[activeTab]?.id;

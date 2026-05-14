@@ -20,6 +20,7 @@
     "@mui/material": "^5.14.13",
     "@sentry/react": "^8.48.0",
     "@tanstack/react-query": "^4.36.1",
+    "@tanstack/react-query-devtools": "^4.44.0",
     "@tiptap/extension-image": "^3.20.1",
     "@tiptap/extension-link": "^3.20.1",
     "@tiptap/extension-placeholder": "^3.20.1",
@@ -35,6 +36,7 @@
     "react-i18next": "^13.3.1",
     "react-router-dom": "^6.16.0",
     "recharts": "^2.9.0",
+    "socket.io-client": "^4.8.3",
     "zustand": "^4.4.4"
   },
   "devDependencies": {

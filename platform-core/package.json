@@ -76,6 +76,7 @@
     "sanitize-html": "^2.11.0",
     "sequelize": "^6.35.0",
     "sharp": "^0.33.5",
+    "socket.io": "^4.8.3",
     "turndown": "^7.2.4",
     "uuid": "^9.0.1",
     "validator": "^13.11.0",

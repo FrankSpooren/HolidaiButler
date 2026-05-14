@@ -21,6 +21,7 @@
 
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
+import realtimeService from './realtimeService.js';
 
 // ---------------------------------------------------------------------
 // 1. TRANSITION MATRIX — explicit, complete, audited
@@ -220,7 +221,40 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     logger.warn(`[approvalStateMachine] audit log failed for item ${itemId}: ${auditErr.message}`);
   }
 
+  // v4.95 Blok 2.B: realtime broadcast via Socket.IO (NATS-style subject naming)
+  try {
+    const [[itemMeta]] = await mysqlSequelize.query(
+      'SELECT destination_id, concept_id FROM content_items WHERE id = :id',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (itemMeta?.destination_id) {
+      const action = _statusToAction(newStatus, fromStatus);
+      realtimeService.publishContentEvent({
+        destinationId: itemMeta.destination_id,
+        action,
+        itemId: Number(itemId),
+        conceptId: itemMeta.concept_id || null,
+        fromStatus,
+        toStatus: newStatus,
+        actorId: userId,
+      });
+    }
+  } catch (rtErr) {
+    logger.debug(`[approvalStateMachine] realtime emit non-blocking error: ${rtErr.message}`);
+  }
+
   return { itemId, fromStatus, toStatus: newStatus, affected: 1 };
+}
+
+/**
+ * Map FSM target-status naar Socket.IO action-name (NATS subject suffix).
+ * scheduled→scheduled (force) wordt 'updated' om reschedule te onderscheiden.
+ * approved na scheduled wordt 'unscheduled'.
+ */
+function _statusToAction(newStatus, fromStatus) {
+  if (newStatus === 'approved' && fromStatus === 'scheduled') return 'unscheduled';
+  if (newStatus === 'scheduled' && fromStatus === 'scheduled') return 'updated';
+  return newStatus;
 }
 
 /**
