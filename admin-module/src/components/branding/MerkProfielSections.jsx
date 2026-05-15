@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box, Typography, TextField, Button, Chip, Grid, Alert, Snackbar,
   Accordion, AccordionSummary, AccordionDetails, IconButton, Tooltip,
@@ -35,7 +35,7 @@ const INDUSTRY_OPTIONS = [
  * MerkProfielSections — 7 brand profile accordion sections
  * Used inside BrandingPage, scoped to the active destination.
  */
-export default function MerkProfielSections({ destinationId, destinationName }) {
+export default function MerkProfielSections({ destinationId, destinationName, highlightKnowledgeId = null, onHighlightConsumed = null }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
@@ -51,6 +51,8 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
     queryFn: () => brandProfileService.getPersonas(destinationId),
     enabled: !!destinationId,
   });
+  const knowledgeListRef = useRef(null);
+  const [highlightedKbId, setHighlightedKbId] = useState(null);
   const { data: knowledgeData, refetch: refetchKnowledge } = useQuery({
     queryKey: ['brand-knowledge', destinationId],
     queryFn: () => brandProfileService.getKnowledge(destinationId),
@@ -65,6 +67,27 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
   const profile = profileData?.data || {};
   const personas = personasData?.data || [];
   const knowledge = knowledgeData?.data || {};
+
+  // v4.95 deep-link consumer: scroll + highlight knowledge item bij ?kb=<id>
+  useEffect(() => {
+    if (!highlightKnowledgeId || !knowledge.items?.length) return;
+    const exists = knowledge.items.find(i => i.id === Number(highlightKnowledgeId));
+    if (!exists) return;
+    setHighlightedKbId(Number(highlightKnowledgeId));
+    // Wacht 200ms voor accordion-open + DOM-render, scroll vervolgens
+    const t = setTimeout(() => {
+      const el = document.getElementById(`kb-source-${highlightKnowledgeId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 250);
+    // Highlight pulse 3s, dan reset
+    const t2 = setTimeout(() => {
+      setHighlightedKbId(null);
+      if (onHighlightConsumed) onHighlightConsumed();
+    }, 3000);
+    return () => { clearTimeout(t); clearTimeout(t2); };
+  }, [highlightKnowledgeId, knowledge.items?.length, onHighlightConsumed]);
   const competitors = competitorsData?.data || [];
 
   // === BRAND PROFILE FORM ===
@@ -406,7 +429,7 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
       </Accordion>
 
       {/* 5. Knowledge Base */}
-      <Accordion>
+      <Accordion defaultExpanded={!!highlightKnowledgeId}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           {sectionIcon(MenuBookIcon, t('brandProfile.sections.knowledge', 'Knowledge Base'))}
           <Chip label={`${knowledge.totalSources || 0} bronnen`} size="small" sx={{ ml: 1 }} />
@@ -431,7 +454,18 @@ export default function MerkProfielSections({ destinationId, destinationName }) 
           {/* Knowledge items list */}
           <List dense>
             {(knowledge.items || []).map(item => (
-              <ListItem key={item.id} sx={{ bgcolor: 'action.hover', borderRadius: 1, mb: 0.5 }}>
+              <ListItem
+                key={item.id}
+                id={`kb-source-${item.id}`}
+                sx={{
+                  bgcolor: highlightedKbId === item.id ? 'success.light' : 'action.hover',
+                  borderRadius: 1, mb: 0.5,
+                  transition: 'background-color 0.6s ease',
+                  outline: highlightedKbId === item.id ? '2px solid' : 'none',
+                  outlineColor: 'success.main',
+                  outlineOffset: 2,
+                }}
+              >
                 <ListItemText
                   primary={item.source_name}
                   secondary={`${item.source_type} · ${item.word_count} woorden`}

@@ -12702,16 +12702,17 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       `INSERT INTO content_items
        (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
         seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id,
-        media_ids, social_metadata, created_at, updated_at)
+        media_ids, social_metadata, provenance, created_at, updated_at)
        VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
         :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId,
-        :mediaIds, :socialMeta, NOW(), NOW())`,
+        :mediaIds, :socialMeta, :provenance, NOW(), NOW())`,
       {
         replacements: {
           destId: suggestion.destination_id,
           sugId: suggestion.id,
           contentType: generated.content_type,
           title: generated.title,
+          provenance: generated.provenance ? JSON.stringify(generated.provenance) : null,
           bodyEn: generated.body_en || null,
           bodyNl: generated.body_nl || null,
           bodyDe: generated.body_de || null,
@@ -12876,11 +12877,9 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       const dtoItems = await ContentItemResource.collection(items);
       for (let i = 0; i < items.length && i < dtoItems.length; i++) {
         items[i].images = dtoItems[i].images;  // canonical name
-        // resolved_images legacy alias set after legacy block below
+        item.resolved_images = dtoItems[i].images;  // backward compat alias
       }
     } catch (_e) { logger.warn('[content/items list] ContentItemResource hydration failed: ' + _e.message); }
-    // Parse JSON fields + resolve images
-    const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     for (const item of items) {
       if (typeof item.seo_data === 'string') item.seo_data = JSON.parse(item.seo_data);
       if (typeof item.social_metadata === 'string') item.social_metadata = JSON.parse(item.social_metadata);
@@ -12888,85 +12887,15 @@ router.get('/content/items', adminAuth('editor'), async (req, res) => {
       if (typeof item.keyword_cluster === 'string') item.keyword_cluster = JSON.parse(item.keyword_cluster);
 
       // v4.92.0 DTO Pattern: hydrate via ContentItemResource (single source of truth)
-      let _dtoImages = [];
       try {
         const _dto = await ContentItemResource.V1(item);
-        _dtoImages = _dto.images || [];
-        item.images = _dtoImages;
+        item.images = _dto.images || [];
+        item.resolved_images = item.images;
         item.provenance = _dto.provenance;
-      } catch (_e) { logger.warn('[content/items GET] ContentItemResource hydration failed: ' + _e.message); }
-
-      // Resolve media_ids to image URLs — strip "poi:" prefix for numeric lookup (legacy fallback)
-      item.resolved_images = _dtoImages.length > 0 ? _dtoImages : [];
-      const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
-      const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
-      const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
-
-      // Resolve POI images (from imageurls table)
-      if (poiIds.length > 0) {
-        const [poiImages] = await mysqlSequelize.query(
-          `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
-          { replacements: { ids: poiIds } }
-        );
-        item.resolved_images.push(...poiImages.map(img => {
-          const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
-          return {
-            id: `poi:${img.id}`,
-            url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
-            thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
-            alt: img.local_path ? img.local_path.split('/').pop().replace(/\.\w+$/, '') : 'POI image',
-          };
-        }));
-      }
-
-      // Resolve Media Library images (from media table)
-      if (mediaIds.length > 0) {
-        const [mediaImages] = await mysqlSequelize.query(
-          `SELECT id, filename, alt_text, destination_id FROM media WHERE id IN (:ids)`,
-          { replacements: { ids: mediaIds } }
-        );
-        item.resolved_images.push(...mediaImages.map(img => ({
-          id: img.id,
-          url: `${process.env.API_BASE_URL || 'https://api.holidaibutler.com'}/media-files/${img.destination_id}/${img.filename}`,
-          thumbnail: `${process.env.API_BASE_URL || 'https://api.holidaibutler.com'}/media-files/${img.destination_id}/${img.filename}`,
-          alt: img.alt_text || img.filename.replace(/\.\w+$/, ''),
-        })));
-      }
-
-      // Sort resolved_images to match original media_ids order
-      if (item.resolved_images.length > 1 && rawIds.length > 1) {
-        const orderMap = new Map();
-        rawIds.forEach((rid, idx) => {
-          const key = typeof rid === 'string' && rid.startsWith('poi:') ? rid : String(Number(rid));
-          orderMap.set(key, idx);
-        });
-        item.resolved_images.sort((a, b) => {
-          const aKey = typeof a.id === 'string' && a.id.startsWith('poi:') ? a.id : String(Number(a.id));
-          const bKey = typeof b.id === 'string' && b.id.startsWith('poi:') ? b.id : String(Number(b.id));
-          const aIdx = orderMap.has(aKey) ? orderMap.get(aKey) : 999;
-          const bIdx = orderMap.has(bKey) ? orderMap.get(bKey) : 999;
-          return aIdx - bIdx;
-        });
-      }
-
-      // Backward compat: if resolved is still empty but has numeric ids, try imageurls as fallback
-      if (item.resolved_images.length === 0 && rawIds.length > 0) {
-        const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
-        if (allIds.length > 0) {
-          const [fallbackImages] = await mysqlSequelize.query(
-            `SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)`,
-            { replacements: { ids: allIds } }
-          );
-          item.resolved_images = fallbackImages.map(img => {
-            const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
-            return {
-              id: img.id,
-              url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
-              thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
-              alt: 'Content image',
-            };
-          });
-        }
+      } catch (_e) {
+        logger.warn('[content/items GET] ContentItemResource hydration failed: ' + _e.message);
+        item.images = [];
+        item.resolved_images = [];
       }
     }
 
@@ -13013,68 +12942,9 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
       logger.warn('[content/items/:id] ContentItemResource.V1 failed: ' + _dtoErr.message);
     }
 
-    // Resolve media_ids to image URLs — support both POI (imageurls) and Media Library (media) tables
-    const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
-    item.resolved_images = _detailDtoImages.length > 0 ? _detailDtoImages : [];
-    const rawIds = Array.isArray(item.media_ids) ? item.media_ids : [];
-    const poiIds = rawIds.filter(id => typeof id === 'string' && id.startsWith('poi:')).map(id => Number(id.replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
-    const mediaIds = rawIds.filter(id => !(typeof id === 'string' && id.startsWith('poi:'))).map(id => Number(id)).filter(id => !isNaN(id) && id > 0);
+    // DTO provides resolved_images — no legacy resolution needed
+    item.resolved_images = _detailDtoImages;
 
-    if (poiIds.length > 0) {
-      const [poiImages] = await mysqlSequelize.query('SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)', { replacements: { ids: poiIds } });
-      item.resolved_images.push(...poiImages.map(img => {
-        const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
-        return { id: `poi:${img.id}`, url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url, thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url, alt: 'POI image' };
-      }));
-    }
-    if (mediaIds.length > 0) {
-      try {
-        const mediaBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
-        const [mediaImages] = await mysqlSequelize.query('SELECT id, filename, alt_text, destination_id FROM media WHERE id IN (:ids)', { replacements: { ids: mediaIds } });
-        logger.info(`[ContentItem] Media resolve: mediaIds=${JSON.stringify(mediaIds)}, found=${mediaImages.length}`);
-        for (const img of mediaImages) {
-          item.resolved_images.push({ id: img.id, url: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`, thumbnail: `${mediaBase}/media-files/${img.destination_id}/${img.filename}`, alt: img.alt_text || img.filename });
-        }
-      } catch (mediaErr) {
-        logger.warn('[ContentItem] Media resolve failed:', mediaErr.message);
-      }
-    }
-    // Sort resolved_images to match original media_ids order
-      if (item.resolved_images.length > 1 && rawIds.length > 1) {
-      const orderMap = new Map();
-      rawIds.forEach((rid, idx) => {
-        const key = typeof rid === 'string' && rid.startsWith('poi:') ? rid : String(Number(rid));
-        orderMap.set(key, idx);
-      });
-      item.resolved_images.sort((a, b) => {
-        const aKey = typeof a.id === 'string' && a.id.startsWith('poi:') ? a.id : String(Number(a.id));
-        const bKey = typeof b.id === 'string' && b.id.startsWith('poi:') ? b.id : String(Number(b.id));
-        const aIdx = orderMap.has(aKey) ? orderMap.get(aKey) : 999;
-        const bIdx = orderMap.has(bKey) ? orderMap.get(bKey) : 999;
-        return aIdx - bIdx;
-      });
-      }
-
-    // Fallback: if resolved is still empty but has numeric ids, try imageurls (POI images stored without poi: prefix)
-    if (item.resolved_images.length === 0 && rawIds.length > 0) {
-      const allIds = rawIds.map(id => Number(String(id).replace('poi:', ''))).filter(id => !isNaN(id) && id > 0);
-      if (allIds.length > 0) {
-        const [fallbackImages] = await mysqlSequelize.query(
-          'SELECT id, local_path, image_url FROM imageurls WHERE id IN (:ids)',
-          { replacements: { ids: allIds } }
-        );
-        item.resolved_images = fallbackImages.map(img => {
-          const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
-          return {
-            id: img.id,
-            url: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=600&f=webp` : img.image_url,
-            thumbnail: imgPath ? `${imageBase}/api/v1/img${imgPath}?w=200&f=webp` : img.image_url,
-            alt: 'Content image',
-          };
-        });
-      }
-    }
-    logger.info(`[ContentItem] Resolved ${item.resolved_images.length} images for item ${item.id} (poi:${poiIds.length} media:${mediaIds.length})`);
 
     // Compile language versions
     item.languages = {};
@@ -13085,15 +12955,6 @@ router.get('/content/items/:id', adminAuth('editor'), async (req, res) => {
     }
 
     
-      // Sort resolved_images to match media_ids order (MySQL IN() doesn't guarantee order)
-      if (item.resolved_images.length > 0 && rawIds.length > 0) {
-        const orderMap = new Map(rawIds.map((id, idx) => [String(id), idx]));
-        item.resolved_images.sort((a, b) => {
-          const posA = orderMap.get(String(a.id)) ?? 999;
-          const posB = orderMap.get(String(b.id)) ?? 999;
-          return posA - posB;
-        });
-      }
 
     // Enrich item with its destination's language config (enterprise: item determines language, not UI dropdown)
     if (item.destination_id) {
@@ -14068,15 +13929,16 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, provenance, created_at, updated_at)
          VALUES (:conceptId, :destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, :provenance, NOW(), NOW())`,
         {
           replacements: {
             conceptId,
             destId: sourceItem.destination_id,
             contentType: item.content_type,
             title: item.title,
+            provenance: item.provenance ? JSON.stringify(item.provenance) : null,
             bodyEn: item.body_en || null,
             bodyNl: item.body_nl || null,
             bodyDe: item.body_de || null,
@@ -14893,13 +14755,14 @@ router.post('/content/campaigns/generate', adminAuth('destination_admin'), write
         const [insertResult] = await mysqlSequelize.query(
           `INSERT INTO content_items
            (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-            seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+            seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, provenance, created_at, updated_at)
            VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-            :seoData, :seoScore, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+            :seoData, :seoScore, :platform, 'draft', :aiModel, true, :provenance, NOW(), NOW())`,
           { replacements: {
             destId,
             contentType: generated.content_type,
             title: generated.title,
+            provenance: generated.provenance ? JSON.stringify(generated.provenance) : null,
             bodyEn: generated.body_en || null,
             bodyNl: generated.body_nl || null,
             bodyDe: generated.body_de || null,
