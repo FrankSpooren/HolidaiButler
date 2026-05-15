@@ -161,7 +161,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { mysqlSequelize } from '../config/database.js';
+import { mysqlSequelize, readReplicaSequelize, getReadDb } from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import {
   verifyAdminToken,
@@ -171,7 +171,7 @@ import {
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import ContentItemResource from '../resources/ContentItemResource.js';
-import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError } from '../services/approvalStateMachine.js';
+import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError, transitionStatus, bulkTransitionStatus } from '../services/approvalStateMachine.js';
 import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
 import emailService from '../services/emailService.js';
 import { AgentIssue } from '../services/agents/base/agentIssues.js';
@@ -184,6 +184,12 @@ import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCol
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
 import notificationService from '../services/notificationService.js';
+import workflowConfigService from '../services/workflowConfigService.js';
+import webhookDispatcher from '../services/webhookDispatcher.js';
+import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
+import tenantCacheService from '../services/tenantCacheService.js';
+import { verifyProvenance, getProvenance, detectBodyLang } from '../services/provenanceService.js';
+import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
 
 const router = Router();
@@ -13291,10 +13297,10 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
 router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const itemId = Number(req.params.id);
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'deleted', scheduled_at = NULL, updated_at = NOW() WHERE id = :id`,
-      { replacements: { id: itemId } }
-    );
+    await transitionStatus(itemId, 'deleted', {
+      userId: req.adminUser?.id || 'system',
+      comment: 'Soft delete via DELETE /content/items/:id'
+    });
     // Sync concept status so parent reflects deletion
     await syncConceptStatus(itemId);
     res.json({ success: true, data: { id: itemId, deleted: true } });
@@ -13321,37 +13327,26 @@ router.post('/content/concepts/:id/approve', adminAuth('editor'), writeAccess(['
       return res.status(404).json({ success: false, error: { code: 'NO_ITEMS', message: 'Geen items om goed te keuren' } });
     }
 
-    // Log approval trail for each item
-    for (const item of items) {
-      if (item.approval_status !== 'approved') {
-        await mysqlSequelize.query(
-          `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-           VALUES (:itemId, :fromStatus, 'approved', :userId, 'Concept-level approval (alle kanalen)')`,
-          { replacements: { itemId: item.id, fromStatus: item.approval_status, userId } }
-        );
-      }
-    }
-
-    // Approve all items — but only those in approve-able states (FSM whitelist)
+    // Approve all items via FSM gateway — only items in approve-able states.
     // Issue D fix: exclude scheduled/publishing/published items (no regression)
     const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
     const itemIds = items.filter(i => approvableStates.includes(i.approval_status)).map(i => i.id);
     const skippedCount = items.length - itemIds.length;
+    let bulkResult = { success: 0, skipped: 0, failed: 0 };
     if (itemIds.length > 0) {
-      await mysqlSequelize.query(
-        `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
-         WHERE id IN (:itemIds)`,
-        { replacements: { itemIds, userId } }
-      );
+      bulkResult = await bulkTransitionStatus(itemIds, 'approved', {
+        userId,
+        comment: 'Concept-level approval (alle kanalen)'
+      });
     }
     if (skippedCount > 0) {
-      logger.info(`[ConceptApprove] Concept ${conceptId}: approved ${itemIds.length} items, skipped ${skippedCount} (already scheduled/publishing/published)`);
+      logger.info(`[ConceptApprove] Concept ${conceptId}: approved ${bulkResult.success} items, skipped ${skippedCount} (already scheduled/publishing/published), fsm-failed ${bulkResult.failed}`);
     }
 
     // Sync concept status
     await syncConceptStatusByConceptId(conceptId);
 
-    res.json({ success: true, data: { concept_id: conceptId, approved_items: itemIds.length } });
+    res.json({ success: true, data: { concept_id: conceptId, approved_items: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Concept approve error:', error);
     res.status(500).json({ success: false, error: { code: 'CONCEPT_APPROVE_ERROR', message: error.message } });
@@ -13415,6 +13410,17 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
 
     const whereClause = conditions.join(' AND ');
 
+    // v4.98 Blok 5.1: cache-aside per tenant (5min TTL, auto-invalidate op content events)
+    const cacheDestId = destination_id ? Number(destination_id) : req.adminUser?.destination_id || null;
+    if (cacheDestId) {
+      const cached = await tenantCacheService.get({
+        destinationId: cacheDestId,
+        namespace: 'concepts-list',
+        identifier: { status: status || 'all', limit: Number(limit), offset: Number(offset) },
+      });
+      if (cached) return res.json(cached);
+    }
+
     const [[{ total }]] = await mysqlSequelize.query(
       `SELECT COUNT(DISTINCT c.id) as total FROM content_concepts c
        WHERE ${whereClause}
@@ -13453,7 +13459,17 @@ router.get('/content/concepts', adminAuth('editor'), async (req, res) => {
       };
     });
 
-    res.json({ success: true, data, meta: { total, limit: Number(limit), offset: Number(offset) } });
+    const payload = { success: true, data, meta: { total, limit: Number(limit), offset: Number(offset) } };
+    if (cacheDestId) {
+      await tenantCacheService.set({
+        destinationId: cacheDestId,
+        namespace: 'concepts-list',
+        identifier: { status: status || 'all', limit: Number(limit), offset: Number(offset) },
+        value: payload,
+        ttlSeconds: 300,
+      });
+    }
+    res.json(payload);
   } catch (error) {
     logger.error('[AdminPortal] Content concepts list error:', error);
     res.status(500).json({ success: false, error: { code: 'CONCEPTS_LIST_ERROR', message: error.message } });
@@ -13681,10 +13697,18 @@ router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfor
 router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platform_admin', 'destination_admin', 'poi_owner', 'content_manager', 'editor']), async (req, res) => {
   try {
     const conceptId = Number(req.params.id);
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW() WHERE concept_id = ?`,
-      { replacements: [conceptId] }
+    // Cascade delete via FSM gateway: fetch alle non-deleted child items, transition naar 'deleted'
+    const [childItems] = await mysqlSequelize.query(
+      "SELECT id FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'",
+      { replacements: { conceptId } }
     );
+    const childIds = childItems.map(r => r.id);
+    if (childIds.length > 0) {
+      await bulkTransitionStatus(childIds, 'deleted', {
+        userId: req.adminUser?.id || 'system',
+        comment: 'Cascade delete via DELETE /content/concepts/:id'
+      });
+    }
     await mysqlSequelize.query(
       `UPDATE content_concepts SET approval_status = 'deleted', updated_at = NOW() WHERE id = ?`,
       { replacements: [conceptId] }
@@ -13951,18 +13975,19 @@ router.post('/content/generate-from-poi', adminAuth('editor'), writeAccess(['pla
           seo_data, seo_score, seo_meta_title, seo_meta_description, seo_slug,
           social_metadata, media_ids, keyword_cluster,
           target_platform, approval_status, ai_model, ai_generated, poi_id,
-          content_source_type, content_source_id, created_at, updated_at)
+          content_source_type, content_source_id, provenance, created_at, updated_at)
          VALUES (:destId, :conceptId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
           :seoData, :seoScore, :seoMetaTitle, :seoMetaDesc, :seoSlug,
           :socialMeta, :mediaIds, :keywords,
           :platform, 'draft', :aiModel, true, :poiId,
-          'poi', :poiId, NOW(), NOW())`,
+          'poi', :poiId, :provenance, NOW(), NOW())`,
         {
           replacements: {
             destId,
             conceptId: conceptId,
             contentType: item.content_type,
             title: item.title,
+            provenance: item.provenance ? JSON.stringify(item.provenance) : null,
             bodyEn: item.body_en || null,
             bodyNl: item.body_nl || null,
             bodyDe: item.body_de || null,
@@ -14118,18 +14143,19 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
       personaId: null, // Uses target destination's brand context + tone automatically
     });
 
-    // Save as new item in target destination
+    // Save as new item in target destination — v4.95 Blok 7 fix: include provenance
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        seo_data, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+        seo_data, target_platform, approval_status, ai_model, ai_generated, provenance, created_at, updated_at)
        VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :seoData, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+        :seoData, :platform, 'draft', :aiModel, true, :provenance, NOW(), NOW())`,
       {
         replacements: {
           destId: Number(destination_id),
           contentType: result.content_type,
           title: result.title,
+          provenance: result.provenance ? JSON.stringify(result.provenance) : null,
           bodyEn: result.body_en || null,
           bodyNl: result.body_nl || null,
           bodyDe: result.body_de || null,
@@ -14781,17 +14807,11 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
 
       const pad2 = n => String(n).padStart(2, '0');
       const localDateStr = `${scheduleDate.getFullYear()}-${pad2(scheduleDate.getMonth() + 1)}-${pad2(scheduleDate.getDate())} ${pad2(scheduleDate.getHours())}:${pad2(scheduleDate.getMinutes())}:00`;
-      await mysqlSequelize.query(
-        `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW() WHERE id = :id`,
-        { replacements: { scheduledAt: localDateStr, id: item.id } }
-      );
-
-      // Log approval
-      await mysqlSequelize.query(
-        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-         VALUES (:itemId, 'approved', 'scheduled', :userId, :comment)`,
-        { replacements: { itemId: item.id, userId: req.adminUser?.id || 'system', comment: `Auto-scheduled for ${localDateStr}` } }
-      );
+      await transitionStatus(item.id, 'scheduled', {
+        scheduledAt: localDateStr,
+        userId: req.adminUser?.id || 'system',
+        comment: `Auto-scheduled for ${localDateStr}`
+      });
 
       scheduled.push({ id: item.id, platform: item.target_platform, scheduled_at: localDateStr });
 
@@ -15084,18 +15104,12 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     // Normalize datetime string to MySQL format without UTC conversion (Amsterdam local time)
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
 
-    // Log approval trail
-    await mysqlSequelize.query(
-      `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-       SELECT id, approval_status, 'scheduled', :userId, :comment
-       FROM content_items WHERE id = :id`,
-      { replacements: { id: Number(id), userId: req.adminUser?.id || 'system', comment: `Scheduled for ${parsedScheduledAt}` } }
-    );
-
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW() WHERE id = :id`,
-      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
-    );
+    // Schedule via FSM gateway (audit + scheduled_at + status in 1 atomaire transitie)
+    await transitionStatus(Number(id), 'scheduled', {
+      scheduledAt: parsedScheduledAt,
+      userId: req.adminUser?.id || 'system',
+      comment: `Scheduled for ${parsedScheduledAt}`
+    });
 
     // Sync concept status
     await syncConceptStatus(Number(id));
@@ -15128,11 +15142,20 @@ router.post('/content/items/:id/publish-now', adminAuth('editor'), async (req, r
 router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, res) => {
   try {
     const { id } = req.params;
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'approved', scheduled_at = NULL, updated_at = NOW() WHERE id = :id AND approval_status = 'scheduled'`,
+    // Pre-check: alleen scheduled items kunnen uitgepland worden (orig WHERE clause)
+    const [[currentItem]] = await mysqlSequelize.query(
+      'SELECT approval_status FROM content_items WHERE id = :id',
       { replacements: { id: Number(id) } }
     );
-        await syncConceptStatus(req.params.id);
+    if (!currentItem || currentItem.approval_status !== 'scheduled') {
+      return res.json({ success: true, data: { id: Number(id), approval_status: currentItem?.approval_status || null, skipped: true } });
+    }
+    // Transition scheduled -> approved (FSM zet scheduled_at automatisch NULL)
+    await transitionStatus(Number(id), 'approved', {
+      userId: req.adminUser?.id || 'system',
+      comment: 'Cancelled scheduled publish'
+    });
+    await syncConceptStatus(req.params.id);
     res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
   } catch (error) {
     logger.error('[AdminPortal] Cancel schedule error:', error);
@@ -15260,17 +15283,22 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELD', message: 'scheduled_at is required' } });
     }
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
-    // Issue C fix: set approval_status='scheduled' alongside scheduled_at to maintain state consistency
-    const [, meta] = await mysqlSequelize.query(
-      `UPDATE content_items SET scheduled_at = :scheduledAt, approval_status = 'scheduled', updated_at = NOW()
-       WHERE id = :id AND approval_status NOT IN ('published','rejected','failed','publishing')`,
-      { replacements: { scheduledAt: parsedScheduledAt, id: Number(id) } }
+    // Pre-check: handhaaf orig whitelist (FSM toestemming check is breder; expliciete check houdt API-contract intact)
+    const [[currentItem]] = await mysqlSequelize.query(
+      'SELECT approval_status FROM content_items WHERE id = :id',
+      { replacements: { id: Number(id) } }
     );
-    const affected = meta?.affectedRows ?? 0;
-    if (affected === 0) {
+    if (!currentItem || ['published','rejected','failed','publishing'].includes(currentItem.approval_status)) {
       return res.status(409).json({ success: false, error: { code: 'NOT_RESCHEDULABLE', message: 'Item kan niet verplaatst worden (gepubliceerd, afgewezen of niet gevonden)' } });
     }
-    res.json({ success: true, data: { id: Number(id), scheduled_at, affected } });
+    // Transition naar 'scheduled' (force=true voor same-status timestamp-update bij scheduled->scheduled)
+    await transitionStatus(Number(id), 'scheduled', {
+      scheduledAt: parsedScheduledAt,
+      userId: req.adminUser?.id || 'system',
+      comment: `Rescheduled to ${parsedScheduledAt}`,
+      force: true
+    });
+    res.json({ success: true, data: { id: Number(id), scheduled_at, affected: 1 } });
   } catch (error) {
     logger.error('[AdminPortal] Reschedule error:', error);
     res.status(500).json({ success: false, error: { code: 'RESCHEDULE_ERROR', message: error.message } });
@@ -16360,23 +16388,14 @@ router.post('/content/bulk/approve', adminAuth('editor'), writeAccess(['platform
       return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
     }
     const numericIds = ids.map(Number).filter(n => !isNaN(n));
-    // Log approval trail for each
-    for (const itemId of numericIds) {
-      await mysqlSequelize.query(
-        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-         SELECT id, approval_status, 'approved', :userId, 'Bulk approval'
-         FROM content_items WHERE id = :itemId AND approval_status != 'approved'`,
-        { replacements: { itemId, userId: req.adminUser?.id || 'system' } }
-      );
-    }
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'approved', approved_by = :userId, updated_at = NOW()
-       WHERE id IN (:ids) AND approval_status NOT IN ('published', 'deleted')`,
-      { replacements: { ids: numericIds, userId: req.adminUser?.id || null } }
-    );
-        // Sync concept statuses for all affected items
+    // Bulk approve via FSM gateway (FSM blokkeert published/deleted per item)
+    const bulkResult = await bulkTransitionStatus(numericIds, 'approved', {
+      userId: req.adminUser?.id || 'system',
+      comment: 'Bulk approval'
+    });
+    // Sync concept statuses for all affected items
     for (const iid of numericIds) { await syncConceptStatus(iid); }
-    res.json({ success: true, data: { approved: numericIds.length } });
+    res.json({ success: true, data: { approved: bulkResult.success + bulkResult.skipped, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk approve error:', error);
     res.status(500).json({ success: false, error: { code: 'BULK_APPROVE_ERROR', message: error.message } });
@@ -16394,20 +16413,12 @@ router.post('/content/bulk/reject', adminAuth('editor'), writeAccess(['platform_
       return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
     }
     const numericIds = ids.map(Number).filter(n => !isNaN(n));
-    for (const itemId of numericIds) {
-      await mysqlSequelize.query(
-        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-         SELECT id, approval_status, 'rejected', :userId, :reason
-         FROM content_items WHERE id = :itemId AND approval_status != 'rejected'`,
-        { replacements: { itemId, userId: req.adminUser?.id || 'system', reason: reason || 'Bulk rejection' } }
-      );
-    }
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'rejected', updated_at = NOW()
-       WHERE id IN (:ids) AND approval_status NOT IN ('published', 'deleted')`,
-      { replacements: { ids: numericIds } }
-    );
-    res.json({ success: true, data: { rejected: numericIds.length } });
+    // Bulk reject via FSM gateway
+    const bulkResult = await bulkTransitionStatus(numericIds, 'rejected', {
+      userId: req.adminUser?.id || 'system',
+      comment: reason || 'Bulk rejection'
+    });
+    res.json({ success: true, data: { rejected: bulkResult.success + bulkResult.skipped, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk reject error:', error);
     res.status(500).json({ success: false, error: { code: 'BULK_REJECT_ERROR', message: error.message } });
@@ -16425,23 +16436,16 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'ids and scheduled_at are required' } });
     }
     const numericIds = ids.map(Number).filter(n => !isNaN(n));
-    for (const itemId of numericIds) {
-      await mysqlSequelize.query(
-        `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-         SELECT id, approval_status, 'scheduled', :userId, :comment
-         FROM content_items WHERE id = :itemId`,
-        { replacements: { itemId, userId: req.adminUser?.id || 'system', comment: `Bulk scheduled for ${scheduled_at}` } }
-      );
-    }
     const parsedScheduledAt = String(scheduled_at).replace('T', ' ').replace(/\.\d{3}Z$/, '').slice(0, 19);
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'scheduled', scheduled_at = :scheduledAt, updated_at = NOW()
-       WHERE id IN (:ids) AND approval_status IN ('approved')`,
-      { replacements: { ids: numericIds, scheduledAt: parsedScheduledAt } }
-    );
+    // Bulk schedule via FSM gateway (FSM staat alleen approved->scheduled toe)
+    const bulkResult = await bulkTransitionStatus(numericIds, 'scheduled', {
+      scheduledAt: parsedScheduledAt,
+      userId: req.adminUser?.id || 'system',
+      comment: `Bulk scheduled for ${scheduled_at}`
+    });
     // Sync concept statuses
     for (const iid of numericIds) { await syncConceptStatus(iid); }
-    res.json({ success: true, data: { scheduled: numericIds.length, scheduled_at } });
+    res.json({ success: true, data: { scheduled: bulkResult.success, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed, scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk schedule error:', error);
     res.status(500).json({ success: false, error: { code: 'BULK_SCHEDULE_ERROR', message: error.message } });
@@ -16459,12 +16463,12 @@ router.post('/content/bulk/delete', adminAuth('editor'), writeAccess(['platform_
       return res.status(400).json({ success: false, error: { code: 'MISSING_IDS', message: 'ids array is required' } });
     }
     const numericIds = ids.map(Number).filter(n => !isNaN(n));
-    await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'deleted', updated_at = NOW()
-       WHERE id IN (:ids) AND approval_status != 'published'`,
-      { replacements: { ids: numericIds } }
-    );
-    res.json({ success: true, data: { deleted: numericIds.length } });
+    // Bulk delete via FSM gateway (FSM blokkeert published; per-state allow-list in TRANSITIONS)
+    const bulkResult = await bulkTransitionStatus(numericIds, 'deleted', {
+      userId: req.adminUser?.id || 'system',
+      comment: 'Bulk soft-delete'
+    });
+    res.json({ success: true, data: { deleted: bulkResult.success, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk delete error:', error);
     res.status(500).json({ success: false, error: { code: 'BULK_DELETE_ERROR', message: error.message } });
@@ -16529,18 +16533,22 @@ router.post('/content/items/:id/retry-publish', adminAuth('editor'), writeAccess
     if (item.approval_status !== 'failed') {
       return res.status(400).json({ success: false, error: { code: 'NOT_FAILED', message: 'Item is not in failed state' } });
     }
-    // Reset to scheduled for re-publish
+    // Reset publish_error apart (FSM gateway handelt status + scheduled_at + audit af)
     await mysqlSequelize.query(
-      `UPDATE content_items SET approval_status = 'scheduled', publish_error = NULL, scheduled_at = NOW(), updated_at = NOW() WHERE id = :id`,
+      'UPDATE content_items SET publish_error = NULL WHERE id = :id',
       { replacements: { id: Number(id) } }
     );
-    // Log the retry
-    await mysqlSequelize.query(
-      `INSERT INTO content_approval_log (content_item_id, from_status, to_status, changed_by, comment)
-       VALUES (:itemId, 'failed', 'scheduled', :userId, :comment)`,
-      { replacements: { itemId: Number(id), userId: req.adminUser?.id || 'system', comment: `Manual retry. Previous error: ${item.publish_error || 'unknown'}` } }
-    );
-        await syncConceptStatus(req.params.id);
+    // Bouw lokale Amsterdam-tijd-string voor scheduled_at = NOW()
+    const _nowDate = new Date();
+    const _pad2 = n => String(n).padStart(2, '0');
+    const _nowStr = `${_nowDate.getFullYear()}-${_pad2(_nowDate.getMonth() + 1)}-${_pad2(_nowDate.getDate())} ${_pad2(_nowDate.getHours())}:${_pad2(_nowDate.getMinutes())}:${_pad2(_nowDate.getSeconds())}`;
+    // Transition failed -> scheduled via FSM gateway (audit + scheduled_at)
+    await transitionStatus(Number(id), 'scheduled', {
+      scheduledAt: _nowStr,
+      userId: req.adminUser?.id || 'system',
+      comment: `Manual retry. Previous error: ${item.publish_error || 'unknown'}`
+    });
+    await syncConceptStatus(req.params.id);
     res.json({ success: true, data: { id: Number(id), retried: true, previousError: item.publish_error } });
   } catch (error) {
     logger.error('[AdminPortal] Retry publish error:', error);
@@ -17519,6 +17527,375 @@ router.delete('/notifications/:id', adminAuth('destination_admin'), async (req, 
   } catch (error) {
     logger.error('[AdminPortal] Dismiss notification error:', error.message);
     res.status(500).json({ success: false, error: { code: 'DISMISS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.96 Blok 3: Workflow configuration + Webhook management
+// ============================================================
+
+/**
+ * GET /workflow/transitions — get TRANSITIONS-dict voor een destination
+ * Query: ?destinationId=X (default uit req.adminUser)
+ */
+router.get('/workflow/transitions', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const transitions = await workflowConfigService.getTransitions(destId);
+    res.json({ success: true, data: { destinationId: destId, transitions, stateCount: Object.keys(transitions).length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Workflow transitions error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WORKFLOW_TRANSITIONS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PUT /workflow/transitions — update TRANSITIONS-dict voor een destination
+ * Body: { destinationId, transitions, description? }
+ */
+router.put('/workflow/transitions', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { destinationId, transitions, description, preset } = req.body;
+    const destId = Number(destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+
+    let transitionsToSave = transitions;
+    if (preset && WORKFLOW_PRESETS[preset]) {
+      transitionsToSave = WORKFLOW_PRESETS[preset];
+    }
+    if (!transitionsToSave || typeof transitionsToSave !== 'object') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITIONS', message: 'transitions object or preset required' } });
+    }
+    const result = await workflowConfigService.setTransitions({
+      destinationId: destId,
+      transitions: transitionsToSave,
+      userId: req.adminUser?.id,
+      description: description || (preset ? `Preset: ${preset}` : null),
+    });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('[AdminPortal] Workflow transitions update error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WORKFLOW_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /workflow/presets — lijst beschikbare workflow presets
+ */
+router.get('/workflow/presets', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: {
+      presets: Object.keys(WORKFLOW_PRESETS).map(key => ({
+        key,
+        stateCount: Object.keys(WORKFLOW_PRESETS[key]).length,
+        transitions: WORKFLOW_PRESETS[key],
+      })),
+    } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'PRESETS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /workflow/machine-graph — visualization graph (nodes+edges)
+ * Voor @xstate/inspect integratie. Per destination.
+ */
+router.get('/workflow/machine-graph', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const transitions = await workflowConfigService.getTransitions(destId);
+    const graph = getMachineGraph(transitions);
+    res.json({ success: true, data: { destinationId: destId, ...graph } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'GRAPH_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks — list webhook endpoints voor een destination
+ */
+router.get('/webhooks', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.query.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const [rows] = await mysqlSequelize.query(
+      `SELECT id, destination_id, name, url, events, enabled, failure_count,
+              last_failure_at, last_success_at, description, created_at, updated_at
+       FROM webhook_endpoints WHERE destination_id = :destId ORDER BY id DESC`,
+      { replacements: { destId } }
+    );
+    res.json({ success: true, data: rows.map(r => ({ ...r, events: typeof r.events === 'string' ? JSON.parse(r.events) : r.events })) });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhooks list error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOKS_LIST_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /webhooks — create webhook endpoint
+ * Body: { destinationId, name, url, events: [], secret?, description? }
+ */
+router.post('/webhooks', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const { destinationId, name, url, events, secret, description } = req.body;
+    const destId = Number(destinationId) || req.adminUser?.destination_id;
+    if (!destId || !name || !url || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destinationId, name, url, events[] required' } });
+    }
+    if (!/^https?:\/\//.test(url)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_URL', message: 'url must be http(s)' } });
+    }
+    const [result] = await mysqlSequelize.query(
+      `INSERT INTO webhook_endpoints (destination_id, name, url, events, secret, description, created_by_user_id)
+       VALUES (:destId, :name, :url, :events, :secret, :desc, :userId)`,
+      { replacements: {
+        destId, name, url,
+        events: JSON.stringify(events),
+        secret: secret || null,
+        desc: description || null,
+        userId: req.adminUser?.id || null,
+      } }
+    );
+    res.status(201).json({ success: true, data: { id: result?.insertId || result, destinationId: destId, name, url, events, enabled: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhook create error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_CREATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * PATCH /webhooks/:id — update webhook endpoint
+ */
+router.patch('/webhooks/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const fields = [];
+    const repl = { id };
+    if (req.body.name !== undefined) { fields.push('name = :name'); repl.name = req.body.name; }
+    if (req.body.url !== undefined) {
+      if (!/^https?:\/\//.test(req.body.url)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_URL', message: 'url must be http(s)' } });
+      }
+      fields.push('url = :url'); repl.url = req.body.url;
+    }
+    if (req.body.events !== undefined) { fields.push('events = :events'); repl.events = JSON.stringify(req.body.events); }
+    if (req.body.secret !== undefined) { fields.push('secret = :secret'); repl.secret = req.body.secret || null; }
+    if (req.body.enabled !== undefined) { fields.push('enabled = :enabled'); repl.enabled = req.body.enabled ? 1 : 0; }
+    if (req.body.description !== undefined) { fields.push('description = :desc'); repl.desc = req.body.description; }
+    if (fields.length === 0) return res.status(400).json({ success: false, error: { code: 'NO_FIELDS', message: 'No updatable fields' } });
+    fields.push('updated_at = NOW()');
+    await mysqlSequelize.query(
+      `UPDATE webhook_endpoints SET ${fields.join(', ')} WHERE id = :id`,
+      { replacements: repl }
+    );
+    res.json({ success: true, data: { id, updated: true } });
+  } catch (error) {
+    logger.error('[AdminPortal] Webhook update error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_UPDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * DELETE /webhooks/:id — delete webhook endpoint
+ */
+router.delete('/webhooks/:id', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await mysqlSequelize.query('DELETE FROM webhook_endpoints WHERE id = :id', { replacements: { id } });
+    res.json({ success: true, data: { id, deleted: true } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'WEBHOOK_DELETE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks/:id/deliveries — recent deliveries voor 1 endpoint
+ */
+router.get('/webhooks/:id/deliveries', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const limit = Math.min(Number(req.query.limit) || 50, 500);
+    const [rows] = await mysqlSequelize.query(
+      `SELECT id, event_subject, attempt, status, http_status_code, duration_ms,
+              error_message, created_at, delivered_at, next_retry_at
+       FROM webhook_deliveries WHERE webhook_endpoint_id = :id
+       ORDER BY id DESC LIMIT :limit`,
+      { replacements: { id, limit } }
+    );
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'DELIVERIES_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /webhooks/stats — dispatcher stats (admin only)
+ */
+router.get('/webhooks/stats', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: webhookDispatcher.getStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'STATS_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.98 Blok 5: cache metrics + read replica observability
+// ============================================================
+
+/**
+ * GET /cache/stats — tenantCacheService hit/miss + per-namespace stats
+ */
+router.get('/cache/stats', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    res.json({ success: true, data: tenantCacheService.getStats() });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'CACHE_STATS_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /cache/invalidate — handmatige invalidate per destination en/of namespace
+ * Body: { destinationId, namespace? }
+ */
+router.post('/cache/invalidate', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const destId = Number(req.body.destinationId) || req.adminUser?.destination_id;
+    if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
+    const namespace = req.body.namespace || null;
+    let count;
+    if (namespace) {
+      count = await tenantCacheService.invalidateNamespace(destId, namespace);
+    } else {
+      count = await tenantCacheService.invalidateDestination(destId);
+    }
+    res.json({ success: true, data: { destinationId: destId, namespace, invalidatedKeys: count } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'CACHE_INVALIDATE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /database/replica-health — read replica status
+ */
+router.get('/database/replica-health', adminAuth('platform_admin'), async (req, res) => {
+  try {
+    if (!readReplicaSequelize) {
+      return res.json({ success: true, data: { configured: false, host: null, healthy: false, note: 'REPLICA_DB_HOST niet gezet — getReadDb() returns master' } });
+    }
+    let healthy = false;
+    let lagSeconds = null;
+    try {
+      const start = Date.now();
+      await readReplicaSequelize.query('SELECT 1 AS ok');
+      const ping = Date.now() - start;
+      healthy = true;
+      // Replica lag via Seconds_Behind_Master (alleen op echte replica beschikbaar)
+      try {
+        const [statusRows] = await readReplicaSequelize.query('SHOW SLAVE STATUS');
+        if (statusRows && statusRows[0] && statusRows[0].Seconds_Behind_Master != null) {
+          lagSeconds = Number(statusRows[0].Seconds_Behind_Master);
+        }
+      } catch { /* SHOW SLAVE STATUS niet beschikbaar bij non-replica */ }
+      res.json({ success: true, data: {
+        configured: true,
+        host: process.env.REPLICA_DB_HOST,
+        healthy: true,
+        pingMs: ping,
+        lagSeconds,
+      } });
+    } catch (err) {
+      res.json({ success: true, data: { configured: true, host: process.env.REPLICA_DB_HOST, healthy: false, error: err.message } });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: { code: 'REPLICA_HEALTH_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.95 Blok 7: EU AI Act Provenance UI endpoints
+// ============================================================
+
+/**
+ * GET /content/items/:id/provenance — return full provenance JSON + verify status
+ * Voor frontend ProvenancePanel — toont signature, model, sources, validation.
+ */
+router.get('/content/items/:id/provenance', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [[row]] = await mysqlSequelize.query(
+      `SELECT id, destination_id, provenance, body_en, body_nl, body_de, body_es, body_fr
+       FROM content_items WHERE id = :id`,
+      { replacements: { id } }
+    );
+    if (!row) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    let prov = row.provenance;
+    if (typeof prov === 'string') {
+      try { prov = JSON.parse(prov); } catch { prov = null; }
+    }
+    const lang = detectBodyLang(row);
+    const body = String(row[`body_${lang}`] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const verify = prov ? verifyProvenance(body, prov) : { valid: false, reason: 'no_provenance' };
+    res.json({ success: true, data: { id, destination_id: row.destination_id, provenance: prov, verify } });
+  } catch (error) {
+    logger.error('[AdminPortal] Provenance read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'PROVENANCE_READ_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/verify-provenance — re-verify signature en tamper-status
+ * Body kan optioneel { content } overschrijven (om hypothetische edit te checken).
+ */
+router.post('/content/items/:id/verify-provenance', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [[row]] = await mysqlSequelize.query(
+      `SELECT provenance, body_en, body_nl, body_de, body_es, body_fr
+       FROM content_items WHERE id = :id`,
+      { replacements: { id } }
+    );
+    if (!row) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    let prov = row.provenance;
+    if (typeof prov === 'string') {
+      try { prov = JSON.parse(prov); } catch { prov = null; }
+    }
+    if (!prov) {
+      return res.json({ success: true, data: { id, verify: { valid: false, reason: 'no_provenance' } } });
+    }
+    const lang = detectBodyLang(row);
+    const bodyRaw = req.body?.content !== undefined ? req.body.content : (row[`body_${lang}`] || '');
+    const body = String(bodyRaw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const verify = verifyProvenance(body, prov);
+    res.json({ success: true, data: { id, verify, content_length: body.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Verify provenance error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'VERIFY_PROVENANCE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/provenance-report.pdf — PDF audit-report download
+ * Voor regulatory inspections (NL Autoriteit Persoonsgegevens, EU AI Act audit).
+ */
+router.get('/content/items/:id/provenance-report.pdf', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="provenance-item${id}-${new Date().toISOString().slice(0,10)}.pdf"`);
+    await generateProvenancePDF(id, res);
+  } catch (error) {
+    logger.error('[AdminPortal] Provenance PDF error:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: { code: 'PROVENANCE_PDF_ERROR', message: error.message } });
+    } else {
+      res.end();
+    }
   }
 });
 

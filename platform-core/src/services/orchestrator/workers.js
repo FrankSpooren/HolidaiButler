@@ -8,6 +8,7 @@ let scheduledWorker = null;
 let alertWorker = null;
 let orchestratorWorker = null;
 let contentGenerationWorker = null;
+let contentPublishItemWorker = null;
 
 export function startWorkers() {
   console.log("[Orchestrator] Starting workers...");
@@ -2052,6 +2053,38 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
   console.log("[Orchestrator] - Financial Monitor Agent (De Kassier): active");
   console.log("[Orchestrator] - Inventory Sync Agent (De Magazijnier): active");
   console.log("[Orchestrator] - Content Generation Worker: active");
+  // v4.97 Blok 4: Content publish-item worker (BullMQ delayed-jobs voor exacte timing)
+  contentPublishItemWorker = new Worker(
+    "content-publish-item",
+    async (job) => {
+      const start = Date.now();
+      const { itemId, destinationId, scheduledAt } = job.data || {};
+      try {
+        // Lazy import om circular deps te vermijden
+        const publisherMod = await import("../agents/publisher/index.js");
+        const publisher = publisherMod.default;
+        // force=true: bypass FUTURE-SCHEDULE-GUARD — BullMQ fired exact op scheduled_at
+        const result = await publisher.publishItem(Number(itemId), { force: true });
+        const duration = Date.now() - start;
+        console.log(`[PublishItemWorker] item=${itemId} published in ${duration}ms`);
+        await logAgent("publisher", destinationId || null, "delayed-publish-success", {
+          itemId, scheduledAt, durationMs: duration,
+        }).catch(() => {});
+        return { itemId, status: "published", durationMs: duration, ...result };
+      } catch (err) {
+        const duration = Date.now() - start;
+        console.error(`[PublishItemWorker] item=${itemId} failed after ${duration}ms: ${err.message}`);
+        await logError("publisher", destinationId || null, "delayed-publish-failed", err, {
+          itemId, scheduledAt, durationMs: duration,
+        }).catch(() => {});
+        // Re-throw zodat BullMQ als failed markeert; cron safety-net pickt orphan-items op
+        throw err;
+      }
+    },
+    { connection, concurrency: 4 }
+  );
+  console.log("[Orchestrator] - Content Publish Item Worker: active");
+
   startMediaWorker();
   console.log("[Orchestrator] - Media Processing Worker: active");
 }
@@ -2067,8 +2100,9 @@ export async function stopWorkers() {
   if (alertWorker) await alertWorker.close();
   if (orchestratorWorker) await orchestratorWorker.close();
   if (contentGenerationWorker) await contentGenerationWorker.close();
+  if (contentPublishItemWorker) await contentPublishItemWorker.close();
   await stopMediaWorker();
   console.log("[Orchestrator] Workers stopped");
 }
 
-export { scheduledWorker, alertWorker, orchestratorWorker, contentGenerationWorker, mediaWorker };
+export { scheduledWorker, alertWorker, orchestratorWorker, contentGenerationWorker, contentPublishItemWorker, mediaWorker };
