@@ -533,7 +533,7 @@ function POIDetailDialog({ poiId, onClose, onEdit }) {
           <Typography variant="h6" sx={{ fontWeight: 700 }}>
             {isLoading ? <Skeleton width={200} /> : poi.name}
           </Typography>
-          
+          {!isLoading && (
             <Typography variant="body2" color="text.secondary">
               ID: {poi.id} | {poi.destination_id === 2 ? '🇳🇱 Texel' : '🇪🇸 Calpe'} | {poi.category}{poi.subcategory ? ` > ${poi.subcategory}` : ''}
             </Typography>
