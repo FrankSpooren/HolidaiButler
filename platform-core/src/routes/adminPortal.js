@@ -13545,7 +13545,14 @@ router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfor
       `UPDATE content_concepts SET ${updates.join(', ')} WHERE id = ?`,
       { replacements }
     );
-    // Invalidate tenant cache so GET /content/concepts returns fresh data
+    // Propagate title to all child items (gateway-level consistency)
+    if (title !== undefined) {
+      await mysqlSequelize.query(
+        "UPDATE content_items SET title = ?, updated_at = NOW() WHERE concept_id = ? AND approval_status != 'deleted'",
+        { replacements: [String(title).substring(0, 500), conceptId] }
+      );
+    }
+    // Invalidate tenant cache so GET /content/concepts + calendar returns fresh data
     const [[conceptDest]] = await mysqlSequelize.query(
       'SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] }
     );
