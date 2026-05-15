@@ -12702,16 +12702,17 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
       `INSERT INTO content_items
        (destination_id, suggestion_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
         seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id,
-        media_ids, social_metadata, created_at, updated_at)
+        media_ids, social_metadata, provenance, created_at, updated_at)
        VALUES (:destId, :sugId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
         :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId,
-        :mediaIds, :socialMeta, NOW(), NOW())`,
+        :mediaIds, :socialMeta, :provenance, NOW(), NOW())`,
       {
         replacements: {
           destId: suggestion.destination_id,
           sugId: suggestion.id,
           contentType: generated.content_type,
           title: generated.title,
+          provenance: generated.provenance ? JSON.stringify(generated.provenance) : null,
           bodyEn: generated.body_en || null,
           bodyNl: generated.body_nl || null,
           bodyDe: generated.body_de || null,
@@ -14068,15 +14069,16 @@ router.post('/content/items/:id/repurpose', adminAuth('editor'), writeAccess(['p
       const [insertResult] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, created_at, updated_at)
+          seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, poi_id, provenance, created_at, updated_at)
          VALUES (:conceptId, :destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, NOW(), NOW())`,
+          :seoData, :seoScore, :platform, 'draft', :aiModel, true, :poiId, :provenance, NOW(), NOW())`,
         {
           replacements: {
             conceptId,
             destId: sourceItem.destination_id,
             contentType: item.content_type,
             title: item.title,
+            provenance: item.provenance ? JSON.stringify(item.provenance) : null,
             bodyEn: item.body_en || null,
             bodyNl: item.body_nl || null,
             bodyDe: item.body_de || null,
@@ -14893,13 +14895,14 @@ router.post('/content/campaigns/generate', adminAuth('destination_admin'), write
         const [insertResult] = await mysqlSequelize.query(
           `INSERT INTO content_items
            (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-            seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+            seo_data, seo_score, target_platform, approval_status, ai_model, ai_generated, provenance, created_at, updated_at)
            VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-            :seoData, :seoScore, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+            :seoData, :seoScore, :platform, 'draft', :aiModel, true, :provenance, NOW(), NOW())`,
           { replacements: {
             destId,
             contentType: generated.content_type,
             title: generated.title,
+            provenance: generated.provenance ? JSON.stringify(generated.provenance) : null,
             bodyEn: generated.body_en || null,
             bodyNl: generated.body_nl || null,
             bodyDe: generated.body_de || null,
