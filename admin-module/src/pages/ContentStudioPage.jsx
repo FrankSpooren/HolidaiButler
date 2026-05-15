@@ -1779,8 +1779,8 @@ export default function ContentStudioPage() {
   const rowHeight = DENSITY_HEIGHTS[densityMode] || 52;
 
   // Column visibility
-  const ALL_COLUMNS = ['title', 'source', 'platforms', 'pillar', 'seo', 'status', 'updated', 'actions'];
-  const COLUMN_LABELS = { title: 'Titel', source: 'Bron', platforms: 'Platforms', pillar: 'Pillar', seo: 'SEO', status: 'Status', updated: 'Bijgewerkt', actions: 'Acties' };
+  const ALL_COLUMNS = ['title', 'type', 'platforms', 'pillar', 'seo', 'status', 'updated', 'actions'];
+  const COLUMN_LABELS = { title: 'Titel', type: 'Type', platforms: 'Platforms', pillar: 'Pillar', seo: 'SEO', status: 'Status', updated: 'Bijgewerkt', actions: 'Acties' };
   const activeColumns = visibleColumns || ALL_COLUMNS;
 
   // Persist density
@@ -2497,15 +2497,21 @@ export default function ContentStudioPage() {
                   sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.5, fontSize: 11 } }}
                 >
                   <ToggleButton value="comfortable">
-                    <Tooltip title="Comfortable"><span style={{ fontSize: 11 }}>&#9764;</span></Tooltip>
+                    <Tooltip title="Comfortable"><span style={{ fontSize: 11 }}>{'\u25A4'}</span></Tooltip>
                   </ToggleButton>
                   <ToggleButton value="compact">
-                    <Tooltip title="Compact"><span style={{ fontSize: 11 }}>&#9765;</span></Tooltip>
+                    <Tooltip title="Compact"><span style={{ fontSize: 11 }}>{'\u25A5'}</span></Tooltip>
                   </ToggleButton>
                   <ToggleButton value="dense">
                     <Tooltip title="Dense"><DensitySmallIcon sx={{ fontSize: 16 }} /></Tooltip>
                   </ToggleButton>
                 </ToggleButtonGroup>
+                {/* Column visibility — zelfde als Items */}
+                <Tooltip title={t('contentStudio.columnVisibility', 'Kolommen')}>
+                  <IconButton size="small" onClick={(e) => setColumnMenuAnchor(e.currentTarget)}>
+                    <ViewColumnIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
                 {/* Keyboard shortcuts — EU digitale toegankelijkheid */}
                 <Tooltip title="Sneltoetsen">
                   <IconButton size="small" onClick={(e) => setKbdAnchor(e.currentTarget)} color={kbdAnchor ? 'primary' : 'default'}><KeyboardIcon fontSize="small" /></IconButton>
@@ -2996,7 +3002,7 @@ export default function ContentStudioPage() {
                         {t('contentStudio.table.title', 'Titel')} {itemSort.startsWith('title') ? (itemSort === 'title_asc' ? '↑' : '↓') : ''}
                       </TableCell>
                     )}
-                    {activeColumns.includes('source') && (
+                    {activeColumns.includes('type') && (
                       <TableCell sx={{ width: 110 }}>
                         <Select size="small" value={itemTypeFilter} onChange={e => setItemTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 55 }}>
                           <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
@@ -3052,7 +3058,7 @@ export default function ContentStudioPage() {
                       <TableRow key={`skel-${i}`} sx={{ height: rowHeight }}>
                         <TableCell padding="none" sx={{ width: 42, textAlign: 'center', pl: 1 }}><Skeleton variant="rectangular" width={18} height={18} sx={{ borderRadius: 0.5 }} /></TableCell>
                         {activeColumns.includes('title') && <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Skeleton variant="rectangular" width={28} height={28} sx={{ borderRadius: 1, flexShrink: 0 }} /><Skeleton variant="text" width={`${60 + Math.random() * 30}%`} /></Box></TableCell>}
-                        {activeColumns.includes('source') && <TableCell><Skeleton variant="rounded" width={60} height={20} /></TableCell>}
+                        {activeColumns.includes('type') && <TableCell><Skeleton variant="rounded" width={60} height={20} /></TableCell>}
                         {activeColumns.includes('platforms') && <TableCell><Box sx={{ display: 'flex', gap: 0.5 }}><Skeleton variant="rounded" width={55} height={20} /><Skeleton variant="rounded" width={55} height={20} /></Box></TableCell>}
                         {activeColumns.includes('pillar') && <TableCell><Skeleton variant="text" width={70} /></TableCell>}
                         {activeColumns.includes('seo') && <TableCell><Skeleton variant="rounded" width={36} height={20} /></TableCell>}
@@ -3160,7 +3166,7 @@ export default function ContentStudioPage() {
                             </Box>
                           </TableCell>
                         )}
-                        {activeColumns.includes('source') && (
+                        {activeColumns.includes('type') && (
                           <TableCell>
                             <Chip
                               label={CONTENT_TYPE_LABELS[concept.content_type] || concept.content_type || '—'}
