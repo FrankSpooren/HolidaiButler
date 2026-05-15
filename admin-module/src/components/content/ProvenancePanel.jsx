@@ -23,6 +23,8 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import client from '../../api/client.js';
+import { useNavigate } from 'react-router-dom';
+import useDestinationCode from '../../lib/useDestinationCode.js';
 
 const AUTO_REVERIFY_DEBOUNCE_MS = 1500;
 
@@ -66,6 +68,8 @@ export default function ProvenancePanel({ itemId, body }) {
   const [expanded, setExpanded] = useState(true);
   const [snack, setSnack] = useState(null);
   const lastVerifiedBodyRef = useRef(null);
+  const navigate = useNavigate();
+  const destinationCode = useDestinationCode(data?.destination_id);
   const debounceTimerRef = useRef(null);
 
   const load = async () => {
@@ -290,24 +294,34 @@ export default function ProvenancePanel({ itemId, body }) {
                       Geciteerde bronnen ({sources.length}):
                     </Typography>
                     <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                      {sources.map((s) => (
-                        <Tooltip
-                          key={s.id || s.name}
-                          title={s.url ? `Open bron: ${s.url}` : 'Geen URL beschikbaar (lokale tekst-bron)'}
-                          arrow
-                        >
-                          <Chip
-                            size="small"
-                            label={s.name}
-                            variant="outlined"
-                            color={s.url ? 'primary' : 'default'}
-                            clickable={!!s.url}
-                            onClick={s.url ? () => window.open(s.url, '_blank', 'noopener') : undefined}
-                            icon={s.url ? <OpenInNewIcon style={{ fontSize: 14 }} /> : undefined}
-                            sx={{ cursor: s.url ? 'pointer' : 'default' }}
-                          />
-                        </Tooltip>
-                      ))}
+                      {sources.map((s) => {
+                        const hasUrl = !!s.url;
+                        const canDeepLink = !hasUrl && s.id && destinationCode;
+                        const onClick = hasUrl
+                          ? () => window.open(s.url, '_blank', 'noopener')
+                          : canDeepLink
+                            ? () => navigate(`/branding?dest=${encodeURIComponent(destinationCode)}&kb=${encodeURIComponent(s.id)}`)
+                            : undefined;
+                        const tooltip = hasUrl
+                          ? `Open bron: ${s.url}`
+                          : canDeepLink
+                            ? `Open bron in Merk Profiel → Knowledge Base`
+                            : 'Bron niet meer beschikbaar in Merk Profiel';
+                        return (
+                          <Tooltip key={s.id || s.name} title={tooltip} arrow>
+                            <Chip
+                              size="small"
+                              label={s.name}
+                              variant="outlined"
+                              color={hasUrl || canDeepLink ? 'primary' : 'default'}
+                              clickable={!!onClick}
+                              onClick={onClick}
+                              icon={hasUrl ? <OpenInNewIcon style={{ fontSize: 14 }} /> : undefined}
+                              sx={{ cursor: onClick ? 'pointer' : 'default' }}
+                            />
+                          </Tooltip>
+                        );
+                      })}
                     </Stack>
                   </Box>
                 )}

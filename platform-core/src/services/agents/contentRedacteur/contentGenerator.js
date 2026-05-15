@@ -1962,6 +1962,24 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
         seoScore = seoResult.overallScore;
       } catch (err) { console.debug('[contentGenerator.js] SEO analysis is optional for repurposed content:', err.message); }
 
+      // v4.95 Blok 7 follow-up: build provenance voor EU AI Act compliance
+      let _rpProvenance = null;
+      try {
+        const _rpValidation = await _validateContent(content || '', _bc?.sources || [], {
+          locale: 'en', skipPerSentence: true,
+        });
+        _rpProvenance = _buildProvenance({
+          content: content || '',
+          model: modelName,
+          operation: 'repurpose',
+          sourceIds: (_bc?.sources || []).map(s => s.id).filter(Boolean),
+          sourceMetadata: _bc?.sources || [],
+          validation: _rpValidation,
+          locale: 'en',
+          destinationId: destId,
+        });
+      } catch (_provErr) { /* non-blocking */ }
+
       const result = {
         title: sourceItem.title,
         body_en: content,
@@ -1976,6 +1994,7 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
         seo_score: seoScore,
         char_count: content.length,
         char_limit: platformRules.maxChars,
+        provenance: _rpProvenance,
       };
 
       results.push(result);
