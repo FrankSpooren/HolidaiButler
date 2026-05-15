@@ -23,16 +23,21 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 600,
-    rolldownOptions: {
+    rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return;
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) return 'vendor-react';
-          if (id.includes('node_modules/@mui/icons-material/')) return 'vendor-mui-icons';
-          if (id.includes('node_modules/@mui/material/')) return 'vendor-mui-core';
-          if (id.includes('node_modules/@tanstack/react-query/') || id.includes('node_modules/axios/') || id.includes('node_modules/zustand/') || id.includes('node_modules/i18next/') || id.includes('node_modules/react-i18next/')) return 'vendor-data';
-          if (id.includes('node_modules/@dnd-kit/')) return 'vendor-interactive';
-          if (id.includes('node_modules/@sentry/react/')) return 'vendor-sentry';
+        manualChunks: {
+          // React core
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // MUI core
+          'vendor-mui-core': ['@mui/material'],
+          'vendor-mui-icons': ['@mui/icons-material'],
+          // Data management (i18next stays — only nl.json sync, rest lazy)
+          'vendor-data': ['@tanstack/react-query', 'axios', 'zustand', 'i18next', 'react-i18next'],
+          // DnD + Rich text
+          'vendor-interactive': ['@dnd-kit/core'],
+          // Sentry — separate chunk, lazy init
+          'vendor-sentry': ['@sentry/react'],
+          // recharts removed — Vite auto-splits per lazy-loaded page
         },
       },
     },

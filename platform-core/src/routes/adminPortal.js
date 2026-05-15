@@ -13545,6 +13545,13 @@ router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfor
       `UPDATE content_concepts SET ${updates.join(', ')} WHERE id = ?`,
       { replacements }
     );
+    // Invalidate tenant cache so GET /content/concepts returns fresh data
+    const [[conceptDest]] = await mysqlSequelize.query(
+      'SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] }
+    );
+    if (conceptDest?.destination_id) {
+      tenantCacheService.invalidateNamespace(conceptDest.destination_id, 'concepts-list').catch(() => {});
+    }
     res.json({ success: true, data: { concept_id: conceptId, updated: true } });
   } catch (error) {
     logger.error('[AdminPortal] Concept update error:', error);
