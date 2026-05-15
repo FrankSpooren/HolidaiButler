@@ -1780,7 +1780,7 @@ export default function ContentStudioPage() {
 
   // Column visibility
   const ALL_COLUMNS = ['title', 'type', 'platforms', 'pillar', 'seo', 'status', 'updated', 'actions'];
-  const COLUMN_LABELS = { title: 'Titel', type: 'Type', platforms: 'Platforms', pillar: 'Pillar', seo: 'SEO', status: 'Status', updated: 'Bijgewerkt', actions: 'Acties' };
+  const COLUMN_LABELS = { title: 'Titel', type: 'Type', platforms: 'Platforms', pillar: 'Pillar', seo: 'SEO', status: 'Status', updated: 'Datum', actions: 'Acties' };
   const activeColumns = visibleColumns || ALL_COLUMNS;
 
   // Persist density
@@ -2567,7 +2567,7 @@ export default function ContentStudioPage() {
               <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
                   <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
-                    <TableCell padding="checkbox" sx={{ width: 42 }}>
+                    <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48 }}>
                       {(() => {
                         const filtered = suggestions
                           .filter(s => !sugTypeFilter || s.content_type === sugTypeFilter)
@@ -2601,7 +2601,7 @@ export default function ContentStudioPage() {
                         <MenuItem value="video_script">Video</MenuItem>
                       </Select>
                     </TableCell>
-                    <TableCell sx={{ cursor: 'pointer', width: 70 }} onClick={() => setSugSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {sugSort.startsWith('score') ? (sugSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
+                    <TableCell sx={{ cursor: 'pointer', width: 80 }} onClick={() => setSugSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {sugSort.startsWith('score') ? (sugSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.keywords', 'Keywords')}</TableCell>
                     <TableCell sx={{ width: 100 }}>{t('contentStudio.table.channels', 'Kanalen')}</TableCell>
                     <TableCell sx={{ width: 120 }}>
@@ -2613,7 +2613,7 @@ export default function ContentStudioPage() {
                         <MenuItem value="generated">Gegenereerd</MenuItem>
                       </Select>
                     </TableCell>
-                    <TableCell align="right" sx={{ width: 70 }}>{t('contentStudio.table.actions', 'Acties')}</TableCell>
+                    <TableCell align="right" sx={{ width: 100 }}>{t('contentStudio.table.actions', 'Acties')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2816,87 +2816,10 @@ export default function ContentStudioPage() {
                     <ViewColumnIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Popover
-                  open={Boolean(columnMenuAnchor)}
-                  anchorEl={columnMenuAnchor}
-                  onClose={() => setColumnMenuAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                  <Box sx={{ p: 2, minWidth: 180 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('contentStudio.visibleColumns', 'Zichtbare kolommen')}</Typography>
-                    {ALL_COLUMNS.map(col => (
-                      <FormControlLabel
-                        key={col}
-                        control={
-                          <Switch
-                            size="small"
-                            checked={activeColumns.includes(col)}
-                            onChange={() => {
-                              const newCols = activeColumns.includes(col)
-                                ? activeColumns.filter(c => c !== col)
-                                : [...activeColumns, col];
-                              setVisibleColumns(newCols.length === ALL_COLUMNS.length ? null : newCols);
-                            }}
-                            disabled={col === 'title'}
-                          />
-                        }
-                        label={<Typography variant="body2">{COLUMN_LABELS[col]}</Typography>}
-                        sx={{ display: 'block', mx: 0 }}
-                      />
-                    ))}
-                    <Button size="small" onClick={() => setVisibleColumns(null)} sx={{ mt: 1 }}>{t('contentStudio.resetColumns', 'Herstel')}</Button>
-                  </Box>
-                </Popover>
                 {/* Keyboard shortcuts */}
                 <Tooltip title="Sneltoetsen">
                   <IconButton size="small" onClick={(e) => setKbdAnchor(e.currentTarget)} color={kbdAnchor ? 'primary' : 'default'}><KeyboardIcon fontSize="small" /></IconButton>
                 </Tooltip>
-                <Popover
-                  open={Boolean(kbdAnchor)}
-                  anchorEl={kbdAnchor}
-                  onClose={() => setKbdAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                  <Box sx={{ p: 2, minWidth: 240 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>Sneltoetsen</Typography>
-                    {[
-                      ['j / \u2193', 'Volgende rij'],
-                      ['k / \u2191', 'Vorige rij'],
-                      ['Enter', 'Open geselecteerd'],
-                      ['x', 'Selecteer/deselecteer'],
-                      ['Shift+A', 'Alles selecteren'],
-                      ['Shift+X', 'Selectie wissen'],
-                      ['a', 'Goedkeuren (bij selectie)'],
-                      ['p', 'Publiceren (bij selectie)'],
-                      ['Delete', 'Verwijderen (bij selectie)'],
-                    ].map(([key, desc]) => (
-                      <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>{desc}</Typography>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          {key.split(' / ').map(k => (
-                            <Box key={k} component="kbd" sx={{
-                              px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
-                              bgcolor: 'action.hover', borderRadius: 0.5,
-                              border: '1px solid', borderColor: 'divider',
-                              lineHeight: 1.4,
-                            }}>{k}</Box>
-                          ))}
-                        </Box>
-                      </Box>
-                    ))}
-                    <Divider sx={{ my: 1 }} />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
-                      <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 500, color: 'primary.main' }}>Command Palette</Typography>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>Ctrl</Box>
-                        <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>K</Box>
-                      </Box>
-                    </Box>
-                    <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, mt: 0.5, display: 'block' }}>Alle sneltoetsen &amp; acties</Typography>
-                  </Box>
-                </Popover>
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadItems}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
@@ -3024,7 +2947,7 @@ export default function ContentStudioPage() {
                       <TableCell sx={{ minWidth: 130 }}>Pillar</TableCell>
                     )}
                     {activeColumns.includes('seo') && (
-                      <TableCell sx={{ width: 55 }}>
+                      <TableCell sx={{ width: 65 }}>
                         <Tooltip title={t('contentStudio.table.seoScoreTooltip', 'Hoogste SEO-score over alle platform-versies van dit concept.')}>
                           <span>SEO</span>
                         </Tooltip>
@@ -3044,11 +2967,11 @@ export default function ContentStudioPage() {
                     )}
                     {activeColumns.includes('updated') && (
                       <TableCell sx={{ cursor: 'pointer', width: 110 }} onClick={() => setItemSort(s => s === 'date_desc' ? 'date_asc' : 'date_desc')}>
-                        {t('contentStudio.table.date', 'Bijgewerkt')} {itemSort.startsWith('date') ? (itemSort === 'date_asc' ? '↑' : '↓') : ''}
+                        {t('contentStudio.table.date', 'Datum')} {itemSort.startsWith('date') ? (itemSort === 'date_asc' ? '↑' : '↓') : ''}
                       </TableCell>
                     )}
                     {activeColumns.includes('actions') && (
-                      <TableCell align="right" sx={{ width: 70 }}>{t('contentStudio.table.actions', 'Acties')}</TableCell>
+                      <TableCell align="right" sx={{ width: 100 }}>{t('contentStudio.table.actions', 'Acties')}</TableCell>
                     )}
                   </TableRow>
                 </TableHead>
@@ -3310,6 +3233,85 @@ export default function ContentStudioPage() {
         onGenerate={handleGenerateContent}
         destinationId={destinationId}
       />
+
+      {/* === Shared Popovers (Column Visibility + Keyboard Shortcuts) — render outside tab conditionals === */}
+      <Popover
+        open={Boolean(columnMenuAnchor)}
+        anchorEl={columnMenuAnchor}
+        onClose={() => setColumnMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box sx={{ p: 2, minWidth: 180 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('contentStudio.visibleColumns', 'Zichtbare kolommen')}</Typography>
+          {ALL_COLUMNS.map(col => (
+            <FormControlLabel
+              key={col}
+              control={
+                <Switch
+                  size="small"
+                  checked={activeColumns.includes(col)}
+                  onChange={() => {
+                    const newCols = activeColumns.includes(col)
+                      ? activeColumns.filter(c => c !== col)
+                      : [...activeColumns, col];
+                    setVisibleColumns(newCols.length === ALL_COLUMNS.length ? null : newCols);
+                  }}
+                  disabled={col === 'title'}
+                />
+              }
+              label={<Typography variant="body2">{COLUMN_LABELS[col]}</Typography>}
+              sx={{ display: 'block', mx: 0 }}
+            />
+          ))}
+          <Button size="small" onClick={() => setVisibleColumns(null)} sx={{ mt: 1 }}>{t('contentStudio.resetColumns', 'Herstel')}</Button>
+        </Box>
+      </Popover>
+      <Popover
+        open={Boolean(kbdAnchor)}
+        anchorEl={kbdAnchor}
+        onClose={() => setKbdAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box sx={{ p: 2, minWidth: 240 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700 }}>Sneltoetsen</Typography>
+          {[
+            ['j / \u2193', 'Volgende rij'],
+            ['k / \u2191', 'Vorige rij'],
+            ['Enter', 'Open geselecteerd'],
+            ['x', 'Selecteer/deselecteer'],
+            ['Shift+A', 'Alles selecteren'],
+            ['Shift+X', 'Selectie wissen'],
+            ['a', 'Goedkeuren (bij selectie)'],
+            ['p', 'Publiceren (bij selectie)'],
+            ['Delete', 'Verwijderen (bij selectie)'],
+          ].map(([key, desc]) => (
+            <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>{desc}</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {key.split(' / ').map(k => (
+                  <Box key={k} component="kbd" sx={{
+                    px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+                    bgcolor: 'action.hover', borderRadius: 0.5,
+                    border: '1px solid', borderColor: 'divider',
+                    lineHeight: 1.4,
+                  }}>{k}</Box>
+                ))}
+              </Box>
+            </Box>
+          ))}
+          <Divider sx={{ my: 1 }} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+            <Typography variant="body2" sx={{ fontSize: 12, fontWeight: 500, color: 'primary.main' }}>Command Palette</Typography>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>Ctrl</Box>
+              <Box component="kbd" sx={{ px: 0.75, py: 0.25, fontSize: 11, fontFamily: 'monospace', fontWeight: 600, bgcolor: 'action.hover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', lineHeight: 1.4 }}>K</Box>
+            </Box>
+          </Box>
+          <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, mt: 0.5, display: 'block' }}>Alle sneltoetsen &amp; acties</Typography>
+        </Box>
+      </Popover>
 
       <ConceptDialog
         open={!!conceptDialogId}
