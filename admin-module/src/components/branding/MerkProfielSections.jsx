@@ -4,7 +4,7 @@ import {
   Accordion, AccordionSummary, AccordionDetails, IconButton, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, FormControl,
   InputLabel, Select, MenuItem, FormControlLabel, Checkbox, CircularProgress,
-  Paper, List, ListItem, ListItemText, ListItemSecondaryAction, Divider
+  Paper, List, ListItem, ListItemButton, ListItemText, Divider
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import BusinessIcon from '@mui/icons-material/Business';
@@ -500,8 +500,32 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
               <ListItem
                 key={item.id}
                 id={`kb-source-${item.id}`}
-                button
-                onClick={() => openKbPreview(item)}
+                disablePadding
+                secondaryAction={
+                  <>
+                    <Tooltip title={t('brandProfile.knowledge.download', 'Download')}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => { e.stopPropagation(); handleKbDownload(item.id); }}
+                        aria-label={t('brandProfile.knowledge.download', 'Download')}
+                        sx={{ minWidth: 44, minHeight: 44 }}
+                      >
+                        <DownloadIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={t('common.delete', 'Verwijderen')}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => { e.stopPropagation(); knowledgeDeleteMut.mutate(item.id); }}
+                        aria-label={t('common.delete', 'Verwijderen')}
+                        sx={{ minWidth: 44, minHeight: 44 }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                }
                 sx={{
                   bgcolor: highlightedKbId === item.id ? 'success.light' : 'action.hover',
                   borderRadius: 1, mb: 0.5,
@@ -509,38 +533,14 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
                   outline: highlightedKbId === item.id ? '2px solid' : 'none',
                   outlineColor: 'success.main',
                   outlineOffset: 2,
-                  cursor: 'pointer',
-                  // Reserve room for 2 IconButtons (44px each) + spacing
-                  pr: 12,
                 }}
               >
-                <ListItemText
-                  primary={item.source_name}
-                  secondary={`${item.source_type} · ${item.word_count} ${t('brandProfile.knowledge.words', 'woorden')}`}
-                />
-                <ListItemSecondaryAction>
-                  <Tooltip title={t('brandProfile.knowledge.download', 'Download')}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); handleKbDownload(item.id); }}
-                      aria-label={t('brandProfile.knowledge.download', 'Download')}
-                      sx={{ minWidth: 44, minHeight: 44 }}
-                    >
-                      <DownloadIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={t('common.delete', 'Verwijderen')}>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => { e.stopPropagation(); knowledgeDeleteMut.mutate(item.id); }}
-                      aria-label={t('common.delete', 'Verwijderen')}
-                      sx={{ minWidth: 44, minHeight: 44 }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </ListItemSecondaryAction>
+                <ListItemButton onClick={() => openKbPreview(item)} sx={{ borderRadius: 1, pr: 12 }}>
+                  <ListItemText
+                    primary={item.source_name}
+                    secondary={`${item.source_type} · ${item.word_count} ${t('brandProfile.knowledge.words', 'woorden')}`}
+                  />
+                </ListItemButton>
               </ListItem>
             ))}
           </List>
