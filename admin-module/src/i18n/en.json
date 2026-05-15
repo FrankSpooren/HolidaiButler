@@ -1920,6 +1920,14 @@
       "informal": "Informal",
       "formal": "Formal",
       "mixed": "Mixed"
+    },
+    "knowledge": {
+      "preview": "Preview",
+      "download": "Download",
+      "words": "words",
+      "previewEmpty": "(no content available)",
+      "downloadForFull": "Preview shows the first 5,000 characters. Download for the full content.",
+      "downloadFailed": "Download failed"
     }
   },
   "media": {

@@ -1896,6 +1896,14 @@
       "informal": "Informal (tú)",
       "formal": "Formal (usted)",
       "mixed": "Mixto"
+    },
+    "knowledge": {
+      "preview": "Vista previa",
+      "download": "Descargar",
+      "words": "palabras",
+      "previewEmpty": "(sin contenido disponible)",
+      "downloadForFull": "La vista previa muestra los primeros 5000 caracteres. Descargue para ver el contenido completo.",
+      "downloadFailed": "Error al descargar"
     }
   },
   "media": {

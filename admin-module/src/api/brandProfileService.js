@@ -57,6 +57,39 @@ const brandProfileService = {
   // Website analysis
   analyzeWebsite: (destId, url) =>
     client.post('/brand-profile/analyze-website', { url }, { params: { destination_id: destId }, timeout: 30000 }).then(r => r.data),
+
+  // Knowledge Base preview + download (Blok 1)
+  // Backend routes: /brand-sources/:id/(preview|download)
+  // - preview: editor role (view in dialog), returns PDF blob OR JSON excerpt
+  // - download: destination_admin role (forced download)
+  previewKnowledge: async (id) => {
+    const res = await client.get(`/brand-sources/${id}/preview`, { responseType: 'blob' });
+    const contentType = res.headers['content-type'] || '';
+    if (contentType.startsWith('application/pdf')) {
+      // Inline PDF — return blob URL for iframe rendering
+      // Caller MUST URL.revokeObjectURL() when dialog closes (memory leak prevention)
+      return { type: 'pdf', blobUrl: URL.createObjectURL(res.data) };
+    }
+    // JSON response — content_excerpt + metadata for <pre> rendering
+    const text = await res.data.text();
+    const json = JSON.parse(text);
+    return { type: 'json', ...(json.data || {}) };
+  },
+
+  downloadKnowledge: async (id) => {
+    const res = await client.get(`/brand-sources/${id}/download`, { responseType: 'blob' });
+    const match = (res.headers['content-disposition'] || '').match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `knowledge-${id}`;
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { filename, size: res.data.size };
+  },
 };
 
 export default brandProfileService;

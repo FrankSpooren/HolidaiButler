@@ -188,7 +188,7 @@ import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
-import { verifyProvenance, getProvenance, detectBodyLang } from '../services/provenanceService.js';
+import { verifyProvenance, getProvenance, detectBodyLang, buildProvenance } from '../services/provenanceService.js';
 import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
 
@@ -14908,19 +14908,55 @@ Return as JSON array only.`;
           { replacements: { destId, title: itemTitle, cType } }
         );
         const conceptId = conceptResult;
+        // EU AI Act (Optie A) — calendar-autofill briefs zijn AI-generated.
+        // Provenance + ai_generation_log net als de andere 5/8 AI INSERT paths.
+        const itemBody = s.brief || s.description || s.summary || '';
+        const aiModel = embeddingService.chatModel || 'mistral-medium-latest';
+        const provenanceObj = buildProvenance({
+          content: itemBody,
+          model: aiModel,
+          operation: 'calendar-autofill',
+          sourceIds: [],
+          sourceMetadata: [],
+          validation: null,
+          locale: destLang,
+          destinationId: destId,
+        });
+
         // Step 2: Create content item linked to concept
         const [result] = await mysqlSequelize.query(
-          `INSERT INTO content_items (destination_id, concept_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, created_at, updated_at)
-           VALUES (:destId, :conceptId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, 'calendar-autofill', :seoData, NOW(), NOW())`,
+          `INSERT INTO content_items (destination_id, concept_id, content_type, title, ${bodyField}, target_platform, approval_status, scheduled_at, ai_generated, ai_model, seo_data, provenance, created_at, updated_at)
+           VALUES (:destId, :conceptId, :contentType, :title, :body, :platform, 'draft', :scheduledAt, true, :aiModel, :seoData, :provenance, NOW(), NOW())`,
           { replacements: {
             destId, conceptId, contentType: cType,
             title: itemTitle,
-            body: s.brief || s.description || s.summary || '',
+            body: itemBody,
             platform: s.target_platform || 'instagram',
             scheduledAt,
+            aiModel,
             seoData: JSON.stringify({ pillar: s.pillar || '', persona: s.target_persona || '', source: 'calendar-autofill' }),
+            provenance: JSON.stringify(provenanceObj),
           }, type: QueryTypes.INSERT }
         );
+
+        // EU AI Act audit log — operation enum = 'generate', sub-type in provenance.operation
+        try {
+          const { writeAuditLog } = await import('../services/aiQualityOrchestrator.js');
+          await writeAuditLog({
+            destinationId: destId,
+            contentItemId: result,
+            contentType: cType,
+            platform: s.target_platform || 'instagram',
+            locale: destLang,
+            operation: 'generate',
+            model: aiModel,
+            sources: [],
+            validation: null,
+            durationMs: null,
+          });
+        } catch (auditErr) {
+          logger.warn(`[calendar-autofill] ai_generation_log write failed: ${auditErr.message}`);
+        }
         // Step 3: Auto-attach best matching image
         try {
           const { selectImages } = await import('../services/agents/contentRedacteur/imageSelector.js');
@@ -15049,8 +15085,8 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
 
     // Get ALL platform items of this concept (not just the clicked one)
     const [allItems] = await mysqlSequelize.query(
-      `SELECT destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated
+      `SELECT id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated, provenance
        FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'
        ORDER BY target_platform`,
       { replacements: { conceptId: original.concept_id } }
@@ -15071,13 +15107,35 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
     // Copy ALL platform items into the new concept
     const createdIds = [];
     for (const item of allItems) {
+      // EU AI Act provenance inherit (Blok 3) — body is byte-identical, so signature
+      // stays cryptographically valid. operation='duplicate' marks derivation.
+      let inheritedProvenance = null;
+      if (item.provenance) {
+        try {
+          const parsed = typeof item.provenance === 'object' ? item.provenance : JSON.parse(item.provenance);
+          inheritedProvenance = {
+            ...parsed,
+            operation: 'duplicate',
+            duplicated_from_item_id: item.id,
+            duplicated_from_concept_id: original.concept_id,
+            duplicated_at: new Date().toISOString(),
+            signature_inherited: parsed.signature || null,
+          };
+        } catch (parseErr) {
+          logger.warn(`[Duplicate] Cannot parse provenance for item ${item.id}: ${parseErr.message}`);
+        }
+      } else if (item.ai_generated) {
+        // AI-generated origineel zonder provenance (legacy pre-Blok 7) — log voor audit
+        logger.info(`[Duplicate] AI-item ${item.id} has no provenance — duplicate inherit skipped (legacy item)`);
+      }
+
       const [insertId] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
+          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated, provenance,
           approval_status, created_at, updated_at)
          VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
+          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated, :provenance,
           'draft', NOW(), NOW())`,
         { replacements: {
           conceptId: newConceptId, destId: item.destination_id, cType: item.content_type,
@@ -15088,6 +15146,7 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
           mediaIds: item.media_ids,
           seoData: item.seo_data ? (typeof item.seo_data === 'object' ? JSON.stringify(item.seo_data) : item.seo_data) : null,
           pillarId: item.pillar_id, aiModel: item.ai_model, aiGenerated: item.ai_generated,
+          provenance: inheritedProvenance ? JSON.stringify(inheritedProvenance) : null,
         }}
       );
       createdIds.push({ id: insertId, platform: item.target_platform });
