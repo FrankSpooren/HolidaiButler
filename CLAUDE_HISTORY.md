@@ -10,6 +10,126 @@
 
 ---
 
+## v4.94.0 – v4.99.0 — Fase B Multi-Tenant Scale (15 mei 2026)
+
+### Samenvatting
+Volledige Fase B Multi-Tenant Scale Command: 7 work-blokken + Blok 7 follow-ups, totaal 18 commits. Multi-tenant schaalbaarheid voor 50 destinations + 5000 items/week. EU AI Act Article 50 compliance op item-niveau via provenance signatures + audit-PDF + tamper-detection. Real-time multi-user editing via Socket.IO. BullMQ delayed-jobs voor 60s publicatie-precisie. XState v5 FSM met per-tenant workflows uit DB.
+
+### Blok 1 — Workflow Sealing (v4.94)
+- 1.1 Graph API publish-confirmation met retry-logica (vóór sessie, commit 3db35fe)
+- 1.2 FSM gateway uitgebreid — alle 12 direct-UPDATE op approval_status in routes/adminPortal.js gerefactord naar transitionStatus()/bulkTransitionStatus(). 7 manuele audit-log INSERTs verwijderd.
+- 1.3 Stap 2 buttons FSM-driven via getAvailableActions().canPublish/canSchedule met tooltip-uitleg
+- 1.4 .bak.* cleanup (vóór sessie, commit 758be6c)
+- 1.5 Items 248+249 voor 16 mei 10:00 UTC autonomous-publish test ready
+- 1.6 provenanceAuditMonitor singleton: alert na 3 consecutive ai_generation_log failures (15-min cooldown), geïntegreerd in alle 5 INSERT callsites
+
+### Blok 2 — Real-Time Frontend State (v4.95)
+- TanStack Query reeds geïnstalleerd; nieuwe useMutation patroon op approveConceptMutation met onMutate snapshot + onError rollback + onSettled invalidate
+- Backend: src/services/realtimeService.js — Socket.IO server op /realtime met JWT auth, per-destination rooms, eventBus bridge met NATS-stijl content.{destId}.{action} subjects
+- src/index.js: http.createServer wrap + Socket.IO attach
+- approvalStateMachine.transitionStatus emit hook na elke successful transition
+- Frontend: src/hooks/useRealtimeContent.js met useRef-callback pattern (geen reconnect storms), auto-invalidateQueries op events
+- main.jsx: ReactQueryDevtools dev-only, QueryClient config refresh
+- Feature flag publisher.delayed_jobs_enabled per destination (rollback safety)
+
+### Blok 3 — Backend FSM Productisering (v4.96)
+- xstate ^5.31 geïnstalleerd
+- src/services/contentWorkflowMachine.js — XState v5 machine factory + 4 presets (default, bute-1-step, warrewijzer-2-step, corporate-3-step) + getMachineGraph() voor @xstate/inspect
+- src/services/workflowConfigService.js — workflow_configurations DB-loader met 5-min cache + setTransitions UPSERT
+- DB: BUTE (dest 10) + WarreWijzer (dest 4) beta workflows geseeded
+- approvalStateMachine.transitionStatus gebruikt nu canTransitionXState met per-tenant DB-transitions
+- src/services/domainEventBus.js — NATS-stijl pub/sub abstractie (publish/subscribe met wildcards) bovenop Redis eventBus
+- realtimeService publiceert via domainEventBus
+- DB tabellen webhook_endpoints + webhook_deliveries (migration 010)
+- src/services/webhookDispatcher.js — HMAC-SHA256 signing, 5s AbortController timeout, exponential backoff retry 1s/5s/30s, auto-disable na 10 failures
+- Admin REST: /workflow/transitions GET+PUT, /workflow/presets, /workflow/machine-graph, /webhooks CRUD, /webhooks/:id/deliveries, /webhooks/stats
+
+### Blok 4 — Delayed Publishing Precision (v4.97)
+- src/services/contentPublishScheduler.js — BullMQ wrapper met scheduleItem/rescheduleItem/cancelItem (jobId=`publish-{itemId}` pattern, idempotent remove+add) + backfillScheduled
+- orchestrator/workers.js: contentPublishItemWorker met concurrency 4, calls publisher.publishItem({force:true})
+- approvalStateMachine FSM hook: scheduled transition → scheduleItem(), unschedule → cancelItem()
+- publisher.processScheduledPublications refactored naar orphan-detector (>5min past + status=scheduled threshold)
+- src/index.js: backfillScheduled() bij boot (recovery na Redis-restart)
+- 8 items na backfill geregistreerd (incl. 248+249 voor 16 mei test)
+
+### Blok 5 — Content Caching & Performance (v4.98)
+- src/services/tenantCacheService.js — Redis per-tenant cache met namespace tenant:{destId}:{ns}:{hash}, get/set/wrap/invalidateNamespace/invalidateDestination
+- Auto-invalidate via domainEventBus subscribe op content.> patterns
+- Feature flag cache.content_listings_enabled per destination
+- GET /content/concepts (list) gewikkeld in cache-aside (TTL 5min)
+- src/config/database.js — readReplicaSequelize via REPLICA_DB_HOST env + getReadDb() helper (master fallback indien niet geconfigureerd)
+- main.jsx — TanStack Query SWR defaults: staleTime 30s, gcTime 5min, refetchOn{Window,Reconnect}Focus 'always', refetchOnMount true
+- Admin REST: /cache/stats, /cache/invalidate, /database/replica-health
+
+### Blok 6 — Reviewer Quality UX (v4.94/v4.95)
+- brandSources.js — 4 nieuwe AI Quality endpoints: /ai-quality/trend (daily aggregaties), /top-entities (frequentie ungrounded), /retry-stats, /export.csv
+- admin-module/src/pages/AIQualityPage.jsx — Recharts LineChart pass-rate/hallucination trend + BarChart retry-distribution + Top-10 entities + recent failures table + period toggle 7/30/90 dagen + CSV blob download
+- admin-module/src/api/aiQualityService.js
+- App.jsx route /ai-quality (lazy)
+- admin-module/src/components/content/SentenceCitations.jsx — eerste versie met sentence-tokenizer + hover-tooltips (later refactored naar chip-first design)
+
+### Blok 7 — EU AI Act Provenance UI (v4.95)
+- pdfkit ^0.18 geïnstalleerd
+- src/services/provenanceReportService.js — generateProvenancePDF: A4 audit-rapport met header (Article 50 reference), item-identification, verification result (kleurcode), provenance metadata, signature + content_sha256 monospace, cited sources met klikbare URLs, validation result (hallucination_rate, ungrounded entities), full body content, legal footer
+- adminPortal.js — 3 nieuwe endpoints: GET /content/items/:id/provenance (provenance JSON + verify status), POST /verify-provenance (re-verify met optionele content override), GET /provenance-report.pdf (download)
+- admin-module/src/components/content/ProvenancePanel.jsx — eerste versie met collapsible card, copy-to-clipboard chips voor signature/hash, source-chips, validation panel
+- Geïntegreerd onder SentenceCitations in ConceptDialog Blog modus
+- Backfill script: 46 legacy items met provenance gevuld (operation='backfill')
+
+### Post-Blok-7 fixes (commit 531b7cc)
+Bug A: SQL "Unknown column 'target_language'" in 3 SELECTs — content_items heeft geen target_language kolom. Helper detectBodyLang(row) toegevoegd aan provenanceService, vervangen in adminPortal x2 + provenanceReportService.loadItem.
+Bug C: AIQualityPage destinationStore API — vervangen s.activeDestination?.id door s.getSelectedDestinationInfo()?.id (correcte API).
+Bug D: SentenceCitations response unwrap — r.data?.data?.sources i.p.v. r.data?.data (object vs array).
+Bug E: 2e generate INSERT path (adapt-to-destination) provenance toegevoegd.
+
+### UX-pakket (commit 449ea83)
+Fix F: Re-verify snackbar met severity + timestamp + status feedback.
+Fix G (KRITIEK): real-time body watching met 1500ms debounce auto re-verify — status updaten direct zonder dialog close/reopen.
+Redesign: chip-first SentenceCitations — volle tekst niet meer standaard zichtbaar, expand-toggle "Toon zinsanalyse" voor regulator-modus.
+Fix H: clickable bron-chips met OpenInNewIcon, URL open of disabled.
+
+### Deep-link naar Merk Profiel (commit 7207fc6)
+- src/lib/useDestinationCode.js hook: destinationId → code via destinationStore.destinations
+- BrandingPage.jsx: useSearchParams reader ?dest=&kb= → auto activeTab + auto open Merk Profiel dialog
+- MerkProfielSections.jsx: highlightKnowledgeId prop + scrollIntoView + 3s pulse-animatie (success.light bg + outline)
+- SentenceCitations + ProvenancePanel: chip onClick voor text-bronnen → navigate /branding?dest=X&kb=Y
+- Tooltip "Open bron in Merk Profiel → Knowledge Base" i.p.v. "Geen URL beschikbaar"
+
+### Volledige provenance coverage (commit f3d9c3f)
+5/8 INSERT INTO content_items paden persisteren provenance:
+- /content/items/generate (line 12702)
+- /content/generate-from-poi (line 13974, Blok 7)
+- /content/items/:id/repurpose (line 14070, upstream repurposeContent build)
+- /content/items/:id/share-to-destination (line 14150, fix E)
+- /content/campaigns/generate (line 14896)
+3 niet-AI paden terecht uitgesloten: handmatig (12624), calendar-autofill brief (15053), duplicate (15215).
+
+### Backend services nieuw (9 totaal)
+provenanceAuditMonitor, realtimeService, contentWorkflowMachine, workflowConfigService, domainEventBus, webhookDispatcher, contentPublishScheduler, tenantCacheService, provenanceReportService
+
+### Frontend componenten nieuw (6 totaal)
+useRealtimeContent (hook), useDestinationCode (hook), aiQualityService (API), AIQualityPage, SentenceCitations, ProvenancePanel
+
+### DB schema wijzigingen
+- workflow_configurations table populated + 2 beta workflows
+- webhook_endpoints + webhook_deliveries tables (migration 010)
+- content_items.provenance populated voor 49/51 active items (was 0/51 vóór sessie)
+
+### Nieuwe dependencies
+- platform-core: socket.io ^4.8.3, xstate ^5.31.1, pdfkit ^0.18.0
+- admin-module: socket.io-client ^4.8.3, @tanstack/react-query-devtools ^4.44.0
+
+### Metrics post-Fase-B
+- 322 router endpoints in adminPortal.js (was ~318)
+- adminPortal.js v3.25.0 (geen separate bump)
+- 18 commits in sessie
+- 0 SQL errors in PM2 logs na fixes
+- DB coverage provenance: 49/51 = 96% van actieve items
+
+CLAUDE.md v4.99.0. MS v8.40. **Fase B COMPLEET 15-05-2026.**
+
+---
+
 ## v4.82.0 -- Dashboard Acties & Snelkoppelingen Aanpasbaar (6 mei 2026)
 
 ### Samenvatting
