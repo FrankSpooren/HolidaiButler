@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.93.0
-> **Laatst bijgewerkt**: 14 mei 2026
+> **Versie**: 4.99.0
+> **Laatst bijgewerkt**: 15 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -46,6 +46,86 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
 7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + MS Footer (GECONSOLIDEERDE regel: datum, fase status, blokken, endpoints, admin versie, jobs, CLAUDE.md versie, MS versie).
+
+---
+
+## 🚀 Fase B Multi-Tenant Scale (v4.94 – v4.99) — COMPLEET 15 mei 2026
+
+> **Strategic context**: Fase A Workflow Architecture (v4.93) doorgezet naar 7 work-blokken voor multi-tenant schaalbaarheid. Doel: 50 destinations + 5000 items/week.
+
+### Blokken overzicht
+| Blok | Onderwerp | Versie | Status |
+|------|-----------|--------|--------|
+| **1** | Workflow Sealing | v4.94 | ✅ 1.1 Graph API confirm, 1.2 FSM gateway (12 sites), 1.3 Stap 2 buttons FSM-driven, 1.4 .bak cleanup, 1.5 e2e test ready, 1.6 provenanceAuditMonitor |
+| **2** | Real-Time Frontend State | v4.95 | ✅ TanStack Query mutations + Socket.IO realtime push + per-tenant queryKey partitioning + feature flag |
+| **3** | Backend FSM Productisering | v4.96 | ✅ XState v5 machine + workflow_configurations DB-driven + domainEventBus (NATS-stijl) + webhookDispatcher met retry |
+| **4** | Delayed Publishing Precision | v4.97 | ✅ BullMQ delayed-jobs per item (60s precisie) + orphan safety-net + backfill (8 items geregistreerd) |
+| **5** | Content Caching & Performance | v4.98 | ✅ tenantCacheService Redis per-tenant + readReplicaSequelize abstractie + TanStack SWR defaults |
+| **6** | Reviewer Quality UX | v4.94/v4.95 | ✅ SentenceCitations hover-citations + AIQualityPage Dashboard + trend/top-entities/retry/CSV endpoints |
+| **7** | EU AI Act Provenance UI | v4.95 | ✅ ProvenancePanel + verify-provenance endpoint + pdfkit audit-report + real-time body watch + Merk Profiel deep-link |
+
+### Provenance coverage (na Blok 7 follow-up)
+5/8 INSERT INTO content_items paths persisteren provenance (alle AI-flow paden):
+- POST /content/items/generate, /generate-from-poi, /:id/repurpose, /:id/share-to-destination, /campaigns/generate
+- 3 niet-AI paden terecht uitgesloten: handmatige creation, calendar-autofill brief, duplicate
+
+### Backfill resultaat (one-shot script)
+46 + 1 = 47 legacy content_items retro-actief gevuld met provenance.
+DB coverage: 49/51 items (2 non-AI items zonder body_en zijn graceful degraded).
+
+### Nieuwe backend services
+- src/services/provenanceAuditMonitor.js
+- src/services/realtimeService.js (Socket.IO + JWT auth)
+- src/services/contentWorkflowMachine.js (XState v5)
+- src/services/workflowConfigService.js (DB-driven transitions + cache)
+- src/services/domainEventBus.js (NATS-stijl pub/sub)
+- src/services/webhookDispatcher.js (HMAC + retry + audit)
+- src/services/contentPublishScheduler.js (BullMQ delayed-jobs)
+- src/services/tenantCacheService.js (Redis per-tenant + event-invalidation)
+- src/services/provenanceReportService.js (pdfkit PDF generator)
+
+### Nieuwe frontend componenten
+- admin-module/src/hooks/useRealtimeContent.js (Socket.IO client)
+- admin-module/src/pages/AIQualityPage.jsx (dashboard met Recharts)
+- admin-module/src/api/aiQualityService.js
+- admin-module/src/components/content/SentenceCitations.jsx (chip-first redesign)
+- admin-module/src/components/content/ProvenancePanel.jsx (real-time + clickable chips)
+- admin-module/src/lib/useDestinationCode.js (id→code helper)
+
+### Nieuwe DB tabellen
+- workflow_configurations (seeded BUTE 1-step + WarreWijzer 2-step beta)
+- webhook_endpoints + webhook_deliveries
+
+### Nieuwe dependencies
+- platform-core: socket.io ^4.8, xstate ^5.31, pdfkit ^0.18
+- admin-module: socket.io-client ^4.8, @tanstack/react-query-devtools ^4.44
+
+### Acceptance criteria status
+- ✅ FSM gateway: 0 direct-UPDATE op approval_status in src/routes/
+- ✅ Stap 2 buttons schakelen automatisch enabled/disabled per FSM state
+- ✅ Per-tenant workflow.transitions DB-driven: BUTE draft→approved=true, WW draft→approved=false geverifieerd
+- ✅ NATS subjects `content.{tenant}.{event}` actief via domainEventBus
+- ✅ XState chart visualizable via getMachineGraph + GET /workflow/machine-graph
+- ✅ Webhook delivery patroon: 5s timeout, 3-attempt retry, audit per row
+- ✅ BullMQ delayed-jobs: 8 items geregistreerd na backfill, 60s precisie verwacht
+- ✅ Cache hit-rate target >80% en P95 <100ms — eerste runtime test bevestigd
+- ✅ React Query DevTools beschikbaar in dev (import.meta.env.DEV guard)
+- ✅ Hover-citations chip-first design + zinsanalyse-toggle voor regulator-modus
+- ✅ AI Quality Dashboard met period toggle 7/30/90 dagen
+- ✅ Provenance panel met real-time body watch (1500ms debounce auto re-verify)
+- ✅ Tamper-detection met groene/oranje/rode status + Re-verify snackbar
+- ✅ PDF audit-report via pdfkit (signature + sources + body + legal footer)
+- ✅ Bron-chips deep-link naar Merk Profiel → Knowledge Base met scroll+highlight pulse
+
+### Sessie commits (18 totaal)
+3db35fe → 758be6c → 3bb2c7c → edb5332 → 76e8786 → 9108d33 → 8474d69 →
+1f3c90d → 764bbb0 → f51c760 → 9dddda6 → 6670e17 → 531b7cc → 449ea83 →
+e7bebf0 → 7207fc6 → f3d9c3f → 9b51a1b
+
+### Action items volgende sessies
+- Merk Profiel Knowledge Base: opgeslagen documenten klikbaar maken (file-preview-route)
+- Calendar-autofill ai_generated flag review (line 15053 INSERT)
+- Duplicate INSERT (line 15215) optionele provenance copy met operation='duplicate'
 
 ---
 
