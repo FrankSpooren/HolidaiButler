@@ -14,19 +14,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// OpenTelemetry tracing - initialize after env vars, before other imports
+// OpenTelemetry + Sentry tracing - initialize after env vars, before other imports
+// Sentry.init() is bundled in tracing.js for OTel-coexistence per Sentry v10 custom-setup docs
 import './observability/tracing.js';
-
-// Sentry Error Monitoring - Initialize early to catch all errors
-import * as Sentry from '@sentry/node';
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'production',
-    tracesSampleRate: 1.0,
-  });
-  console.log('Sentry initialized for error monitoring');
-}
 
 // Now import all other modules (they will have access to env vars)
 import express from 'express';
