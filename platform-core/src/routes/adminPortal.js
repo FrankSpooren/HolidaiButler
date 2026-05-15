@@ -188,6 +188,8 @@ import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
+import { verifyProvenance, getProvenance } from '../services/provenanceService.js';
+import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
 
 const router = Router();
@@ -17810,6 +17812,89 @@ router.get('/database/replica-health', adminAuth('platform_admin'), async (req, 
     }
   } catch (error) {
     res.status(500).json({ success: false, error: { code: 'REPLICA_HEALTH_ERROR', message: error.message } });
+  }
+});
+
+
+// ============================================================
+// v4.95 Blok 7: EU AI Act Provenance UI endpoints
+// ============================================================
+
+/**
+ * GET /content/items/:id/provenance — return full provenance JSON + verify status
+ * Voor frontend ProvenancePanel — toont signature, model, sources, validation.
+ */
+router.get('/content/items/:id/provenance', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [[row]] = await mysqlSequelize.query(
+      `SELECT id, destination_id, provenance, body_en, body_nl, body_de, body_es, body_fr, target_language
+       FROM content_items WHERE id = :id`,
+      { replacements: { id } }
+    );
+    if (!row) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    let prov = row.provenance;
+    if (typeof prov === 'string') {
+      try { prov = JSON.parse(prov); } catch { prov = null; }
+    }
+    const lang = row.target_language || 'en';
+    const body = (row[`body_${lang}`] || row.body_en || row.body_nl || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const verify = prov ? verifyProvenance(body, prov) : { valid: false, reason: 'no_provenance' };
+    res.json({ success: true, data: { id, destination_id: row.destination_id, provenance: prov, verify } });
+  } catch (error) {
+    logger.error('[AdminPortal] Provenance read error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'PROVENANCE_READ_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * POST /content/items/:id/verify-provenance — re-verify signature en tamper-status
+ * Body kan optioneel { content } overschrijven (om hypothetische edit te checken).
+ */
+router.post('/content/items/:id/verify-provenance', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [[row]] = await mysqlSequelize.query(
+      `SELECT provenance, body_en, body_nl, body_de, body_es, body_fr, target_language
+       FROM content_items WHERE id = :id`,
+      { replacements: { id } }
+    );
+    if (!row) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
+    let prov = row.provenance;
+    if (typeof prov === 'string') {
+      try { prov = JSON.parse(prov); } catch { prov = null; }
+    }
+    if (!prov) {
+      return res.json({ success: true, data: { id, verify: { valid: false, reason: 'no_provenance' } } });
+    }
+    const lang = row.target_language || 'en';
+    const bodyRaw = req.body?.content !== undefined ? req.body.content : (row[`body_${lang}`] || row.body_en || row.body_nl || '');
+    const body = String(bodyRaw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const verify = verifyProvenance(body, prov);
+    res.json({ success: true, data: { id, verify, content_length: body.length } });
+  } catch (error) {
+    logger.error('[AdminPortal] Verify provenance error:', error.message);
+    res.status(500).json({ success: false, error: { code: 'VERIFY_PROVENANCE_ERROR', message: error.message } });
+  }
+});
+
+/**
+ * GET /content/items/:id/provenance-report.pdf — PDF audit-report download
+ * Voor regulatory inspections (NL Autoriteit Persoonsgegevens, EU AI Act audit).
+ */
+router.get('/content/items/:id/provenance-report.pdf', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="provenance-item${id}-${new Date().toISOString().slice(0,10)}.pdf"`);
+    await generateProvenancePDF(id, res);
+  } catch (error) {
+    logger.error('[AdminPortal] Provenance PDF error:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: { code: 'PROVENANCE_PDF_ERROR', message: error.message } });
+    } else {
+      res.end();
+    }
   }
 });
 

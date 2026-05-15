@@ -24,6 +24,7 @@ import AnimatedScoreChip from '../common/AnimatedScoreChip.jsx';
 import WorkflowStatusChip from '../common/WorkflowStatusChip.jsx';
 import WorkflowProgressIndicator from '../common/WorkflowProgressIndicator.jsx';
 import SentenceCitations from './SentenceCitations.jsx';
+import ProvenancePanel from './ProvenancePanel.jsx';
 import { getAvailableActions, getStatusLabel as _wfGetStatusLabel } from '../../lib/workflowStatus.js';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PeopleIcon from '@mui/icons-material/People';
@@ -1387,6 +1388,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     body={editBody}
                     destinationId={destinationId}
                   />
+
+                  {/* v4.95 Blok 7.1: Provenance panel — signature, verify, PDF audit-report */}
+                  <ProvenancePanel itemId={activeItem?.id} body={editBody} />
 
                   {/* Word counter */}
                   {(() => {
