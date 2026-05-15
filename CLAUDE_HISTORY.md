@@ -8916,3 +8916,90 @@ Sessie van 8 commits op `dev` branch. Drie sporen parallel: security hardening (
 - `admin-module/src/pages/ContentStudioPage.jsx`
 - `admin-module/src/pages/ContentAnalyseTab.jsx`
 - `platform-core/src/routes/adminPortal.js` (legacy image resolution verwijderd)
+
+---
+
+## v5.1.1 — OpenTelemetry SDK 0.218 bump (15 mei 2026)
+
+### Samenvatting
+
+Eerste van de vier SemVer-major follow-ups uit de v5.0.0 audit (15-05-2026). Drie `@opentelemetry/*` packages gebumpt naar latest published versies. Bij sessie-start bleek de in MEMORY.md gedocumenteerde versie-spread "0.74 → 0.218" outdated: actuele state was al `^0.215.0`. De delta naar 0.218 is feitelijk 3 minor releases, niet een major.
+
+### Wat is geüpgraded
+
+| Package | Voor | Na |
+|---------|------|-----|
+| `@opentelemetry/sdk-node` | `^0.215.0` | `^0.218.0` |
+| `@opentelemetry/exporter-trace-otlp-grpc` | `^0.215.0` | `^0.218.0` |
+| `@opentelemetry/auto-instrumentations-node` | `^0.73.0` | `^0.76.0` |
+| `@opentelemetry/resources` (auto) | `2.7.0` | `2.7.1` |
+
+### Breaking-changes onderzoek
+
+Vóór de upgrade CHANGELOG-analyse via WebFetch op de upstream repositories:
+- `opentelemetry-js/experimental/CHANGELOG.md` voor sdk-node + exporter
+- `opentelemetry-js-contrib/packages/auto-instrumentations-node/CHANGELOG.md`
+
+Conclusie: **geen breaking changes** in 0.216-0.218 en 0.74-0.76. Alleen feature additions (`startNodeSDK()` no-arg, ViewOptions wiring naar declaratieve config, `log_level` voor DiagConsoleLogger) en routine sub-instrumentation dep bumps (mongodb, mysql2, mongoose, amqplib, aws detector).
+
+`src/observability/tracing.js` (37 regels) niet gewijzigd. API surface (`NodeSDK`, `OTLPTraceExporter`, `getNodeAutoInstrumentations`, `resourceFromAttributes`) blijft 1:1 compatibel.
+
+### Verificatie (Phase 3 evidence)
+
+| Check | Resultaat |
+|-------|-----------|
+| `node --check src/observability/tracing.js` | SYNTAX OK |
+| Smoke import test | `[otel] SDK started` + IMPORT OK + exit 0 |
+| `npm install` | exit 0, 74 packages changed, 0 peerDep warnings |
+| `npm audit --omit=dev` delta | 8 (5L, 3H) → 5 (5L) — 3 high CVEs gefixt |
+| PM2 restart `holidaibutler-api` | status online, uptime 5s, restarts 71→72 |
+| `[otel] SDK started` in PM2 stdout | aanwezig (regel 34 in tail -500) |
+| Trace IDs in request logs | `trace_id` / `span_id` / `trace_flags:"01"` propageren correct |
+| `curl https://api.holidaibutler.com/health` | HTTP 200 in 110ms |
+| Tempo HTTP API query | 10 hb-platform-core traces in laatste 30 min, root spans SELECT/GET/POST, dur 1-24ms |
+
+### Observability infrastructuur
+
+`otelcol-contrib` draait als systemd service, Tempo draait in Docker met HTTP query API op `localhost:3200`. Geen Grafana UI — toekomstige Tempo checks via SSH + curl + jq. Mogelijke follow-up: Grafana installeren + Tempo data-source voor visuele dashboards.
+
+### Git operations
+
+| Stap | Resultaat |
+|------|-----------|
+| Tag op `dev` HEAD vóór upgrade | `pre-otel-upgrade-2026-05-15-1308` → `f5b365b` |
+| Lockfile + package.json backup | `/root/backups/2026-05-15/{package.json,package-lock.json}.pre-otel` met SHA256 |
+| Feature branch | `upgrade/otel-0.218` (commit `21b6038`) |
+| Fast-forward merge naar `dev` | `f5b365b..21b6038` |
+| Push `dev` naar GitHub | `21b6038` |
+| Push `upgrade/otel-0.218` naar GitHub | nieuwe branch |
+| Push rollback tag naar GitHub | `pre-otel-upgrade-2026-05-15-1308` |
+
+### Niet in scope (action items volgende sessies)
+
+- Sentry `^7.91.0` → Sentry 8.x/9.x (OTel-native rewrite — raakt deze stack significant)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` env var formaliseren (cosmetisch — fallback `http://localhost:4317` werkt)
+- Temporal worker (`src/temporal/worker.js`) eigen OTel init implementeren — MEMORY.md beschreef dit als bestaand maar de code heeft geen tracing import (aspiratie, geen actueel risico)
+- Mongoose / BullMQ / Vite SemVer-major bumps
+
+### Learnings
+
+1. **MEMORY.md kan stale referenties bevatten over packageversies**. De "0.74 → 0.218" claim was achterhaald — bij feitelijke inventarisatie bleek de baseline al op `^0.215.0`. **Toegepaste les**: doe altijd eerst een server-side inventarisatie van de huidige state vóór je een upgrade plan baseert op MEMORY.md-claims over versies. MEMORY.md regel-aanpassing toegevoegd over dit patroon.
+
+2. **OTel SDK 0.x versie-nummers suggereren experimental, maar trace API surface is in praktijk stabiel**. De 0.215 → 0.218 delta gedraagt zich als patch-niveau ondanks 3 minor versies. Voor toekomstige `@opentelemetry/*` bumps is CHANGELOG-onderzoek voldoende — geen aparte staging-deploy nodig mits geen breaking changes gedocumenteerd zijn.
+
+3. **Tempo zonder Grafana = SSH-based verificatie**. Voor enterprise observability werk is een Grafana UI met Tempo data-source nuttig (visuele trace exploration). Niet kritiek voor deze upgrade, wel voor lange-termijn. Toegevoegd als optionele follow-up.
+
+4. **Auto-instrumentations-node bumps fixen transitief CVEs**. Bonus-effect: 3 high CVEs verdwenen via patch+minor sub-instrumentation deps (mongodb, mysql2, amqplib etc.). Maakt het argument voor reguliere @opentelemetry/* updates sterker dan puur "feature ophalen".
+
+5. **Tempo HTTP API zonder Grafana is queryable**: `curl localhost:3200/api/search?tags=service.name=hb-platform-core&start=...&end=...` retourneert JSON met traceID + rootServiceName + spans. Plus `/api/search/tag/service.name/values` voor tag-index introspectie. Gebruik jq voor parse — Python heredoc via SSH heeft escape-problemen.
+
+### Bestanden gewijzigd
+
+| Bestand | Wijziging |
+|---------|-----------|
+| `platform-core/package.json` | 3 versie bumps (sdk-node, exporter-trace-otlp-grpc, auto-instrumentations-node) |
+| `platform-core/package-lock.json` | 74 packages changed (transitive updates) |
+| `CLAUDE.md` | header 5.1.0 → 5.1.1, action items aangepast, nieuwe v5.1.1 sectie, Changelog entry |
+| `CLAUDE_HISTORY.md` | deze sessie entry |
+
+Sessie commits: `21b6038` (upgrade), `<volgt>` (docs).

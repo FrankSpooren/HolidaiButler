@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.1.0
+> **Versie**: 5.1.1
 > **Laatst bijgewerkt**: 15 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -123,7 +123,7 @@ DB coverage: 49/51 items (2 non-AI items zonder body_en zijn graceful degraded).
 e7bebf0 → 7207fc6 → f3d9c3f → 9b51a1b
 
 ### Action items volgende sessies (resterend)
-- OpenTelemetry/Mongoose/BullMQ/Vite SemVer-major bumps (follow-up sessie per Frank-akkoord)
+- Mongoose/BullMQ/Vite SemVer-major bumps (follow-up sessie per Frank-akkoord) — OpenTelemetry voltooid v5.1.1 (2026-05-15)
 - Volledige provenance coverage: 7/8 INSERT paths gedekt; resterende handmatige creation INSERT (line ~12624) is correct non-AI
 
 ---
@@ -138,7 +138,7 @@ e7bebf0 → 7207fc6 → f3d9c3f → 9b51a1b
 - sanitize-html CRITICAL XSS (CVSS 9.3, GHSA-rpr9-rxv7-x643) — gateway voor AI-sanitization
 - platform-core: 12 transitive vulns via `npm audit fix` (axios, mongoose, bullmq, protobufjs, fast-uri, basic-ftp)
 - admin-module: 7 vulns (axios 1.5.1→1.16.1 = 15 CVEs in één klap, lodash, flatted)
-- Major bumps GESKIPPED (follow-up sessie): OpenTelemetry/mongoose/bullmq/vite
+- Major bumps GESKIPPED (follow-up sessie): mongoose/bullmq/vite — OpenTelemetry voltooid v5.1.1 (2026-05-15)
 - `.github/dependabot.yml`: 10 npm ecosystems + github-actions, wekelijks Monday 09:00 EU/Amsterdam,
   grouped patch+minor, separate majors, max 5 PRs/ecosystem
 
@@ -166,6 +166,56 @@ e7bebf0 → 7207fc6 → f3d9c3f → 9b51a1b
 ### Rollback points
 - Git tag (beide repos): `pre-security-audit-2026-05-15-1115` → commit `d2e29d3`
 - Lockfile backups: `/root/backups/2026-05-15/`
+
+---
+
+## 📡 v5.1.1 — OpenTelemetry SDK 0.218 bump (COMPLEET 15 mei 2026)
+
+**Sessie-resultaat**: 1 commit op `dev` (`21b6038`). Eerste van de 4 follow-up SemVer-major bumps uit v5.0.0 audit afgerond.
+
+### Wat is gefixt
+- `@opentelemetry/sdk-node` `^0.215.0` → `^0.218.0`
+- `@opentelemetry/exporter-trace-otlp-grpc` `^0.215.0` → `^0.218.0`
+- `@opentelemetry/auto-instrumentations-node` `^0.73.0` → `^0.76.0`
+- `@opentelemetry/resources` auto-bumped `2.7.0` → `2.7.1` (binnen `^` range)
+
+### Breaking-changes onderzoek
+CHANGELOG analyse vóór upgrade bevestigde: **geen breaking changes** in 0.216-0.218 (sdk-node + exporter-trace-otlp-grpc) en 0.74-0.76 (auto-instrumentations-node). Alleen feature toevoegingen:
+- `startNodeSDK()` zonder argument (0.218)
+- ViewOptions wiring naar declaratieve config (0.216)
+- `log_level` voor DiagConsoleLogger setup (0.217)
+- Sub-instrumentation dep bumps (mongodb, mysql2, mongoose, amqplib, aws detector)
+
+`src/observability/tracing.js` (37 regels) onveranderd — API surface (`NodeSDK`, `OTLPTraceExporter`, `getNodeAutoInstrumentations`, `resourceFromAttributes`) blijft 1:1 compatibel.
+
+### Verificatie
+- npm install: exit 0, 74 packages changed, 0 peerDep warnings
+- npm audit delta platform-core: 8 vulns (5L, 3H) → 5 vulns (5L) — **3 high CVEs als bijvangst gefixt** (transitively via auto-instrumentations deps)
+- `node --check src/observability/tracing.js`: SYNTAX OK
+- Smoke import: `[otel] SDK started` + IMPORT OK + exit 0
+- PM2 restart holidaibutler-api: status online, `/health` 200 in 110ms
+- Trace IDs propagatie in PM2 JSON request logs (`trace_id`, `span_id`, `trace_flags:"01"`)
+- Tempo HTTP API query (`localhost:3200/api/search?tags=service.name=hb-platform-core`): **10 traces in laatste 30 min**, root spans SELECT/GET/POST, durations 1-24ms (normaal beeld)
+
+### Observability infrastructuur bevestigd
+- `otelcol-contrib` draait als systemd service met config `/etc/otel/config.yaml`
+- Tempo draait in Docker, HTTP query API op `localhost:3200`
+- **Geen Grafana UI geïnstalleerd** — toekomstige checks via Tempo HTTP API + jq. Mogelijke follow-up: Grafana met Tempo data-source voor visuele dashboards.
+
+### Rollback points
+- Git tag op `dev` HEAD vóór upgrade: `pre-otel-upgrade-2026-05-15-1308` → commit `f5b365b`
+- Lockfile backups: `/root/backups/2026-05-15/package.json.pre-otel` + `package-lock.json.pre-otel` (SHA256 vastgelegd)
+
+### Niet in scope (aparte sessies — blijven action items)
+- Sentry `^7.91.0` → Sentry 8.x/9.x (OTel-native rewrite, raakt deze stack significant)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` env var formaliseren (cosmetisch — fallback `http://localhost:4317` werkt)
+- Temporal worker (`src/temporal/worker.js`) eigen OTel init implementeren (MEMORY.md beschreef dit als bestaand maar code heeft geen tracing import)
+- Mongoose / BullMQ / Vite major bumps
+
+### Process learnings
+- MEMORY.md "0.74 → 0.218" claim was outdated: actuele state bij sessie-start was al `^0.215.0`. Delta naar 0.218 is feitelijk minor (3 releases), niet major.
+- OTel SDK 0.x versioning suggereert experimental, maar trace API surface is in praktijk stabiel — CHANGELOG-onderzoek vóór upgrade is goedkope verzekering.
+- Tempo zonder Grafana = SSH-based verificatie. Voor toekomstige observability werk overweeg Grafana installatie.
 
 ---
 
@@ -1037,6 +1087,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **5.1.1** | **2026-05-15** | **OpenTelemetry SDK 0.218 bump (eerste follow-up van v5.0.0 audit)**. Patch-niveau upgrade ondanks 0.x versioning. `@opentelemetry/sdk-node` `^0.215.0`→`^0.218.0`, `exporter-trace-otlp-grpc` idem, `auto-instrumentations-node` `^0.73.0`→`^0.76.0`. CHANGELOG-analyse vooraf: geen breaking changes, alleen features (`startNodeSDK()` no-arg, ViewOptions wiring, `log_level` config) + routine sub-instrumentation bumps. **Bonus**: npm audit delta `8 (5L, 3H) → 5 (5L)` — 3 high CVEs transitief gefixt. Verificatie: smoke import `[otel] SDK started` + IMPORT OK, PM2 holidaibutler-api online + `/health` 200 in 110ms, **Tempo HTTP API query: 10 hb-platform-core traces in laatste 30 min** (root SELECT/GET/POST spans, dur 1-24ms), trace_id propagatie in PM2 request logs. Rollback: tag `pre-otel-upgrade-2026-05-15-1308` + `/root/backups/2026-05-15/`. Scope: `dev` branch + `holidaibutler-api` PM2 process. Niet naar test/main deze sessie. 2 bestanden (package.json, package-lock.json). Resterende SemVer-major follow-ups: Mongoose, BullMQ, Vite, Sentry 7→8. |
 | **5.1.0** | **2026-05-15** | **Content Studio UX Consistency + Bug Fixes**. (1) Workflow progress indicator: actuele fase visueel dominant, voltooide+toekomstige gedimd. (2) Duplicate image fix: legacy image resolution verwijderd uit LIST+DETAIL endpoints (DTO is single source). (3) Content Studio tabel-consistentie: Ideeen tab toolbar 1:1 met Items (density toggle, kolommen-button, sneltoetsen-button, inline header filter dropdowns). (4) Kolom-toggle bug: ALL_COLUMNS key 'source' hernoemd naar 'type' (toggle controleerde verkeerde kolom). (5) Popovers buiten tab-conditionals (werken nu op elke tab). (6) Kolom 'Bijgewerkt' hernoemd naar 'Datum'. (7) Kolom-breedtes: Acties 70->100px, SEO 55->65px, Score 70->80px, Checkbox padding=none. |
 | **4.93.0** | **2026-05-14** | **Integrale Content Item Workflow + Publisher Safety Guards**. Frank's eis (punt 1A-E): logische enterprise UX workflow met consistente status overal (Tab Items linker/rechter paneel + Tab Kalender). **5 UI-statussen** vervangen 13 DB-enum mix: Concept (DB: draft/pending_review/in_review/reviewed/changes_requested/generating) / Goedgekeurd (approved) / Ingepland (scheduled/publishing) / Gepubliceerd (published) / + auxiliary Afgewezen/Mislukt/Gearchiveerd. **WorkflowStatus.js** (admin-module/src/lib/) — single source of truth voor mapping + labels (5 locales) + colors + icons + stage progression + canApprove/canSchedule/canPublish helpers. **WorkflowStatusChip + WorkflowProgressIndicator** (Stijl B badge-rij) components. **Refactor platform-breed**: ConceptDialog header (aggStatus chip → WorkflowProgressIndicator), per-platform tab chip (emoji → WorkflowStatusChip), Stap 3 per-platform chip (hardcoded → getStatusLabel), Approve button (handmatige check → getAvailableActions.canApprove). ContentStudioPage local StatusChip → delegates to WorkflowStatusChip. ContentCalendarTab raw enum chip → WorkflowStatusChip + Approve action voor concept-stage items + MISSED indicator badge bij scheduled_at past + published_at NULL. **DTO Resource patch GET /content/items/:id detail endpoint** (Issue B fix — image hydratie via ContentItemResource.V1 — eerder enkel op LIST endpoint). **CRITICAL Publisher Safety Guards (3 lagen defense-in-depth)**: (1) **Dedupe-guard**: publishItem() blokkeert wanneer publish_url OF published_at gezet (voorkomt re-publish; ALREADY_PUBLISHED 409). (2) **Status-guard**: alleen approved/scheduled/publishing/failed items mogen publiceren (INVALID_STATE_FOR_PUBLISH 409). (3) **Future-schedule-guard**: scheduled_at > NOW() blokkeert publish tenzij options.force=true (PUBLISH_TOO_EARLY 409). publish-now + republish endpoints passeren expliciet force:true voor user-initiated immediate publish. processScheduledPublications query ook gefilterd op published_at IS NULL AND publish_url IS NULL. **Migration 009 workflow_configurations** (Fase B prep): per-tenant FSM transitions + approval_steps + publish_rules. Schema-only met seed van default workflow voor alle 5 destinations (Calpe/Texel/WarreWijzer/Alicante/BUTE). Activatie post-5e destination. **Incidenten transparency**: 3 ongeautoriseerde Facebook publicaties veroorzaakt door autonome diagnostic publish-calls (TEST 4 item 248, SQL fix items 252+253+256, dedupe-guard test item 248). Frank handmatig verwijderd in FB/IG, DB gereverteerd. Vanaf nu: 0 backend publish-calls zonder schriftelijke per-actie toestemming. Future-schedule-guard voorkomt herhaling. 17 bestanden gewijzigd. |
 | **4.92.0** | **2026-05-14** | **Enterprise Workflow Hardening — DTO/Resource Pattern + Finite State Machine + Data Reparatie**. Drie issues uit Frank productie verificatie opgelost via enterprise-standaarden (boven simple fixes uit). **(1) DTO/Resource Pattern (Optie 4)**: nieuwe `ContentItemResource.V1` (`platform-core/src/resources/`) — gecentraliseerde hydratie van content_items met versioned schema (V1/V2 path). Elimineert ~60 regels duplicate image-hydration code over GET /content/items + GET /content/items/:id. Frontend krijgt altijd `images: [{id, url, thumbnail, alt_text, width, height, mime_type, source}]` array — bug Issue B (blanco image linkerpaneel) opgelost door geforceerde hydratie. Backward-compat: `resolved_images` alias behouden. Industry pattern: Laravel API Resources, Spring DTOs, .NET MediatR ResponseModels. **(2) Finite State Machine (Optie C)**: nieuwe `approvalStateMachine.js` met 15-state TRANSITIONS matrix (draft, pending_review, in_review, reviewed, changes_requested, rejected, approved, scheduled, publishing, published, failed, archived, deleted, generating, partially_published). `canTransition(from, to)` + `transitionStatus(itemId, newStatus, options)` gateway + `bulkTransitionStatus` + `deriveConceptStatus` (reads scheduled_at). Throws `InvalidTransitionError` (HTTP 409) op ongeldige overgang. Pattern: DDD Aggregate met Invariants. **(3) FSM integratie in 3 kritieke endpoints**: (a) `/content/concepts/:id/approve` — exclude scheduled/publishing/published items (Issue D regression fix, geen scheduled→approved demotion meer); (b) `/content/items/:id/reschedule` — set ALTIJD approval_status='scheduled' samen met scheduled_at (Issue C consistency fix); (c) `syncConceptStatusByConceptId` — gebruikt FSM `deriveConceptStatus` die scheduled_at meeneemt in derivation. **(4) Migration 008 data reparatie**: Jumbo items 265+266 + platform-breed alle items met `approval_status='approved' AND scheduled_at>NOW()` → demoted naar 'scheduled'. Concept-level statuses re-synced via FSM-priority derivation. Bewijs Jumbo: BEFORE items 265+266=approved+2026-05-16, concept 180=approved. AFTER items=scheduled, concept 180=scheduled (consistent). **(5) Frontend clean rebuild**: v4.91.1 frontend Fix C+D nu bevestigd in deployed bundle (`.body||g.body_en` aanwezig na clean Vite cache rebuild). 8 bestanden, 750+ regels netto-nieuw. **Issue A (hallucination badge zichtbaar)**: na clean rebuild + redeploy, badge moet nu renderen — Frank visuele verificatie nodig met DevTools open voor definitieve diagnose indien nog probleem. |
