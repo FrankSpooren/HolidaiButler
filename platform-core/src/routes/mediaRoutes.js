@@ -175,8 +175,7 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
       const images = await mysqlSequelize.query(
         `SELECT i.id, i.poi_id, p.name as poi_name, p.category as poi_category,
                 i.local_path, i.keywords_visual, i.visual_description, i.visual_mood,
-                i.display_order, i.source,
-                CONCAT('/poi-images', SUBSTRING(i.local_path, LOCATE('/poi-images', i.local_path) + LENGTH('/poi-images'))) as thumbnail_url
+                i.display_order, i.source
          FROM imageurls i
          JOIN POI p ON p.id = i.poi_id
          WHERE ${where}
@@ -184,6 +183,13 @@ export default function createMediaRouter(adminAuth, destinationScope, resolveDe
          LIMIT ? OFFSET ?`,
         { replacements: [...params, limit, offset], type: QueryTypes.SELECT }
       );
+
+      // Resolve thumbnail URLs via Image Resize Proxy (consistent with ContentItemResource)
+      const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
+      for (const img of images) {
+        const imgPath = img.local_path ? img.local_path.replace(/^\/poi-images\//, '/') : null;
+        img.thumbnail_url = imgPath ? `${imageBase}/api/v1/img${imgPath}?w=400&f=webp` : null;
+      }
 
       // Get categories for filter
       const categories = await mysqlSequelize.query(
