@@ -1896,6 +1896,14 @@
       "informal": "Informell (du)",
       "formal": "Formell (Sie)",
       "mixed": "Gemischt"
+    },
+    "knowledge": {
+      "preview": "Vorschau",
+      "download": "Herunterladen",
+      "words": "Wörter",
+      "previewEmpty": "(kein Inhalt verfügbar)",
+      "downloadForFull": "Vorschau zeigt die ersten 5.000 Zeichen. Für den vollständigen Inhalt herunterladen.",
+      "downloadFailed": "Download fehlgeschlagen"
     }
   },
   "media": {

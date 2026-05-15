@@ -146,7 +146,7 @@ function buildReinforcementInstruction(validation, locale) {
 /**
  * Write to ai_generation_log table (non-blocking).
  */
-async function writeAuditLog(entry) {
+export async function writeAuditLog(entry) {
   try {
     await mysqlSequelize.query(
       `INSERT INTO ai_generation_log

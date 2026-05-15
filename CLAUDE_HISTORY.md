@@ -8786,3 +8786,113 @@ Content Studio had twee verschillende content item popups:
 ### Commits
 
 15+ commits gemerged dev → test → main. Alle 3 admin envs HTTP 200. PM2 backend latest, ChromaDB en NATS draaiend (Foundation Stack Fase 15).
+
+
+---
+
+## v5.0.0 — Security Audit + EU AI Act Transparency (15 mei 2026)
+
+### Samenvatting
+Sessie van 8 commits op `dev` branch. Drie sporen parallel: security hardening (19 CVE patches + Dependabot config), EU AI Act provenance coverage gap-closure (5/8 → 7/8 INSERT paths), en Knowledge Base transparency UI (Article 50 deep-link bestemming). Geen major version bumps (Frank-besluit: follow-up sessie per upgrade).
+
+### Commits (chronologisch)
+1. `041c232` — fix(security): upgrade sanitize-html 2.17.0 → 2.17.4 (patches CRITICAL XSS CVSS 9.3)
+2. `27cab51` — fix(security): platform-core npm audit fix — 12 transitive vulns patched
+3. `d220d53` — fix(security): admin-module npm audit fix — 7 vulns (incl. 15 axios CVEs)
+4. `a445246` — ci(security): add Dependabot config — 10 npm ecosystems + github-actions, weekly grouped PRs
+5. `81d5427` — feat(provenance): calendar-autofill INSERT persists provenance + real ai_model (6/8 paths)
+6. `ebe3cd7` — feat(provenance): duplicate INSERT inherits provenance with operation=duplicate (7/8 paths)
+7. `b82b15d` — feat(knowledge-base): clickable list + preview/download endpoints — EU AI Act transparency
+
+### Blok 4a — sanitize-html CRITICAL upgrade
+- GHSA-rpr9-rxv7-x643: XSS via <xmp> raw-text passthrough (CVSS 9.3)
+- Versie: 2.17.0 → 2.17.4 (patch, geen breaking)
+- Gateway voor sanitizeAIText() in embeddingService.js — gebruikt door alle 5/8 AI INSERT paths
+- Project default config (`allowedTags: []`) was niet exploitable in praktijk, maar patch elimineert vulnerability cross-codebase (8 files)
+- Property test: xmp passthrough → `""` (empty), em-dash preserved, bullets stripped
+
+### Blok 4b — platform-core bulk audit fix
+- 20 → 8 vulns (12 fixed via npm audit fix, geen --force)
+- Direct deps patched: mongoose, bullmq, protobufjs, fast-uri, basic-ftp
+- Major bumps GESKIPPED voor follow-up: @opentelemetry trio (sdk-node 0.218.0)
+- Alleen package-lock.json changed (package.json unchanged)
+
+### Blok 4c — admin-module bulk audit fix
+- 9 → 2 vulns (7 fixed, geen --force)
+- axios 1.5.1 → 1.16.1 (15 CVEs in één bump: prototype pollution, SSRF, CRLF injection, XSRF leakage)
+- lodash + flatted patched
+- Vite/esbuild major SKIPPED (vite 8 zou breaking zijn voor MUI/recharts)
+- Build verificatie: 20s clean, BrandingPage chunk 73.71 kB
+
+### Blok 4d — Dependabot config
+- `.github/dependabot.yml`: 10 npm ecosystems + github-actions
+- Weekly Monday 09:00 Europe/Amsterdam
+- Grouped: production-patches (patch+minor), production-security, development-patches
+- Max 5 open PRs/ecosystem (3 voor actions)
+- Hard-ignore: @opentelemetry/* major, vite/esbuild major
+- Replaces 298 GitHub Dependabot alerts backlog met continuous monitoring
+
+### Blok 2 — Calendar-autofill provenance (Optie A)
+- `adminPortal.js:14913` calendar-autofill INSERT:
+  - body capture in `itemBody` variabele (voor SHA-256 signature consistency)
+  - `ai_model`: hardcoded 'calendar-autofill' literal → `embeddingService.chatModel` (mistral-medium-latest)
+  - `provenance` JSON kolom toegevoegd met buildProvenance() — sub-operation in `provenance.operation='calendar-autofill'`
+  - `ai_generation_log` entry via dynamically imported writeAuditLog (DB enum operation='generate')
+- `aiQualityOrchestrator.js`: writeAuditLog now exported (was private)
+- DB enum constraint: ai_generation_log.operation IN (generate, improve, rewrite, translate). Calendar-autofill maps to 'generate'; sub-type lives in provenance.operation. No DB migration needed.
+
+### Blok 3 — Duplicate provenance inherit
+- `adminPortal.js:15116` duplicate endpoint:
+  - SELECT uitgebreid met `id, provenance` kolommen
+  - INSERT uitgebreid met `provenance` placeholder
+  - Inherit-strategie (NIET re-sign): body byte-identical → signature cryptografisch valid
+  - Provenance enrichment: `operation='duplicate'`, `duplicated_from_item_id`, `duplicated_from_concept_id`, `duplicated_at`, `signature_inherited`
+  - Defensive: try/catch op JSON.parse, log warn + NULL fallback bij parse-error
+  - Edge case: AI-item zonder provenance (legacy pre-Blok 7) → logger.info + NULL
+
+### Blok 1 — Knowledge Base preview+download UI
+**Backend (brandSources.js, +141 lines)**:
+- `GET /:id/preview` (editor): PDF blob OR JSON excerpt (max 5000 chars)
+- `GET /:id/download` (destination_admin): forced download
+- Helper `serveKnowledgeFile()`:
+  - path.basename() + extension whitelist (.pdf/.docx/.doc/.txt/.csv)
+  - KNOWLEDGE_DIR prefix check (defense-in-depth)
+  - MIME whitelist mapping (5 extensies)
+  - Cache-Control: private, no-store
+  - Audit log (GDPR Art. 30): every file access logged
+  - Filename sanitization regex
+- Tenant scoping: 404 op cross-tenant (anti-enumeration, niet 403)
+
+**Frontend service (brandProfileService.js, +33 lines)**:
+- `previewKnowledge(id)`: inspects Content-Type → returns `{type:'pdf', blobUrl}` of `{type:'json', content_excerpt, ...}`
+- `downloadKnowledge(id)`: dynamic `<a download>` trigger met URL.revokeObjectURL cleanup
+
+**Frontend UI (MerkProfielSections.jsx, +152 lines)**:
+- ListItem nu `button` + onClick → openKbPreview
+- Download IconButton naast Delete (Fitts: 44px touch targets, stopPropagation)
+- Preview Dialog:
+  - Mobile-first: `fullScreen` op `useMediaQuery(theme.breakpoints.down('md'))`
+  - PDF: `<iframe src={blobUrl}>` (browser-native PDF viewer)
+  - DOCX/TXT/CSV/URL: `<pre>` met content_excerpt + Alert "Download voor volledige inhoud"
+  - Loading skeleton (CircularProgress), Error Alert met recovery
+  - Memory leak prevention: URL.revokeObjectURL on close
+  - WCAG: aria-labelledby + aria-label, semantic HTML
+
+**i18n (4 locales — nl/en/de/es)**:
+- `brandProfile.knowledge.{preview, download, words, previewEmpty, downloadForFull, downloadFailed}`
+- EU-style copy: factueel, geen marketing-superlatieven
+
+### Learnings
+- **MEMORY.md regelnummers verouderen snel**: action items referreerden naar lines 15053/15215 maar werkelijk waren ze 14913/15075/15116 (na Fase B 138-141 regels shift). Lesson: gebruik anchor-strings (functie/INSERT statement) als ankers, niet line numbers.
+- **`ai_generation_log.operation` is restrictive ENUM** (generate/improve/rewrite/translate). Sub-operations (calendar-autofill, duplicate) horen in `provenance.operation` (free-form JSON), niet in DB enum — voorkomt migration overhead.
+- **Provenance inherit-strategie is semantisch correcter dan re-sign** voor duplicate: body byte-identical = signature blijft valid. Re-signing zou suggereren dat duplicate een nieuwe AI-actie was.
+- **MerkProfielSections.jsx Knowledge Base ListItem**: stopPropagation op IconButton onClicks is verplicht — anders triggert ook ListItem onClick (Preview Dialog opent terwijl je probeert te deleten).
+- **PDF preview via blob URL**: cross-origin auth lost door fetch-as-blob + URL.createObjectURL. Geen signed-URL infra nodig. Memory: revoke on dialog close.
+- **Path traversal hardening**: 2-laags verdediging — basename() + KNOWLEDGE_DIR prefix check. Eén laag is onvoldoende.
+- **298 Dependabot vs 112 server-side**: GitHub telt per-branch (dev/test/main × 8 package.json roots ≈ 24× factor) + transitive across all lockfiles. Dependabot.yml met grouped PRs voorkomt herhaling van backlog.
+- **5/8 → 7/8 provenance coverage**: resterende 1/8 (manual creation line ~12624) is correct non-AI (geen provenance nodig). Calendar-autofill (line 14913) en duplicate (line 15116) waren de echte gaps.
+
+### Open items (volgende sessies)
+- OpenTelemetry/Mongoose/BullMQ/Vite SemVer-major bumps — per upgrade Frank-akkoord
+- Knowledge Base preview: DOCX native rendering (mammoth → HTML in iframe?) — nu fallback naar content_text excerpt
+- Knowledge Base: PDF.js worker voor advanced features (search, annotations) — overkill voor MVP

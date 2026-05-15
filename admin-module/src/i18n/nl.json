@@ -1935,6 +1935,14 @@
       "informal": "Informeel (je/jij)",
       "formal": "Formeel (u)",
       "mixed": "Gemengd"
+    },
+    "knowledge": {
+      "preview": "Voorbeeld",
+      "download": "Download",
+      "words": "woorden",
+      "previewEmpty": "(geen inhoud beschikbaar)",
+      "downloadForFull": "Voorbeeld toont eerste 5000 tekens. Download voor de volledige inhoud.",
+      "downloadFailed": "Download mislukt"
     }
   },
   "media": {

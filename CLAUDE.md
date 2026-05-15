@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 4.99.0
+> **Versie**: 5.0.0
 > **Laatst bijgewerkt**: 15 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -122,10 +122,50 @@ DB coverage: 49/51 items (2 non-AI items zonder body_en zijn graceful degraded).
 1f3c90d → 764bbb0 → f51c760 → 9dddda6 → 6670e17 → 531b7cc → 449ea83 →
 e7bebf0 → 7207fc6 → f3d9c3f → 9b51a1b
 
-### Action items volgende sessies
-- Merk Profiel Knowledge Base: opgeslagen documenten klikbaar maken (file-preview-route)
-- Calendar-autofill ai_generated flag review (line 15053 INSERT)
-- Duplicate INSERT (line 15215) optionele provenance copy met operation='duplicate'
+### Action items volgende sessies (resterend)
+- OpenTelemetry/Mongoose/BullMQ/Vite SemVer-major bumps (follow-up sessie per Frank-akkoord)
+- Volledige provenance coverage: 7/8 INSERT paths gedekt; resterende handmatige creation INSERT (line ~12624) is correct non-AI
+
+---
+
+## 🔒 v5.0.0 — Security Audit + EU AI Act Transparency (COMPLEET 15 mei 2026)
+
+**Sessie-resultaat**: 8 commits op `dev`. Eind-state: security baseline + provenance gap-coverage + Knowledge Base transparency.
+
+### Wat is gefixt
+
+**Security (Blok 4 a-d) — 19 CVE patches**
+- sanitize-html CRITICAL XSS (CVSS 9.3, GHSA-rpr9-rxv7-x643) — gateway voor AI-sanitization
+- platform-core: 12 transitive vulns via `npm audit fix` (axios, mongoose, bullmq, protobufjs, fast-uri, basic-ftp)
+- admin-module: 7 vulns (axios 1.5.1→1.16.1 = 15 CVEs in één klap, lodash, flatted)
+- Major bumps GESKIPPED (follow-up sessie): OpenTelemetry/mongoose/bullmq/vite
+- `.github/dependabot.yml`: 10 npm ecosystems + github-actions, wekelijks Monday 09:00 EU/Amsterdam,
+  grouped patch+minor, separate majors, max 5 PRs/ecosystem
+
+**EU AI Act provenance coverage (Blok 2+3) — 5/8 → 7/8**
+- Calendar-autofill INSERT (adminPortal.js:14913): nu `provenance` + `ai_model=embeddingService.chatModel` + `ai_generation_log`
+- Duplicate INSERT (adminPortal.js:15116): inherit provenance met `operation=duplicate` + `duplicated_from_item_id` + `signature_inherited`
+- writeAuditLog uit aiQualityOrchestrator nu exported voor route-direct gebruik
+
+**Knowledge Base transparency UI (Blok 1) — closes provenance deep-link gap**
+- Backend brandSources.js: GET /:id/preview (editor, PDF inline of JSON excerpt) + GET /:id/download (destination_admin, forced)
+- Path-traversal hardening: basename + extension whitelist + KNOWLEDGE_DIR prefix check
+- Anti-enumeration: cross-tenant returns 404 (niet 403)
+- Audit log per access (GDPR Art. 30)
+- Frontend: ListItem nu clickable, Preview Dialog mobile-first (fullScreen<md), PDF iframe of <pre> excerpt, memory leak prevention via URL.revokeObjectURL
+- i18n: 4 locales (nl/en/de/es) — brandProfile.knowledge.{preview,download,words,...}
+
+### Verificatie
+- npm audit platform-core: crit 1→0, high 7→3, totaal 20→8
+- npm audit admin-module: high 3→0, totaal 9→2
+- PM2 holidaibutler-api: 5 restarts, alle clean, /health 200, mysql+mongo connected
+- Vite build admin-module: 20.00s, clean, alle 31 lazy chunks intact
+- buildProvenance unit test: signature SHA-256 + tamper detection werkt
+- syntax check: node --check pass op alle .js wijzigingen
+
+### Rollback points
+- Git tag (beide repos): `pre-security-audit-2026-05-15-1115` → commit `d2e29d3`
+- Lockfile backups: `/root/backups/2026-05-15/`
 
 ---
 
