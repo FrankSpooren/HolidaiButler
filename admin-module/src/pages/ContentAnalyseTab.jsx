@@ -351,7 +351,7 @@ export default function ContentAnalyseTab({ destinationId }) {
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
-                      <TableRow>
+                      <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
                         <TableCell>{t('contentStudio.analyse.title', 'Titel')}</TableCell>
                         <TableCell>{t('contentStudio.analyse.type', 'Type')}</TableCell>
                         <TableCell>{t('contentStudio.analyse.platform', 'Platform')}</TableCell>
@@ -479,7 +479,7 @@ export default function ContentAnalyseTab({ destinationId }) {
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
-                      <TableRow>
+                      <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
                         <TableCell>{t('contentStudio.analyse.platform', 'Platform')}</TableCell>
                         <TableCell align="right">{t('contentStudio.analyse.views', 'Weergaven')}</TableCell>
                         <TableCell align="right">{t('contentStudio.analyse.clicks', 'Klikken')}</TableCell>
