@@ -2296,10 +2296,10 @@ export default function ContentStudioPage() {
                 </Tooltip>
               </Box>
             </Box>
-            <TableContainer>
-              <Table size="small">
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 320px)', overflow: 'auto' }}>
+              <Table size="small" stickyHeader>
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'keyword_asc' ? 'keyword_desc' : 'keyword_asc')}>{t('contentStudio.table.keyword', 'Keyword')} {trendSort.startsWith('keyword') ? (trendSort === 'keyword_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {trendSort.startsWith('score') ? (trendSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setTrendSort(s => s === 'trend_desc' ? 'trend_asc' : 'trend_desc')}>
@@ -2484,9 +2484,9 @@ export default function ContentStudioPage() {
           <Paper variant="outlined">
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                {sugTotal} {t('contentStudio.suggestionsFound', 'suggesties')}
+                {sugTotal} {t('contentStudio.suggestionsFound', 'content ideeen')}
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                 <Tooltip title={t('contentStudio.tooltips.refresh', 'Vernieuwen')}>
                   <IconButton size="small" onClick={loadSuggestions}><RefreshIcon fontSize="small" /></IconButton>
                 </Tooltip>
@@ -2534,10 +2534,42 @@ export default function ContentStudioPage() {
                 <Button size="small" onClick={() => setSelectedSugIds([])}>{t('contentStudio.clearSelection', 'Wis selectie')}</Button>
               </Box>
             )}
-            <TableContainer>
-              <Table size="small">
+            {/* Filter bar — consistent met Items tab */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 0, px: 1, py: 0.5 }}>
+              <Select size="small" value={itemSourceFilter} onChange={e => setItemSourceFilter(e.target.value)} displayEmpty sx={{ fontSize: 12, minWidth: 140 }}>
+                <MenuItem value="">{t('contentStudio.filter.allSources', 'Alle bronnen')}</MenuItem>
+                <MenuItem value="poi">POI</MenuItem>
+                <MenuItem value="event">Event</MenuItem>
+                <MenuItem value="visual">Visual</MenuItem>
+                <MenuItem value="holibot">HoliBot</MenuItem>
+                <MenuItem value="keyword">Keyword</MenuItem>
+                <MenuItem value="recycle">Recycle</MenuItem>
+                <MenuItem value="manual">Handmatig</MenuItem>
+              </Select>
+              <Select size="small" value={sugTypeFilter} onChange={e => setSugTypeFilter(e.target.value)} displayEmpty sx={{ fontSize: 12, minWidth: 120 }}>
+                <MenuItem value="">{t('contentStudio.filter.allTypes', 'Alle types')}</MenuItem>
+                <MenuItem value="blog">Blog</MenuItem>
+                <MenuItem value="social_post">Social</MenuItem>
+                <MenuItem value="video_script">Video</MenuItem>
+              </Select>
+              <Select size="small" value={sugStatusFilter} onChange={e => setSugStatusFilter(e.target.value)} displayEmpty sx={{ fontSize: 12, minWidth: 130 }}>
+                <MenuItem value="">{t('contentStudio.filter.allStatuses', 'Alle statussen')}</MenuItem>
+                <MenuItem value="pending">In afwachting</MenuItem>
+                <MenuItem value="approved">Goedgekeurd</MenuItem>
+                <MenuItem value="rejected">Afgewezen</MenuItem>
+                <MenuItem value="generated">Gegenereerd</MenuItem>
+              </Select>
+              {(itemSourceFilter || sugTypeFilter || sugStatusFilter) && (
+                <Button size="small" onClick={() => { setItemSourceFilter(''); setSugTypeFilter(''); setSugStatusFilter(''); }}>
+                  {t('contentStudio.filter.clear', 'Wissen')}
+                </Button>
+              )}
+            </Box>
+
+            <TableContainer sx={{ maxHeight: 'calc(100vh - 320px)', overflow: 'auto' }}>
+              <Table size="small" stickyHeader>
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
                     <TableCell padding="checkbox">
                       {(() => {
                         const filtered = suggestions
@@ -2552,38 +2584,12 @@ export default function ContentStudioPage() {
                       })()}
                     </TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'title_asc' ? 'title_desc' : 'title_asc')}>{t('contentStudio.table.title', 'Titel')} {sugSort.startsWith('title') ? (sugSort === 'title_asc' ? '↑' : '↓') : ''}</TableCell>
-                    <TableCell>
-                      <Select size="small" value={itemSourceFilter} onChange={e => setItemSourceFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
-                        <MenuItem value="">Bron</MenuItem>
-                        <MenuItem value="poi">📍 POI</MenuItem>
-                        <MenuItem value="event">📅 Event</MenuItem>
-                        <MenuItem value="visual">📷 Visual</MenuItem>
-                        <MenuItem value="holibot">💬 HoliBot</MenuItem>
-                        <MenuItem value="keyword">🔍 Keyword</MenuItem>
-                        <MenuItem value="recycle">♻️ Recycle</MenuItem>
-                        <MenuItem value="manual">✏️ Handmatig</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select size="small" value={sugTypeFilter} onChange={e => setSugTypeFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 60 }}>
-                        <MenuItem value="">{t('contentStudio.table.type', 'Type')}</MenuItem>
-                        <MenuItem value="blog">Blog</MenuItem>
-                        <MenuItem value="social_post">Social</MenuItem>
-                        <MenuItem value="video_script">Video</MenuItem>
-                      </Select>
-                    </TableCell>
+                    <TableCell>{t('contentStudio.table.source', 'Bron')}</TableCell>
+                    <TableCell>{t('contentStudio.table.type', 'Type')}</TableCell>
                     <TableCell sx={{ cursor: 'pointer' }} onClick={() => setSugSort(s => s === 'score_desc' ? 'score_asc' : 'score_desc')}>{t('contentStudio.table.score', 'Score')} {sugSort.startsWith('score') ? (sugSort === 'score_asc' ? '↑' : '↓') : ''}</TableCell>
                     <TableCell>{t('contentStudio.table.keywords', 'Keywords')}</TableCell>
                     <TableCell>{t('contentStudio.table.channels', 'Kanalen')}</TableCell>
-                    <TableCell>
-                      <Select size="small" value={sugStatusFilter} onChange={e => setSugStatusFilter(e.target.value)} displayEmpty variant="standard" sx={{ fontSize: 12, minWidth: 70 }}>
-                        <MenuItem value="">{t('contentStudio.table.status', 'Status')}</MenuItem>
-                        <MenuItem value="pending">In afwachting</MenuItem>
-                        <MenuItem value="approved">Goedgekeurd</MenuItem>
-                        <MenuItem value="rejected">Afgewezen</MenuItem>
-                        <MenuItem value="generated">Gegenereerd</MenuItem>
-                      </Select>
-                    </TableCell>
+                    <TableCell>{t('contentStudio.table.status', 'Status')}</TableCell>
                     <TableCell align="right">{t('contentStudio.table.actions', 'Acties')}</TableCell>
                   </TableRow>
                 </TableHead>
