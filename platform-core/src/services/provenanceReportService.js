@@ -15,7 +15,7 @@
 import PDFDocument from 'pdfkit';
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
-import { verifyProvenance } from './provenanceService.js';
+import { verifyProvenance, detectBodyLang } from './provenanceService.js';
 
 const PAGE_MARGIN = 50;
 const FONT_TITLE = 16;
@@ -46,7 +46,7 @@ function stripHtml(html) {
 async function loadItem(contentItemId) {
   const [[row]] = await mysqlSequelize.query(
     `SELECT ci.id, ci.destination_id, ci.title, ci.body_en, ci.body_nl, ci.body_de,
-            ci.body_es, ci.body_fr, ci.target_platform, ci.target_language,
+            ci.body_es, ci.body_fr, ci.target_platform,
             ci.content_type, ci.ai_model, ci.ai_generated, ci.approval_status,
             ci.provenance, ci.created_at, ci.updated_at,
             d.name AS destination_name
@@ -59,6 +59,8 @@ async function loadItem(contentItemId) {
   if (typeof row.provenance === 'string') {
     try { row.provenance = JSON.parse(row.provenance); } catch { /* keep raw */ }
   }
+  // Detect language uit body kolommen — content_items heeft geen target_language
+  row.detected_lang = detectBodyLang(row);
   return row;
 }
 
@@ -73,7 +75,7 @@ export async function generateProvenancePDF(contentItemId, stream) {
   const item = await loadItem(contentItemId);
   if (!item) throw new Error(`Content item ${contentItemId} not found`);
 
-  const lang = item.target_language || (item.body_nl ? 'nl' : 'en');
+  const lang = item.detected_lang || 'en';
   const body = item[`body_${lang}`] || item.body_en || item.body_nl || '';
   const bodyText = stripHtml(body);
   const verifyResult = item.provenance ? verifyProvenance(bodyText, item.provenance) : { valid: false, reason: 'no_provenance' };

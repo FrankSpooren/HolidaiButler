@@ -36,7 +36,10 @@ function formatNumber(v) {
 
 export default function AIQualityPage() {
   const queryClient = useQueryClient();
-  const destinationId = useDestinationStore((s) => s.activeDestination?.id);
+  // v4.95 fix: destinationStore exposeert geen activeDestination — gebruik
+  // getSelectedDestinationInfo() die het volledige object (incl. id) retourneert.
+  const destInfo = useDestinationStore((s) => s.getSelectedDestinationInfo());
+  const destinationId = destInfo?.id || null;
   const [days, setDays] = useState(30);
 
   const summaryQ = useQuery({

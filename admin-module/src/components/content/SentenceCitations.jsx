@@ -67,7 +67,8 @@ export default function SentenceCitations({ provenance, body, destinationId }) {
     client.get('/brand-sources', { params: { destinationId } })
       .then((r) => {
         if (cancelled) return;
-        const rows = r.data?.data || r.data?.sources || [];
+        // v4.95 fix: brandSources endpoint returnt { data: { sources: [...], summary } }
+        const rows = r.data?.data?.sources || r.data?.sources || (Array.isArray(r.data?.data) ? r.data.data : []);
         const map = {};
         for (const s of rows) {
           if (sourceIds.includes(s.id) || sourceIds.includes(String(s.id))) {

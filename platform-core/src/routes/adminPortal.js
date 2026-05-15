@@ -188,7 +188,7 @@ import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
-import { verifyProvenance, getProvenance } from '../services/provenanceService.js';
+import { verifyProvenance, getProvenance, detectBodyLang } from '../services/provenanceService.js';
 import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
 
@@ -14143,18 +14143,19 @@ router.post('/content/items/:id/share-to-destination', adminAuth('editor'), writ
       personaId: null, // Uses target destination's brand context + tone automatically
     });
 
-    // Save as new item in target destination
+    // Save as new item in target destination — v4.95 Blok 7 fix: include provenance
     const [insertResult] = await mysqlSequelize.query(
       `INSERT INTO content_items
        (destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-        seo_data, target_platform, approval_status, ai_model, ai_generated, created_at, updated_at)
+        seo_data, target_platform, approval_status, ai_model, ai_generated, provenance, created_at, updated_at)
        VALUES (:destId, :contentType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-        :seoData, :platform, 'draft', :aiModel, true, NOW(), NOW())`,
+        :seoData, :platform, 'draft', :aiModel, true, :provenance, NOW(), NOW())`,
       {
         replacements: {
           destId: Number(destination_id),
           contentType: result.content_type,
           title: result.title,
+          provenance: result.provenance ? JSON.stringify(result.provenance) : null,
           bodyEn: result.body_en || null,
           bodyNl: result.body_nl || null,
           bodyDe: result.body_de || null,
@@ -17828,7 +17829,7 @@ router.get('/content/items/:id/provenance', adminAuth('editor'), async (req, res
   try {
     const id = Number(req.params.id);
     const [[row]] = await mysqlSequelize.query(
-      `SELECT id, destination_id, provenance, body_en, body_nl, body_de, body_es, body_fr, target_language
+      `SELECT id, destination_id, provenance, body_en, body_nl, body_de, body_es, body_fr
        FROM content_items WHERE id = :id`,
       { replacements: { id } }
     );
@@ -17837,8 +17838,8 @@ router.get('/content/items/:id/provenance', adminAuth('editor'), async (req, res
     if (typeof prov === 'string') {
       try { prov = JSON.parse(prov); } catch { prov = null; }
     }
-    const lang = row.target_language || 'en';
-    const body = (row[`body_${lang}`] || row.body_en || row.body_nl || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const lang = detectBodyLang(row);
+    const body = String(row[`body_${lang}`] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const verify = prov ? verifyProvenance(body, prov) : { valid: false, reason: 'no_provenance' };
     res.json({ success: true, data: { id, destination_id: row.destination_id, provenance: prov, verify } });
   } catch (error) {
@@ -17855,7 +17856,7 @@ router.post('/content/items/:id/verify-provenance', adminAuth('editor'), async (
   try {
     const id = Number(req.params.id);
     const [[row]] = await mysqlSequelize.query(
-      `SELECT provenance, body_en, body_nl, body_de, body_es, body_fr, target_language
+      `SELECT provenance, body_en, body_nl, body_de, body_es, body_fr
        FROM content_items WHERE id = :id`,
       { replacements: { id } }
     );
@@ -17867,8 +17868,8 @@ router.post('/content/items/:id/verify-provenance', adminAuth('editor'), async (
     if (!prov) {
       return res.json({ success: true, data: { id, verify: { valid: false, reason: 'no_provenance' } } });
     }
-    const lang = row.target_language || 'en';
-    const bodyRaw = req.body?.content !== undefined ? req.body.content : (row[`body_${lang}`] || row.body_en || row.body_nl || '');
+    const lang = detectBodyLang(row);
+    const bodyRaw = req.body?.content !== undefined ? req.body.content : (row[`body_${lang}`] || '');
     const body = String(bodyRaw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const verify = verifyProvenance(body, prov);
     res.json({ success: true, data: { id, verify, content_length: body.length } });
