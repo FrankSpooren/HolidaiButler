@@ -93,7 +93,7 @@ export default function POIImagesTab({ destId }) {
           {images.map((img) => (
             <ImageListItem key={img.id} sx={{ borderRadius: 1, overflow: 'hidden', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}>
               <img
-                src={`${API_BASE}${img.thumbnail_url}`}
+                src={img.thumbnail_url}
                 alt={img.visual_description || img.poi_name}
                 loading="lazy"
                 style={{ height: 200, objectFit: 'cover', width: '100%' }}
