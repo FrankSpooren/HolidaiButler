@@ -9003,3 +9003,139 @@ Conclusie: **geen breaking changes** in 0.216-0.218 en 0.74-0.76. Alleen feature
 | `CLAUDE_HISTORY.md` | deze sessie entry |
 
 Sessie commits: `21b6038` (upgrade), `<volgt>` (docs).
+
+---
+
+## v5.2.0 — Sentry SDK 7 → 10 + OTel-native dual-export (15 mei 2026)
+
+### Samenvatting
+
+Tweede van de vier SemVer-major follow-ups uit de v5.0.0 audit. Sentry SDK 3-major spring (v7.91 → v10.53) op backend + 2-major bump (v8.48 → v10.53) op frontend. Sentry auto-OTel-setup (default in v8+) gemitigeerd via officieel `skipOpenTelemetrySetup` + custom `@sentry/opentelemetry` integration. Tempo blijft primaire trace store, Sentry krijgt traces secundair voor Performance Monitoring.
+
+### Strategische keuzes (Frank vooraf)
+
+- **Versie**: v7 → v10 beide kanten (niet v8) voor future-proof + single-step migratie.
+- **Tracing**: uitgebreid (dual-export) — SentrySpanProcessor naast OTLPTraceExporter in dezelfde NodeSDK.
+- **Profiling addon**: `@sentry/profiling-node` meegenomen met `profilesSampleRate: 0.1` (10%).
+
+### Wat is geüpgraded
+
+**Backend (`platform-core`)**:
+
+| Package | Voor | Na |
+|---------|------|-----|
+| `@sentry/node` | `^7.91.0` (installed 7.120.4) | `^10.53.0` (installed 10.53.1) |
+| `@sentry/opentelemetry` | NIEUW | `^10.53.1` |
+| `@sentry/profiling-node` | NIEUW | `^10.53.1` |
+
+Sub-packages: 6 oude weg (`@sentry/integrations`, `@sentry/types`, `@sentry/utils` geconsolideerd in `@sentry/core`), 1 nieuwe (`@sentry/node-core`).
+
+**Frontend (`admin-module`)**:
+
+| Package | Voor | Na |
+|---------|------|-----|
+| `@sentry/react` | `^8.48.0` (installed 8.55.0) | `^10.53.0` (installed 10.53.1) |
+| `@sentry/browser` (transitive) | 8.55.0 | 10.53.1 |
+| `@sentry/core` (transitive) | 8.55.0 | 10.53.1 |
+
+### Breaking-changes onderzoek (3 majors via WebFetch)
+
+- **v7 → v8**: voor onze minimale usage (alleen `Sentry.init()` + `captureException(err, {extra})`) zijn er geen breaking changes. Node 18+ vereist (we draaien hoger). Sentry auto-OTel-setup conflict gemitigeerd via `skipOpenTelemetrySetup: true`.
+- **v8 → v9**: geen impact (geen `getCurrentHub`, geen `enableTracing`, geen `@sentry/utils` direct imports, geen Hub APIs). TypeScript 5.0.4+ vereist — wij gebruiken JS.
+- **v9 → v10**: OTel deps bumped naar `2.x.x` / `0.20x.x` — wij zitten al op `0.218.x` post-v5.1.1. `SentryContextManager` hernoemd naar `SentryAsyncLocalStorageContextManager` (ontdekt tijdens smoke test). Default `sendDefaultPii=false` is GDPR-verbetering.
+
+### Architectuur refactor — tracing.js (37 → 84 regels)
+
+Kernpunten:
+- `Sentry.init()` nu binnen tracing.js, vóór NodeSDK constructor
+- Self-loading dotenv (ESM imports zijn gehoisted boven `index.js` `dotenv.config()`)
+- `skipOpenTelemetrySetup: true` + `registerEsmLoaderHooks: false`
+- NodeSDK spanProcessors array: `BatchSpanProcessor(OTLPTraceExporter)` → Tempo + `SentrySpanProcessor()` → Sentry.io/Bugsink
+- `SentrySampler` + `SentryPropagator` + `SentryAsyncLocalStorageContextManager`
+- `Sentry.preloadOpenTelemetry()` voor manual ESM hook registratie
+
+`src/index.js`: Sentry init block verwijderd (12 regels), vervangen door 1 comment-regel.
+`src/middleware/errorHandler.js`: ongewijzigd — `captureException` signature stabiel v7-v10.
+`admin-module/src/main.jsx`: ongewijzigd — lazy `Sentry.init({dsn, environment, tracesSampleRate: 0.1})` blijft v10 compatibel.
+
+### Verificatie (Phase 3 evidence)
+
+| Check | Resultaat |
+|-------|-----------|
+| Backend `node --check tracing.js + index.js` | SYNTAX OK |
+| Backend smoke import (5s timeout) | `[sentry] Client initialized (profiling at 10% sample rate)` + `[otel] SDK started` + IMPORT OK + exit 0 |
+| Backend `npm install` | exit 0, 39 added, 6 removed, 3 changed |
+| Backend `npm audit --omit=dev` | 5 low vulns (geen regressie) |
+| Frontend `npm install` | 0 vulnerabilities |
+| Frontend Vite clean build | 20.25s, exit 0, 202 asset files, 7.3MB |
+| Sentry chunk (lazy-split) | `vendor-sentry-7166d6e4.js` 480kB / 158kB gzip |
+| PM2 restart holidaibutler-api | online, /health 200 in 98ms |
+| Sentry test event | event ID `13c590b31d974fc3be3c71853284d812`, `flush(8000)` returned `true` |
+| Tempo regression | 20 traces / 5 min POST = 20 traces / 5 min PRE (zero impact OTLP) |
+| trace_id / span_id propagatie | aanwezig in PM2 JSON request logs |
+| OTel/Sentry errors in PM2 | 0 sinds restart |
+
+### Apache reverse proxy infrastructuur
+
+Self-hosted Sentry instance (mogelijk Bugsink — main.jsx comment "Sentry / Bugsink — lazy init" suggereert dit) draait op `localhost:8000` via Docker-namespace die niet door root's `docker ps` zichtbaar is. Geen publieke route bestond.
+
+Toegevoegd:
+- `mod_proxy_wstunnel` enabled
+- `/etc/apache2/sites-available/sentry.holidaibutler.com.conf` HTTP-only vhost met `ProxyPass / http://127.0.0.1:8000/` + RewriteRule voor ws-upgrade
+- Apache graceful reload + `apache2ctl configtest`: Syntax OK
+
+**Resterend** na DNS propagatie van A-record (toegevoegd 14:08, propagatie nog gaande aan einde sessie):
+- `a2ensite sentry.holidaibutler.com`
+- `systemctl reload apache2`
+- `certbot --apache --redirect -d sentry.holidaibutler.com --email info@holidaibutler.com --agree-tos --non-interactive`
+- Verifieer `https://sentry.holidaibutler.com` login + zoek event `13c590b31d974fc3be3c71853284d812`
+
+### Iteratie-incidenten
+
+1. **SyntaxError `SentryContextManager` niet exported** — fix sed-rename naar `SentryAsyncLocalStorageContextManager` (v10 rename ontdekt via `Object.keys()` op `@sentry/opentelemetry` module).
+2. **`[sentry] Client initialized` log ontbrak na PM2 restart** — root cause: ESM imports gehoisted boven `index.js` `dotenv.config()`. tracing.js moest dotenv inline laden vóór Sentry.init() evaluatie. Fix: dotenv imports + path resolution + `dotenv.config()` in tracing.js zelf.
+
+### Parallel werk gedetecteerd
+
+Tijdens deze sessie pushte een parallel Claude Opus 4.6 sessie (Frank-side) commit `50e065f`: fix Knowledge Base ListItem → ListItemButton in admin-module branding. Disjuncte files t.o.v. Sentry werk — geen conflict. Branch-drift effect: backend commit `4617ec4` landde direct op `dev` i.p.v. feature branch. Pragmatisch geaccepteerd.
+
+### Git operations
+
+| Stap | Resultaat |
+|------|-----------|
+| Tag op `dev` HEAD vóór upgrade | `pre-sentry-upgrade-2026-05-15-1347` |
+| Backups | `/root/backups/2026-05-15/{platform-core-package*,admin-module-package*,tracing.js,index.js}.pre-sentry` |
+| Feature branch (overbodig geworden) | `upgrade/sentry-10` (geen commits, kan opgeruimd) |
+| Backend commit | `4617ec4` op `dev` |
+| Frontend commit | `f8a00f7` op `dev` |
+| Push `dev` naar GitHub | `50e065f..f8a00f7` |
+
+### Learnings
+
+1. **ESM module-load order vs dotenv.config()**: Een geïmporteerde module die `process.env.X` nodig heeft tijdens evaluatie moet zelf `dotenv.config()` aanroepen. ESM imports zijn gehoisted boven alle executable statements van het importerende module. Dit was niet zichtbaar in v5.1.1 omdat OTel een fallback-default heeft voor `OTEL_EXPORTER_OTLP_ENDPOINT`, maar Sentry heeft geen DSN-fallback.
+
+2. **Sentry v10 named exports verschillen van v8 docs**: `SentryContextManager` (v8) → `SentryAsyncLocalStorageContextManager` (v10). Sentry migration guide noemde dit niet expliciet. Lesson: bij upgrade naar major X altijd `Object.keys(import('package'))` runnen om actuele exports te verifiëren, niet blind v8 docs volgen.
+
+3. **Sentry auto-OTel-setup conflict** is reëel maar volledig oplosbaar via officieel pad: `skipOpenTelemetrySetup: true` + `@sentry/opentelemetry` SpanProcessor in eigen NodeSDK config. Dual-export Sentry + Tempo zonder code-duplicatie of conflicterende exporters.
+
+4. **Self-hosted Sentry/Bugsink zonder publieke route** vereist Apache reverse proxy + DNS A-record voor browser-toegang. Voor enterprise observability hoort dat als infrastructuur, niet als follow-up.
+
+5. **Sentry minimal usage = stabiel surface over 3 majors**. `Sentry.init({dsn, environment, tracesSampleRate})` + `captureException(err, {extra})` is identiek in v7, v8, v9, v10. Geen `Handlers`, geen `Integrations.Http`, geen Express middleware = geen migratie pijn. Kies bij Sentry usage altijd voor minimal-API-surface code.
+
+6. **CHANGELOG analyse vooraf** (3 WebFetches, ~5 min) is een goedkope verzekering vóór een 3-major upgrade. Identificeerde 0 user-facing breaking changes, gaf vertrouwen om grote spring (v7 → v10) in 1 sessie te doen i.p.v. incrementeel.
+
+### Bestanden gewijzigd
+
+| Bestand | Wijziging | Commit |
+|---------|-----------|--------|
+| `platform-core/package.json` | +3 Sentry deps op v10 | 4617ec4 |
+| `platform-core/package-lock.json` | 42 packages changed | 4617ec4 |
+| `platform-core/src/observability/tracing.js` | Refactor 37 → 84 regels (Sentry init + dual SpanProcessors) | 4617ec4 |
+| `platform-core/src/index.js` | Sentry init block verwijderd | 4617ec4 |
+| `admin-module/package.json` | @sentry/react ^8.48 → ^10.53 | f8a00f7 |
+| `admin-module/package-lock.json` | 3 Sentry packages updated | f8a00f7 |
+| `CLAUDE.md` | header 5.1.1 → 5.2.0, action items aangepast, nieuwe v5.2.0 sectie, Changelog | (docs commit volgt) |
+| `CLAUDE_HISTORY.md` | deze sessie entry | (docs commit volgt) |
+| `/etc/apache2/sites-available/sentry.holidaibutler.com.conf` | nieuwe vhost (server-side, niet in git) | n/a |
+
+Sessie commits: `4617ec4` + `f8a00f7` + `<docs-commit-volgt>`.
