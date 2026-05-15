@@ -9139,3 +9139,28 @@ Tijdens deze sessie pushte een parallel Claude Opus 4.6 sessie (Frank-side) comm
 | `/etc/apache2/sites-available/sentry.holidaibutler.com.conf` | nieuwe vhost (server-side, niet in git) | n/a |
 
 Sessie commits: `4617ec4` + `f8a00f7` + `<docs-commit-volgt>`.
+
+
+## Sessie 15-05-2026 (deel 2): Content Studio + Media Library Bug Fixes
+
+### CLAUDE.md v5.3.0
+
+**9 Fixes:**
+1. POI images Media Library broken: thumbnail_url was relatief pad (/poi-images/...) op admin.holidaibutler.com (geen images). Fix: resolve via IMAGE_BASE_URL + /api/v1/img/ proxy (mediaRoutes.js + POIImagesTab.jsx)
+2. Knowledge Base documenten niet klikbaar: MUI 5.18 ListItem forwardt onClick niet bij deprecated `button` prop. Fix: ListItemButton + disablePadding + secondaryAction prop (MerkProfielSections.jsx)
+3. Concept-titel propagatie: PATCH /content/concepts/:id update nu ook content_items.title voor alle child items. Kalender las ci.title (item-niveau, oud) i.p.v. cc.title (concept-niveau, nieuw)
+4. Tenant-cache invalidatie: PATCH /content/concepts/:id roept nu tenantCacheService.invalidateNamespace() aan na UPDATE. Was: stale data in Items tabel + kalender (5 min TTL)
+5. Duplicate image in popup: legacy image resolution verwijderd uit LIST+DETAIL endpoints (DTO ContentItemResource.V1 is single source)
+6. Workflow progress indicator: actuele fase filled+bold+glow, voltooide+toekomstige gedimd
+7. Content Studio tabel-consistentie: Ideeen toolbar 1:1 met Items (density toggle, kolommen-button, sneltoetsen EU-toegankelijkheid, inline header filter dropdowns)
+8. Kolom-toggle bug: ALL_COLUMNS key 'source' hernoemd naar 'type' + kolom 'Bijgewerkt' naar 'Datum'
+9. Popovers (Kolommen + Sneltoetsen) buiten tab-conditionals + kolom-breedtes gefixed
+
+**Bestanden gewijzigd:**
+- platform-core/src/routes/adminPortal.js (cache invalidatie + titel propagatie + legacy image removal)
+- platform-core/src/routes/mediaRoutes.js (POI thumbnail URL via Image Resize Proxy)
+- admin-module/src/components/branding/MerkProfielSections.jsx (ListItemButton)
+- admin-module/src/components/media/POIImagesTab.jsx (absolute thumbnail URL)
+- admin-module/src/components/common/WorkflowProgressIndicator.jsx
+- admin-module/src/pages/ContentStudioPage.jsx (tabel-consistentie)
+- admin-module/src/pages/ContentAnalyseTab.jsx (TableHead styling)
