@@ -30,12 +30,17 @@ if (process.env.SENTRY_DSN) {
 
 // Now import all other modules (they will have access to env vars)
 import express from 'express';
+import { createServer as createHttpServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import logger from './utils/logger.js';
 import { initializeDatabase } from './config/database.js';
 import { initializeEventBus } from './services/eventBus.js';
+import realtimeService from "./services/realtimeService.js";
+import webhookDispatcher from "./services/webhookDispatcher.js";
+import contentPublishScheduler from "./services/contentPublishScheduler.js";
+import tenantCacheService from "./services/tenantCacheService.js";
 import { initializeAutomation } from './automation/index.js';
 import { initializeOrchestrator, shutdownOrchestrator } from './services/orchestrator/index.js';
 import apiGateway from './gateway/index.js';
@@ -578,9 +583,32 @@ initializePlatform().then(() => {
   // Initialize circuit breakers for monitoring
   try { initializeCircuitBreakers(); } catch(e) { console.warn("[Init] Circuit breaker init:", e.message); }
 
-  const server = app.listen(PORT, () => {
-  server.timeout = 300000; // 5 min (video uploads)
-  server.keepAliveTimeout = 65000;
+  // v4.95 Blok 2.2: HTTP server + Socket.IO realtime bridge
+  const httpServer = createHttpServer(app);
+  httpServer.timeout = 300000; // 5 min (video uploads)
+  httpServer.keepAliveTimeout = 65000;
+  try {
+    realtimeService.initialize(httpServer);
+  } catch (rtErr) {
+    logger.error('[Realtime] Initialisatie faalde (non-blocking): ' + rtErr.message);
+  }
+  try {
+    webhookDispatcher.initialize();
+  } catch (wdErr) {
+    logger.error('[Webhook] Dispatcher init faalde (non-blocking): ' + wdErr.message);
+  }
+  // v4.98 Blok 5.1: tenantCacheService — per-tenant Redis cache met event-driven invalidation
+  try {
+    tenantCacheService.initialize();
+  } catch (tcErr) {
+    logger.error('[TenantCache] init faalde (non-blocking): ' + tcErr.message);
+  }
+  // v4.97 Blok 4: backfill delayed-jobs voor reeds-scheduled items (non-blocking).
+  // Voorkomt orphan-detector lag van >5min bij Redis-restart of eerste deploy.
+  contentPublishScheduler.backfillScheduled()
+    .then((res) => logger.info(`[ContentPublishScheduler] backfill ${JSON.stringify(res)}`))
+    .catch((err) => logger.warn(`[ContentPublishScheduler] backfill non-blocking error: ${err.message}`));
+  const server = httpServer.listen(PORT, () => {
     const envDisplay = (process.env.NODE_ENV || 'development').toUpperCase().padEnd(42);
     const portDisplay = `http://localhost:${PORT}`.padEnd(28);
     logger.info(`
@@ -590,6 +618,7 @@ initializePlatform().then(() => {
     ╠═══════════════════════════════════════════════════════════╣
     ║   Environment: ${envDisplay}║
     ║   API Gateway: ${portDisplay}║
+    ║   Realtime:    /realtime (Socket.IO)                     ║
     ║   Status: RUNNING                                        ║
     ╚═══════════════════════════════════════════════════════════╝
     `);

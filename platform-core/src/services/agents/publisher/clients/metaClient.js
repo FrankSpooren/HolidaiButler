@@ -32,6 +32,75 @@ class MetaClient {
   }
 
   /**
+   * v4.94 — Graph API publish-confirmation
+   * Verifieert dat een zojuist gepubliceerde post daadwerkelijk bestaat via Graph GET.
+   * Voorkomt DB-vs-werkelijkheid divergentie (root-cause Bosma duplicate-publish 14 mei).
+   *
+   * Retry-window: 5s, 15s, 60s — dekt FB/IG eventual-consistency indexing.
+   *
+   * @param {Object} contentItem - Same item passed to publish()
+   * @param {string} postId - postId returned by publish()
+   * @param {Object} options - { retryDelays?: number[] }
+   * @returns {Promise<{confirmed: boolean, retries: number, error?: string, platform: string}>}
+   */
+  async confirmPublish(contentItem, postId, options = {}) {
+    if (!postId) {
+      return { confirmed: false, retries: 0, error: 'postId ontbreekt — verificatie niet mogelijk', platform: this.subPlatform };
+    }
+    const retryDelays = options.retryDelays || [5000, 15000, 60000];
+
+    const systemToken = this._getAccessToken(contentItem);
+    let verifyToken = systemToken;
+    let pageIdForToken = null;
+    if (this.subPlatform === 'facebook') {
+      pageIdForToken = contentItem.platform_account_id || process.env.META_PAGE_ID;
+    } else {
+      try {
+        const meta = contentItem.account_metadata
+          ? (typeof contentItem.account_metadata === 'string' ? JSON.parse(contentItem.account_metadata) : contentItem.account_metadata)
+          : {};
+        pageIdForToken = meta.pageId || contentItem.platform_account_id || null;
+      } catch { /* parse error */ }
+    }
+    if (pageIdForToken) {
+      try {
+        verifyToken = await this._getPageAccessToken(systemToken, pageIdForToken);
+      } catch (tokenErr) {
+        logger.warn(`[MetaClient] Verify-token exchange failed, falling back to system token: ${tokenErr.message}`);
+      }
+    }
+
+    let lastError = null;
+    for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+      if (attempt > 0) {
+        const delay = retryDelays[attempt - 1];
+        logger.info(`[MetaClient] Graph verify retry ${attempt}/${retryDelays.length} after ${delay}ms for postId=${postId}`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+      try {
+        const verifyUrl = `${META_API_BASE}/${encodeURIComponent(postId)}?fields=id&access_token=${verifyToken}`;
+        const response = await fetch(verifyUrl, { signal: AbortSignal.timeout(15000) });
+        const data = await response.json();
+        if (response.ok && data.id) {
+          logger.info(`[MetaClient] Graph verify CONFIRMED postId=${postId} (${this.subPlatform}) on attempt ${attempt}`);
+          return { confirmed: true, retries: attempt, platform: this.subPlatform };
+        }
+        lastError = data.error?.message || `HTTP ${response.status}: post not found`;
+        logger.warn(`[MetaClient] Graph verify attempt ${attempt} failed for postId=${postId}: ${lastError}`);
+      } catch (fetchErr) {
+        lastError = fetchErr.message;
+        logger.warn(`[MetaClient] Graph verify attempt ${attempt} threw for postId=${postId}: ${fetchErr.message}`);
+      }
+    }
+    return {
+      confirmed: false,
+      retries: retryDelays.length,
+      error: lastError || `Post ${postId} niet bevestigd na ${retryDelays.length} retries`,
+      platform: this.subPlatform,
+    };
+  }
+
+  /**
    * Publish to Facebook Page
    */
   async _publishToFacebook(contentItem, systemToken) {

@@ -172,4 +172,22 @@ export async function getProvenance(contentItemId) {
   }
 }
 
-export default { buildProvenance, verifyProvenance, saveProvenance, getProvenance };
+/**
+ * Detect primary language door eerste populated body_xx kolom op een
+ * content_items row. Fallback 'en'. Voorkomt afhankelijkheid van een
+ * niet-bestaande target_language kolom in dat schema.
+ *
+ * @param {Object} row - content_items row (mag body_en/nl/de/es/fr bevatten)
+ * @returns {string} ISO-2 language code
+ */
+export function detectBodyLang(row) {
+  if (!row) return 'en';
+  const langs = ['en', 'nl', 'de', 'es', 'fr'];
+  for (const l of langs) {
+    const body = row[`body_${l}`];
+    if (body && String(body).trim().length > 0) return l;
+  }
+  return 'en';
+}
+
+export default { buildProvenance, verifyProvenance, saveProvenance, getProvenance, detectBodyLang };

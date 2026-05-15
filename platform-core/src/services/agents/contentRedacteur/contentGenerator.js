@@ -15,12 +15,13 @@ import { analyzeContent } from '../seoMeester/seoAnalyzer.js';
 import { mysqlSequelize } from '../../../config/database.js';
 import { buildBrandContext, buildBrandContextStructured } from './brandContext.js';
 import { validateContent as _validateContent } from '../../outputValidator.js';
-import { buildProvenance as _buildProvenance } from '../../provenanceService.js';
+import { buildProvenance as _buildProvenance, saveProvenance as _saveProvenance } from '../../provenanceService.js';
 import { validateAndRetryWithProvenance as _validateRetry } from '../../aiQualityOrchestrator.js';
 import { buildAntiHallucinationInstructions, buildSystemPromptHeader } from '../../contentSafeguards/promptGuardrails.js';
 import featureFlagService from '../../featureFlagService.js';
 import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
+import provenanceAuditMonitor from '../../provenanceAuditMonitor.js';
 
 const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
 
@@ -451,7 +452,8 @@ export async function generateContent(suggestion, options = {}) {
             status: _genValidation?.passed === false ? 'validation_failed' : 'success',
           }}
         );
-      } catch (_logErr) { /* non-blocking */ }
+        provenanceAuditMonitor.recordSuccess();
+      } catch (_logErr) { provenanceAuditMonitor.recordFailure(_logErr, 'contentGenerator.generate'); }
     } catch (_e) {
       logger.warn('[generateContent] validation/provenance failed: ' + _e.message);
     }
@@ -551,6 +553,9 @@ export async function generateContent(suggestion, options = {}) {
     );
     result.seo_score = seoResult.overallScore;
     result.seo_grade = seoResult.grade;
+    // v4.95 Blok 6.1 fix: voeg provenance toe aan result zodat content_items INSERT
+    // het kan persisteren (hover-citations in reviewer UI + EU AI Act tamper detection).
+    if (_genProvenance) result.provenance = _genProvenance;
 
     if (seoResult.overallScore < SEO_MINIMUM_SCORE) {
       logger.info(`[ContentGenerator] SEO score ${seoResult.overallScore}/100 < ${SEO_MINIMUM_SCORE} — auto-improving...`);
@@ -1184,6 +1189,8 @@ export async function improveExistingContent(contentItem) {
         locale: primaryLang,
         destinationId,
       });
+      // v4.95 Blok 6.1 fix: persisteer provenance op content_items voor hover-citations
+      if (contentItem?.id) await _saveProvenance(contentItem.id, _shProvenance);
     } catch (_e) { logger.warn('[score-high] validation/provenance failed: ' + _e.message); }
 
     // Audit log (with validation)
@@ -1216,7 +1223,8 @@ export async function improveExistingContent(contentItem) {
           status: _shValidation?.passed === false ? 'validation_failed' : 'success',
         }}
       );
-    } catch (_e) { /* audit non-blocking */ }
+      provenanceAuditMonitor.recordSuccess();
+    } catch (_e) { provenanceAuditMonitor.recordFailure(_e, 'contentGenerator.improve.scoreHigh'); }
 
     return {
       improved: false,
@@ -1329,6 +1337,8 @@ export async function improveExistingContent(contentItem) {
         locale: contentItem.target_language || contentItem.language || 'nl',
         destinationId,
       });
+      // v4.95 Blok 6.1 fix: persisteer provenance op content_items voor hover-citations
+      if (contentItem?.id) await _saveProvenance(contentItem.id, _provenance);
       // Audit log (non-blocking)
       try {
         await _mysqlForAudit.query(
@@ -1358,7 +1368,8 @@ export async function improveExistingContent(contentItem) {
             status: _validation?.passed === false ? 'validation_failed' : 'success',
           }}
         );
-      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); }
+        provenanceAuditMonitor.recordSuccess();
+      } catch (_logErr) { logger.warn('[improveExistingContent] audit log failed: ' + _logErr.message); provenanceAuditMonitor.recordFailure(_logErr, 'contentGenerator.improve.standard'); }
     } catch (_e) {
       logger.warn('[improveExistingContent] validation/provenance failed: ' + _e.message);
     }
@@ -1412,6 +1423,8 @@ export async function improveExistingContent(contentItem) {
       locale: primaryLang,
       destinationId,
     });
+    // v4.95 Blok 6.1 fix: persisteer provenance op content_items voor hover-citations
+    if (contentItem?.id) await _saveProvenance(contentItem.id, _aiUnProvenance);
   } catch (_e) { logger.warn('[ai-unable] validation/provenance failed: ' + _e.message); }
 
   // Audit log
@@ -1444,7 +1457,8 @@ export async function improveExistingContent(contentItem) {
         status: 'validation_failed',
       }}
     );
-  } catch (_e) { /* audit non-blocking */ }
+    provenanceAuditMonitor.recordSuccess();
+  } catch (_e) { provenanceAuditMonitor.recordFailure(_e, 'contentGenerator.improve.aiUnable'); }
 
   return {
     improved: false,

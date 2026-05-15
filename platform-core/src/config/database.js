@@ -102,6 +102,74 @@ export const mysqlSequelize = new Sequelize(
   }
 );
 
+// v4.98 Blok 5.2: Read-replica connection (optioneel via REPLICA_DB_HOST env).
+// Routing helper getReadDb() returns replica voor analytics queries, master
+// voor writes en strong-consistency reads. Falls back op master als replica
+// niet geconfigureerd is.
+//
+// Acceptance Fase_B Blok 5.2: "Read replica 0 master-load voor analytics queries".
+// Wordt fully active zodra DBA team MariaDB replica heeft geprovisionerd
+// (REPLICA_DB_HOST env var). Tot dan: code-level abstractie aanwezig, runtime
+// routes naar master.
+const _replicaHost = process.env.REPLICA_DB_HOST || null;
+export const readReplicaSequelize = _replicaHost
+  ? new Sequelize(
+      dbConfig.database,
+      process.env.REPLICA_DB_USER || dbConfig.username,
+      process.env.REPLICA_DB_PASSWORD || dbConfig.password,
+      {
+        host: _replicaHost,
+        port: parseInt(process.env.REPLICA_DB_PORT || String(dbConfig.port), 10),
+        dialect: 'mysql',
+        dialectOptions: {
+          charset: 'utf8mb4',
+          dateStrings: true,
+          timezone: DB_TIMEZONE,
+        },
+        pool: {
+          max: parseInt(process.env.REPLICA_DB_POOL_MAX || '10', 10),
+          min: parseInt(process.env.REPLICA_DB_POOL_MIN || '2', 10),
+          acquire: 30000,
+          idle: 10000,
+        },
+        logging: false,
+        timezone: DB_TIMEZONE,
+      }
+    )
+  : null;
+
+if (readReplicaSequelize) {
+  readReplicaSequelize.authenticate()
+    .then(() => console.log('[Database] ✓ Read replica connected: ' + _replicaHost))
+    .catch((err) => console.warn('[Database] Read replica auth failed (falling back to master): ' + err.message));
+} else {
+  console.log('[Database] Read replica niet geconfigureerd (REPLICA_DB_HOST leeg) — analytics queries gaan naar master');
+}
+
+/**
+ * Routing helper: returns replica Sequelize voor read-only/analytics queries
+ * indien beschikbaar EN healthy, anders master. Caller MOET ervan uitgaan dat
+ * geretourneerde verbinding zowel replica als master kan zijn (eventual consistency).
+ *
+ * Use cases: dashboard aggregaties, analytics reports, content listings
+ * waarbij ~seconden replica-lag acceptabel is.
+ *
+ * NIET gebruiken voor: write-after-read, transactionele consistency, user-edit flows.
+ */
+export function getReadDb() {
+  if (!readReplicaSequelize) return mysqlSequelize;
+  // Crude health check: connection state. Bij replica-lag of -down → master.
+  try {
+    const pool = readReplicaSequelize.connectionManager?.pool;
+    if (pool && pool.size === 0 && pool.available === 0) {
+      return mysqlSequelize;
+    }
+    return readReplicaSequelize;
+  } catch {
+    return mysqlSequelize;
+  }
+}
+
 // MongoDB Connection
 let mongoConnection = null;
 

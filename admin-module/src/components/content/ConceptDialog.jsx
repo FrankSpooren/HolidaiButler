@@ -5,6 +5,8 @@
  * Opdracht 1+2+3: Volledig rechter paneel met werkende acties, scores, preview
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import useRealtimeContent from '../../hooks/useRealtimeContent.js';
 import {
   Dialog, DialogTitle, DialogActions, DialogContent,
   Box, Typography, Button, IconButton, Tabs, Tab, Chip, TextField,
@@ -21,6 +23,8 @@ import ShuffleIcon from '@mui/icons-material/Shuffle';
 import AnimatedScoreChip from '../common/AnimatedScoreChip.jsx';
 import WorkflowStatusChip from '../common/WorkflowStatusChip.jsx';
 import WorkflowProgressIndicator from '../common/WorkflowProgressIndicator.jsx';
+import SentenceCitations from './SentenceCitations.jsx';
+import ProvenancePanel from './ProvenancePanel.jsx';
 import { getAvailableActions, getStatusLabel as _wfGetStatusLabel } from '../../lib/workflowStatus.js';
 import TranslateIcon from '@mui/icons-material/Translate';
 import PeopleIcon from '@mui/icons-material/People';
@@ -407,31 +411,73 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     } catch { setApprovalLog([]); }
   }, []);
 
-  const handleStatusUpdate = async (status, scope = 'all') => {
+  // v4.95 Blok 2.B/C/D: TanStack Query mutations + Socket.IO realtime refresh
+  const queryClient = useQueryClient();
+
+  // Subscribe op content events voor deze destination (Socket.IO).
+  // Bij elk event ontvangen we conceptId/itemId; als 't huidige concept matcht,
+  // refetchen we via loadConcept().
+  useRealtimeContent(destinationId, {
+    enabled: open && Boolean(destinationId),
+    onEvent: (eventName, payload) => {
+      if (!conceptId || !payload) return;
+      if (payload.conceptId && Number(payload.conceptId) === Number(conceptId)) {
+        // Refetch huidige concept zonder optimistic-flicker
+        loadConcept();
+      }
+    },
+  });
+
+  // Approve-alle mutation met optimistic update + rollback (Frank acceptance: geen state-flicker).
+  const approveConceptMutation = useMutation({
+    mutationFn: async (cid) => {
+      const result = await contentService.approveConcept(cid);
+      return result;
+    },
+    onMutate: async (cid) => {
+      // Snapshot huidige items voor rollback
+      const snapshot = items.map(it => ({ ...it }));
+      // Alleen draft/pending_review/etc optimistic naar 'approved' (geen demotion van scheduled/published)
+      const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
+      setItems(prev => prev.map(it =>
+        approvableStates.includes(it.approval_status)
+          ? { ...it, approval_status: 'approved' }
+          : it
+      ));
+      return { snapshot };
+    },
+    onError: (err, _cid, ctx) => {
+      // Rollback naar snapshot
+      if (ctx?.snapshot) setItems(ctx.snapshot);
+      setSnackMsg({ severity: 'error', text: err?.message || 'Approve mislukt — wijziging teruggedraaid' });
+    },
+    onSuccess: (result) => {
+      const approvedCount = result?.data?.approved_items ?? result?.approved_items ?? 0;
+      if (approvedCount === 0) {
+        setSnackMsg({ severity: 'info', text: 'Alle items al goedgekeurd of voorbij goedkeuringsfase' });
+      } else if (approvedCount === items.length) {
+        setSnackMsg({ severity: 'success', text: 'Alle kanalen goedgekeurd' });
+      } else {
+        setSnackMsg({ severity: 'success', text: `${approvedCount} van ${items.length} kanalen goedgekeurd (overige reeds verder in workflow)` });
+      }
+    },
+    onSettled: async () => {
+      // Refetch authoritative state + invalidate cache per destination (Blok 2.D queryKey partitioning)
+      await loadConcept();
+      if (destinationId) {
+        queryClient.invalidateQueries({ queryKey: ['concept', destinationId, conceptId] });
+        queryClient.invalidateQueries({ queryKey: ['concepts', destinationId] });
+      }
+      const itemIdReload = items[activeTab]?.id;
+      if (itemIdReload) loadApprovalLog(itemIdReload);
+    },
+  });
+
+    const handleStatusUpdate = async (status, scope = 'all') => {
     try {
       if (status === 'approved' && scope === 'all' && concept?.id) {
-        // Approve ALL platforms at once via concept-level endpoint (FSM-aware)
-        const result = await contentService.approveConcept(concept.id);
-        const approvedCount = result?.data?.approved_items ?? result?.approved_items ?? 0;
-        // KRITIEKE FIX: alleen draft/pending_review items optimistic markeren
-        // (scheduled/publishing/published BEHOUDEN hun state — geen demotion)
-        const approvableStates = ['draft', 'pending_review', 'in_review', 'reviewed', 'changes_requested', 'rejected', 'failed'];
-        setItems(prev => prev.map(it =>
-          approvableStates.includes(it.approval_status)
-            ? { ...it, approval_status: 'approved' }
-            : it
-        ));
-        await loadConcept();
-        const itemIdReload = items[activeTab]?.id;
-        if (itemIdReload) loadApprovalLog(itemIdReload);
-        // Accurate snackbar based on server response
-        if (approvedCount === 0) {
-          setSnackMsg({ severity: 'info', text: 'Alle items al goedgekeurd of voorbij goedkeuringsfase' });
-        } else if (approvedCount === items.length) {
-          setSnackMsg({ severity: 'success', text: 'Alle kanalen goedgekeurd' });
-        } else {
-          setSnackMsg({ severity: 'success', text: `${approvedCount} van ${items.length} kanalen goedgekeurd (overige reeds verder in workflow)` });
-        }
+        // v4.95 Blok 2.C: delegate naar useMutation (optimistic + rollback + DevTools instrumentation)
+        approveConceptMutation.mutate(concept.id);
       } else {
         // Single item update (reject, or single-platform action)
         const itemId = items[activeTab]?.id;
@@ -1336,6 +1382,16 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     sx={{ '& .ProseMirror': { minHeight: 300 } }}
                   />
 
+                  {/* v4.94-v4.95 Blok 6.1: sentence-level hover-citations (EU AI Act transparantie) */}
+                  <SentenceCitations
+                    provenance={activeItem?.provenance}
+                    body={editBody}
+                    destinationId={destinationId}
+                  />
+
+                  {/* v4.95 Blok 7.1: Provenance panel — signature, verify, PDF audit-report */}
+                  <ProvenancePanel itemId={activeItem?.id} body={editBody} />
+
                   {/* Word counter */}
                   {(() => {
                     const text = editBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1749,19 +1805,46 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Alert>
                   )}
 
-                  {/* Stap 2: Publiceer alle / Plan alle in */}
+                  {/* Stap 2: Publiceer alle / Plan alle in - v4.94 FSM-driven (Blok 1.3) */}
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 2 — Publicatie</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
-                    <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
-                      onClick={handlePublishAll} disabled={publishing || items.every(i => i.approval_status === 'published')} fullWidth>
-                      Publiceer alle
-                    </Button>
-                    <Button variant="outlined" size="small" startIcon={<ScheduleIcon />}
-                      onClick={() => { setPublishTarget(null); setScheduleDialogOpen(true); }}
-                      disabled={publishing} fullWidth>
-                      Plan alle in
-                    </Button>
-                  </Box>
+                  {(() => {
+                    const stap2Actions = getAvailableActions(items);
+                    const allPublished = items.length > 0 && items.every(i => i.approval_status === 'published');
+                    const allScheduled = items.length > 0 && items.every(i => ['scheduled', 'publishing', 'published'].includes(i.approval_status));
+                    const publishDisabled = publishing || !stap2Actions.canPublish;
+                    const scheduleDisabled = publishing || !stap2Actions.canSchedule;
+                    const publishLabel = allPublished
+                      ? '✓ Alles gepubliceerd'
+                      : (!stap2Actions.canPublish ? 'Niet publiceerbaar' : 'Publiceer alle');
+                    const scheduleLabel = allScheduled
+                      ? '✓ Alles ingepland'
+                      : (!stap2Actions.canSchedule ? 'Niet inplanbaar' : 'Plan alle in');
+                    return (
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1.5 }}>
+                        <Tooltip title={publishDisabled && !publishing ? (allPublished ? 'Alle platform-versies zijn al gepubliceerd' : 'Items moeten in status Goedgekeurd of Ingepland staan') : ''}>
+                          <span style={{ flex: 1 }}>
+                            <Button variant="contained" size="small" startIcon={publishing ? <CircularProgress size={14} /> : <PublishIcon />}
+                              onClick={handlePublishAll} disabled={publishDisabled} fullWidth
+                              sx={publishDisabled && allPublished ? {
+                                opacity: 0.85,
+                                '&.Mui-disabled': { bgcolor: 'success.main', color: 'common.white', opacity: 0.8 },
+                              } : {}}>
+                              {publishLabel}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title={scheduleDisabled && !publishing ? (allScheduled ? 'Alle platform-versies zijn al ingepland of gepubliceerd' : 'Items moeten in status Goedgekeurd staan om in te plannen') : ''}>
+                          <span style={{ flex: 1 }}>
+                            <Button variant="outlined" size="small" startIcon={<ScheduleIcon />}
+                              onClick={() => { setPublishTarget(null); setScheduleDialogOpen(true); }}
+                              disabled={scheduleDisabled} fullWidth>
+                              {scheduleLabel}
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    );
+                  })()}
 
                   {/* Stap 3: Per-platform acties */}
                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5 }}>Stap 3 — Per platform</Typography>

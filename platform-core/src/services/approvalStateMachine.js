@@ -21,6 +21,10 @@
 
 import { mysqlSequelize } from '../config/database.js';
 import logger from '../utils/logger.js';
+import realtimeService from './realtimeService.js';
+import workflowConfigService from './workflowConfigService.js';
+import { canTransitionXState, DEFAULT_TRANSITIONS } from './contentWorkflowMachine.js';
+import contentPublishScheduler from './contentPublishScheduler.js';
 
 // ---------------------------------------------------------------------
 // 1. TRANSITION MATRIX — explicit, complete, audited
@@ -171,7 +175,21 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     // No-op; allowed
     return { itemId, fromStatus, toStatus: newStatus, affected: 0, skipped: 'same-status' };
   }
-  if (!force && !canTransition(fromStatus, newStatus)) {
+  // v4.96 Blok 3.1+3.2: per-tenant FSM check via workflow_configurations.
+  // Load destination_id om tenant-specifieke transitions op te halen.
+  let tenantTransitions = DEFAULT_TRANSITIONS;
+  try {
+    const [[itemForTenantCheck]] = await mysqlSequelize.query(
+      'SELECT destination_id FROM content_items WHERE id = :id LIMIT 1',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (itemForTenantCheck?.destination_id) {
+      tenantTransitions = await workflowConfigService.getTransitions(itemForTenantCheck.destination_id);
+    }
+  } catch (cfgErr) {
+    logger.debug(`[approvalStateMachine] tenant transitions lookup failed, using DEFAULT: ${cfgErr.message}`);
+  }
+  if (!force && !canTransitionXState(fromStatus, newStatus, tenantTransitions)) {
     throw new InvalidTransitionError(fromStatus, newStatus, itemId);
   }
 
@@ -220,7 +238,65 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     logger.warn(`[approvalStateMachine] audit log failed for item ${itemId}: ${auditErr.message}`);
   }
 
+  // v4.95 Blok 2.B: realtime broadcast via Socket.IO (NATS-style subject naming)
+  try {
+    const [[itemMeta]] = await mysqlSequelize.query(
+      'SELECT destination_id, concept_id FROM content_items WHERE id = :id',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (itemMeta?.destination_id) {
+      const action = _statusToAction(newStatus, fromStatus);
+      realtimeService.publishContentEvent({
+        destinationId: itemMeta.destination_id,
+        action,
+        itemId: Number(itemId),
+        conceptId: itemMeta.concept_id || null,
+        fromStatus,
+        toStatus: newStatus,
+        actorId: userId,
+      });
+    }
+  } catch (rtErr) {
+    logger.debug(`[approvalStateMachine] realtime emit non-blocking error: ${rtErr.message}`);
+  }
+
+  // v4.97 Blok 4: BullMQ delayed-job orchestration voor exacte publicatie-timing.
+  // - scheduled (new of reschedule): voeg/vervang delayed job
+  // - weg van scheduled (approved/deleted/rejected): cancel job (idempotent)
+  try {
+    const [[schedMeta]] = await mysqlSequelize.query(
+      'SELECT destination_id, scheduled_at FROM content_items WHERE id = :id LIMIT 1',
+      { replacements: { id: Number(itemId) } }
+    );
+    if (newStatus === 'scheduled' && schedMeta?.scheduled_at) {
+      await contentPublishScheduler.scheduleItem({
+        itemId: Number(itemId),
+        scheduledAt: schedMeta.scheduled_at,
+        destinationId: schedMeta?.destination_id || null,
+      });
+    } else if (fromStatus === 'scheduled' && newStatus !== 'scheduled') {
+      // approved (unschedule), deleted, rejected, publishing (worker handelt af), published, failed
+      // Skip cancel als naar 'publishing' (worker is gestart, niet halverwege onderbreken)
+      if (newStatus !== 'publishing') {
+        await contentPublishScheduler.cancelItem(Number(itemId));
+      }
+    }
+  } catch (schedErr) {
+    logger.warn(`[approvalStateMachine] scheduler op item ${itemId} faalde (non-blocking, cron pickt op): ${schedErr.message}`);
+  }
+
   return { itemId, fromStatus, toStatus: newStatus, affected: 1 };
+}
+
+/**
+ * Map FSM target-status naar Socket.IO action-name (NATS subject suffix).
+ * scheduled→scheduled (force) wordt 'updated' om reschedule te onderscheiden.
+ * approved na scheduled wordt 'unscheduled'.
+ */
+function _statusToAction(newStatus, fromStatus) {
+  if (newStatus === 'approved' && fromStatus === 'scheduled') return 'unscheduled';
+  if (newStatus === 'scheduled' && fromStatus === 'scheduled') return 'updated';
+  return newStatus;
 }
 
 /**

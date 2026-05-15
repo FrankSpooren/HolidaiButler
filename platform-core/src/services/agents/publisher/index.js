@@ -197,6 +197,43 @@ class PublisherAgent extends BaseAgent {
       const client = getClient(contentItem.target_platform);
       const result = await client.publish(contentItem);
 
+      // v4.94 Blok 1.1 — Graph API publish-confirmation
+      // Verifieert dat de post daadwerkelijk live staat (root-cause Bosma duplicate-publish 14 mei).
+      // Bij verificatie-falen: publish_url + platform_post_id WORDEN gezet (dedupe-guard blokkeert
+      // re-publish), maar status='failed' + publish_error voor ops-review.
+      // Clients zonder confirmPublish (LinkedIn/Pinterest/X) → verificatie skipped (backward-compat).
+      if (typeof client.confirmPublish === 'function') {
+        let confirmation;
+        try {
+          confirmation = await client.confirmPublish(contentItem, result.postId);
+        } catch (verifyErr) {
+          confirmation = { confirmed: false, retries: 0, error: verifyErr.message, platform: contentItem.target_platform };
+        }
+        if (!confirmation?.confirmed) {
+          const verifyError = `Graph API verificatie faalde voor postId=${result.postId} (${confirmation?.platform || contentItem.target_platform}, ${confirmation?.retries || 0} retries): ${confirmation?.error || 'onbekend'}. Handmatige review vereist.`;
+          await mysqlSequelize.query(
+            `UPDATE content_items SET approval_status = 'failed',
+               publish_url = :url, platform_post_id = :postId,
+               publish_error = :error, updated_at = NOW() WHERE id = :id`,
+            { replacements: {
+              url: result.url || null,
+              postId: result.postId || null,
+              error: verifyError,
+              id: contentItemId,
+            } }
+          );
+          logger.error(`[Publisher] VERIFICATION FAILED for item ${contentItemId}: ${verifyError}`);
+          await logError('publisher', new Error(verifyError), { action: 'verification-failed', destination_id: contentItem.destination_id, contentItemId, postId: result.postId, platform: contentItem.target_platform, retries: confirmation?.retries || 0 });
+          const err = new Error(verifyError);
+          err.code = 'PUBLISH_VERIFICATION_FAILED';
+          err.alreadyHandled = true;
+          throw err;
+        }
+        logger.info(`[Publisher] Graph verify CONFIRMED item ${contentItemId} postId=${result.postId} platform=${contentItem.target_platform} retries=${confirmation.retries}`);
+      } else {
+        logger.info(`[Publisher] No confirmPublish() on ${contentItem.target_platform} client — verification skipped (backward-compat)`);
+      }
+
       // Update to published
       await mysqlSequelize.query(
         `UPDATE content_items SET approval_status = 'published', published_at = NOW(), publish_url = :url, platform_post_id = :postId, publish_error = NULL, updated_at = NOW() WHERE id = :id`,
@@ -227,11 +264,14 @@ class PublisherAgent extends BaseAgent {
 
       return result;
     } catch (error) {
-      // Update to failed
-      await mysqlSequelize.query(
-        `UPDATE content_items SET approval_status = 'failed', publish_error = :error, updated_at = NOW() WHERE id = :id`,
-        { replacements: { error: error.message, id: contentItemId } }
-      );
+      // v4.94 — verification-failure UPDATE is reeds gedaan met publish_url gezet (dedupe-bescherming).
+      // Skip generic UPDATE zodat we publish_url/platform_post_id niet wissen.
+      if (!error?.alreadyHandled) {
+        await mysqlSequelize.query(
+          `UPDATE content_items SET approval_status = 'failed', publish_error = :error, updated_at = NOW() WHERE id = :id`,
+          { replacements: { error: error.message, id: contentItemId } }
+        );
+      }
       // Sync concept status after publish failure
       try { const [[fi]] = await mysqlSequelize.query('SELECT concept_id FROM content_items WHERE id = :id', { replacements: { id } }); if (fi?.concept_id) { const [its] = await mysqlSequelize.query("SELECT approval_status FROM content_items WHERE concept_id = :cid AND approval_status != 'deleted'", { replacements: { cid: fi.concept_id } }); const prio = ['draft','generating','pending_review','in_review','reviewed','rejected','approved','failed','scheduled','publishing','published']; let h=0; for(const it of its){const i=prio.indexOf(it.approval_status);if(i>h)h=i;} await mysqlSequelize.query('UPDATE content_concepts SET approval_status = :s, updated_at = NOW() WHERE id = :cid', { replacements: { s: prio[h]||'draft', cid: fi.concept_id } }); } } catch(e) { /* non-blocking */ }
 
@@ -287,34 +327,51 @@ class PublisherAgent extends BaseAgent {
   }
 
   /**
-   * Process scheduled publish — called by BullMQ worker
-   * Finds content items with scheduled_at <= now and publishes them
+   * Orphan safety-net publisher — v4.97 Blok 4.3.
+   *
+   * Hoofdpad = BullMQ delayed-jobs (contentPublishScheduler) die exact op
+   * scheduled_at firen. Deze cron is fallback voor:
+   *   - Redis-restart waarbij delayed-jobs persisten verloren gaan
+   *   - destinations met publisher.delayed_jobs_enabled=FALSE (feature-flag rollback)
+   *   - jobs die door BullMQ worker-crash zijn gemist
+   *
+   * Pickt alleen items op die >ORPHAN_THRESHOLD_MINUTES past zijn gepland maar
+   * nog steeds in 'scheduled' state. Voorkomt race-condition met BullMQ
+   * (welke binnen seconden firet) terwijl orphans binnen 1u worden afgehandeld
+   * conform Fase_B Blok 4 acceptance SLA.
+   *
+   * Defense-in-depth: publishItem heeft eigen dedupe-guard (publish_url/published_at)
+   * + status-guard (alleen scheduled/publishing/approved/failed) zodat dubbele
+   * publicatie ook bij race onmogelijk is.
    */
   async processScheduledPublications() {
-    // v4.93.0 DEDUPE in query: filter items die al published_at OR publish_url hebben
-    // Defense-in-depth: zelfs als query niet zou filteren, publishItem dedupe-guard zou blocken
+    const ORPHAN_THRESHOLD_MINUTES = 5;
     const [scheduled] = await mysqlSequelize.query(
-      `SELECT id, destination_id FROM content_items
+      `SELECT id, destination_id, scheduled_at FROM content_items
        WHERE approval_status = 'scheduled'
-         AND scheduled_at <= NOW()
+         AND scheduled_at <= NOW() - INTERVAL :threshold MINUTE
          AND published_at IS NULL
          AND (publish_url IS NULL OR publish_url = '')`,
-      { type: mysqlSequelize.QueryTypes.SELECT }
+      { replacements: { threshold: ORPHAN_THRESHOLD_MINUTES }, type: mysqlSequelize.QueryTypes.SELECT }
     );
 
     const items = Array.isArray(scheduled) ? scheduled : (scheduled ? [scheduled] : []);
+    if (items.length === 0) return [];
+
+    logger.warn(`[De Uitgever][SafetyNet] Orphan detector picked up ${items.length} items >${ORPHAN_THRESHOLD_MINUTES}min past scheduled_at — BullMQ delayed-job mogelijk gemist`);
     const results = [];
     for (const item of items) {
       try {
-        const result = await this.publishItem(item.id);
-        results.push({ id: item.id, status: 'published', ...result });
+        // force=true: scheduled_at is in past, FUTURE-SCHEDULE-GUARD zou false-positive zijn.
+        const result = await this.publishItem(item.id, { force: true });
+        results.push({ id: item.id, status: 'published', orphanRecovery: true, ...result });
       } catch (err) {
-        results.push({ id: item.id, status: 'failed', error: err.message });
+        results.push({ id: item.id, status: 'failed', orphanRecovery: true, error: err.message });
       }
     }
 
     if (results.length > 0) {
-      logger.info(`[De Uitgever] Processed ${results.length} scheduled publications`);
+      logger.info(`[De Uitgever][SafetyNet] Processed ${results.length} orphaned publications (cron fallback)`);
     }
     return results;
   }

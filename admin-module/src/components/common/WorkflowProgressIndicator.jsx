@@ -88,22 +88,23 @@ export default function WorkflowProgressIndicator({ items = [], sx = {}, compact
                   : Icon ? <Icon sx={{ fontSize: iconSize }} /> : undefined}
                 label={label}
                 size="small"
-                variant={isCurrent ? 'filled' : isPast ? 'filled' : 'outlined'}
+                variant={isCurrent ? 'filled' : 'outlined'}
                 sx={{
-                  bgcolor: isCurrent ? stage.color : isPast ? stage.color : 'transparent',
-                  color: isCurrent ? '#fff' : isPast ? '#fff' : '#9e9e9e',
-                  borderColor: isFuture ? '#bdbdbd' : stage.color,
-                  fontWeight: isCurrent ? 700 : 600,
-                  height: chipHeight,
-                  fontSize,
-                  opacity: isFuture ? 0.55 : 1,
-                  '& .MuiChip-icon': { color: isCurrent || isPast ? '#fff' : '#9e9e9e' },
+                  bgcolor: isCurrent ? stage.color : 'transparent',
+                  color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd',
+                  borderColor: isPast ? stage.color : isCurrent ? stage.color : '#e0e0e0',
+                  fontWeight: isCurrent ? 700 : 500,
+                  height: isCurrent ? chipHeight + 2 : chipHeight,
+                  fontSize: isCurrent ? fontSize + 1 : fontSize,
+                  opacity: isCurrent ? 1 : isPast ? 0.55 : 0.4,
+                  boxShadow: isCurrent ? `0 0 0 2px ${stage.color}40` : 'none',
+                  '& .MuiChip-icon': { color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd' },
                   transition: 'all 200ms ease',
                 }}
               />
             </Tooltip>
             {idx < stages.length - 1 && (
-              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? stage.color : '#bdbdbd' }} />
+              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? '#bdbdbd' : '#e0e0e0', opacity: isCurrent ? 0.8 : 0.4 }} />
             )}
           </React.Fragment>
         );
