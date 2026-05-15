@@ -15085,8 +15085,8 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
 
     // Get ALL platform items of this concept (not just the clicked one)
     const [allItems] = await mysqlSequelize.query(
-      `SELECT destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated
+      `SELECT id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
+              target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated, provenance
        FROM content_items WHERE concept_id = :conceptId AND approval_status != 'deleted'
        ORDER BY target_platform`,
       { replacements: { conceptId: original.concept_id } }
@@ -15107,13 +15107,35 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
     // Copy ALL platform items into the new concept
     const createdIds = [];
     for (const item of allItems) {
+      // EU AI Act provenance inherit (Blok 3) — body is byte-identical, so signature
+      // stays cryptographically valid. operation='duplicate' marks derivation.
+      let inheritedProvenance = null;
+      if (item.provenance) {
+        try {
+          const parsed = typeof item.provenance === 'object' ? item.provenance : JSON.parse(item.provenance);
+          inheritedProvenance = {
+            ...parsed,
+            operation: 'duplicate',
+            duplicated_from_item_id: item.id,
+            duplicated_from_concept_id: original.concept_id,
+            duplicated_at: new Date().toISOString(),
+            signature_inherited: parsed.signature || null,
+          };
+        } catch (parseErr) {
+          logger.warn(`[Duplicate] Cannot parse provenance for item ${item.id}: ${parseErr.message}`);
+        }
+      } else if (item.ai_generated) {
+        // AI-generated origineel zonder provenance (legacy pre-Blok 7) — log voor audit
+        logger.info(`[Duplicate] AI-item ${item.id} has no provenance — duplicate inherit skipped (legacy item)`);
+      }
+
       const [insertId] = await mysqlSequelize.query(
         `INSERT INTO content_items
          (concept_id, destination_id, content_type, title, body_en, body_nl, body_de, body_es, body_fr,
-          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated,
+          target_platform, media_ids, seo_data, pillar_id, ai_model, ai_generated, provenance,
           approval_status, created_at, updated_at)
          VALUES (:conceptId, :destId, :cType, :title, :bodyEn, :bodyNl, :bodyDe, :bodyEs, :bodyFr,
-          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated,
+          :platform, :mediaIds, :seoData, :pillarId, :aiModel, :aiGenerated, :provenance,
           'draft', NOW(), NOW())`,
         { replacements: {
           conceptId: newConceptId, destId: item.destination_id, cType: item.content_type,
@@ -15124,6 +15146,7 @@ router.post('/content/items/:id/duplicate', adminAuth('editor'), writeAccess(['p
           mediaIds: item.media_ids,
           seoData: item.seo_data ? (typeof item.seo_data === 'object' ? JSON.stringify(item.seo_data) : item.seo_data) : null,
           pillarId: item.pillar_id, aiModel: item.ai_model, aiGenerated: item.ai_generated,
+          provenance: inheritedProvenance ? JSON.stringify(inheritedProvenance) : null,
         }}
       );
       createdIds.push({ id: insertId, platform: item.target_platform });
