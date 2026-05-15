@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box, Typography, Grid, TextField, Button, Alert, Snackbar,
   Tabs, Tab, Skeleton, MenuItem, Select, FormControl, InputLabel,
@@ -163,6 +164,26 @@ export default function BrandingPage() {
     ? allDests
     : allDests.filter(d => userAllowed.includes(d.code));
   const activeDest = destinations[activeTab];
+
+  // v4.95 deep-link: /branding?dest=<code>&kb=<id> opent Merk Profiel dialog
+  // met de juiste destination geselecteerd en knowledge-source gehighlight.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkKb = searchParams.get('kb');
+  const deepLinkDest = searchParams.get('dest');
+
+  useEffect(() => {
+    if (!destinations.length) return;
+    // Switch tab naar destination uit query-param (alleen als deze in lijst staat)
+    if (deepLinkDest) {
+      const idx = destinations.findIndex(d => d.code === deepLinkDest || d.id === Number(deepLinkDest));
+      if (idx >= 0 && idx !== activeTab) setActiveTab(idx);
+    }
+    // Open Merk Profiel dialog als ?kb param aanwezig is
+    if (deepLinkKb && activeGroup !== 'merkProfiel') {
+      setActiveGroup('merkProfiel');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkDest, deepLinkKb, destinations.length]);
 
   useEffect(() => {
     if (activeDest) {
@@ -484,7 +505,7 @@ export default function BrandingPage() {
           <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          {activeDest && <MerkProfielSections destinationId={activeDest.id} destinationName={activeDest.displayName} />}
+          {activeDest && <MerkProfielSections destinationId={activeDest.id} destinationName={activeDest.displayName} highlightKnowledgeId={deepLinkKb ? Number(deepLinkKb) : null} onHighlightConsumed={() => { const sp = new URLSearchParams(searchParams); sp.delete('kb'); setSearchParams(sp, { replace: true }); }} />}
         </DialogContent>
       </Dialog>
 

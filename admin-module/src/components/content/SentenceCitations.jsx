@@ -18,6 +18,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import client from '../../api/client.js';
+import { useNavigate } from 'react-router-dom';
+import useDestinationCode from '../../lib/useDestinationCode.js';
 
 const MIN_SENTENCE_CHARS = 20;
 const SENTENCE_SPLIT = /([.!?]+["')\]]?)(\s+|$)/g;
@@ -50,6 +52,8 @@ export default function SentenceCitations({ provenance, body, destinationId }) {
   const [sourceMap, setSourceMap] = useState({});
   const [loadingSources, setLoadingSources] = useState(false);
   const [showSentenceAnalysis, setShowSentenceAnalysis] = useState(false);
+  const navigate = useNavigate();
+  const destinationCode = useDestinationCode(destinationId);
 
   const provData = useMemo(() => {
     if (!provenance) return null;
@@ -163,20 +167,34 @@ export default function SentenceCitations({ provenance, body, destinationId }) {
             Geciteerde bronnen ({resolvedSources.length}):
           </Typography>
           <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-            {resolvedSources.map((s) => (
-              <Tooltip key={s.id || s.name} title={s.url ? `Open bron: ${s.url}` : 'Geen URL beschikbaar (lokale tekst-bron)'} arrow>
-                <Chip
-                  size="small"
-                  label={s.name}
-                  variant="outlined"
-                  color={s.url ? 'primary' : 'default'}
-                  clickable={!!s.url}
-                  onClick={s.url ? () => window.open(s.url, '_blank', 'noopener') : undefined}
-                  icon={s.url ? <OpenInNewIcon style={{ fontSize: 14 }} /> : undefined}
-                  sx={{ cursor: s.url ? 'pointer' : 'default' }}
-                />
-              </Tooltip>
-            ))}
+            {resolvedSources.map((s) => {
+              const hasUrl = !!s.url;
+              const canDeepLink = !hasUrl && s.id && destinationCode;
+              const onClick = hasUrl
+                ? () => window.open(s.url, '_blank', 'noopener')
+                : canDeepLink
+                  ? () => navigate(`/branding?dest=${encodeURIComponent(destinationCode)}&kb=${encodeURIComponent(s.id)}`)
+                  : undefined;
+              const tooltip = hasUrl
+                ? `Open bron: ${s.url}`
+                : canDeepLink
+                  ? `Open bron in Merk Profiel → Knowledge Base`
+                  : 'Bron niet meer beschikbaar in Merk Profiel';
+              return (
+                <Tooltip key={s.id || s.name} title={tooltip} arrow>
+                  <Chip
+                    size="small"
+                    label={s.name}
+                    variant="outlined"
+                    color={hasUrl || canDeepLink ? 'primary' : 'default'}
+                    clickable={!!onClick}
+                    onClick={onClick}
+                    icon={hasUrl ? <OpenInNewIcon style={{ fontSize: 14 }} /> : undefined}
+                    sx={{ cursor: onClick ? 'pointer' : 'default' }}
+                  />
+                </Tooltip>
+              );
+            })}
           </Stack>
         </Box>
       ) : (
