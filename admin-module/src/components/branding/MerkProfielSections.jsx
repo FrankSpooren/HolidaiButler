@@ -21,6 +21,11 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import LinkIcon from '@mui/icons-material/Link';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import DownloadIcon from '@mui/icons-material/Download';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import CloseIcon from '@mui/icons-material/Close';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import brandProfileService from '../../api/brandProfileService.js';
@@ -161,6 +166,44 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
   const knowledgeUploadMut = useMutation({ mutationFn: (file) => brandProfileService.uploadKnowledgeDoc(destinationId, file), onSuccess: () => refetchKnowledge() });
   const knowledgeDeleteMut = useMutation({ mutationFn: (id) => brandProfileService.deleteKnowledge(id), onSuccess: () => refetchKnowledge() });
   const [urlInput, setUrlInput] = useState('');
+
+  // Knowledge Base preview dialog state (Blok 1)
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [previewState, setPreviewState] = useState(null);
+  // shape: { id, source_name, isLoading, type: 'pdf'|'json'|'error', blobUrl?, content_excerpt?, ... }
+
+  const openKbPreview = async (item) => {
+    setPreviewState({ id: item.id, source_name: item.source_name, isLoading: true });
+    try {
+      const result = await brandProfileService.previewKnowledge(item.id);
+      setPreviewState({ id: item.id, source_name: item.source_name, isLoading: false, ...result });
+    } catch (err) {
+      setPreviewState({
+        id: item.id,
+        source_name: item.source_name,
+        isLoading: false,
+        type: 'error',
+        error: err.response?.data?.error?.message || err.message || 'Onbekende fout',
+      });
+    }
+  };
+
+  const closeKbPreview = () => {
+    // Memory leak prevention: revoke blob URL when dialog closes
+    if (previewState?.blobUrl) {
+      URL.revokeObjectURL(previewState.blobUrl);
+    }
+    setPreviewState(null);
+  };
+
+  const handleKbDownload = async (id) => {
+    try {
+      await brandProfileService.downloadKnowledge(id);
+    } catch (err) {
+      setSnack({ open: true, message: err.response?.data?.error?.message || t('brandProfile.knowledge.downloadFailed', 'Download mislukt') });
+    }
+  };
 
   // === COMPETITORS ===
   const [compName, setCompName] = useState('');
@@ -451,12 +494,14 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
             </Button>
           </Box>
 
-          {/* Knowledge items list */}
+          {/* Knowledge items list (Blok 1 — clickable preview + download) */}
           <List dense>
             {(knowledge.items || []).map(item => (
               <ListItem
                 key={item.id}
                 id={`kb-source-${item.id}`}
+                button
+                onClick={() => openKbPreview(item)}
                 sx={{
                   bgcolor: highlightedKbId === item.id ? 'success.light' : 'action.hover',
                   borderRadius: 1, mb: 0.5,
@@ -464,14 +509,37 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
                   outline: highlightedKbId === item.id ? '2px solid' : 'none',
                   outlineColor: 'success.main',
                   outlineOffset: 2,
+                  cursor: 'pointer',
+                  // Reserve room for 2 IconButtons (44px each) + spacing
+                  pr: 12,
                 }}
               >
                 <ListItemText
                   primary={item.source_name}
-                  secondary={`${item.source_type} · ${item.word_count} woorden`}
+                  secondary={`${item.source_type} · ${item.word_count} ${t('brandProfile.knowledge.words', 'woorden')}`}
                 />
                 <ListItemSecondaryAction>
-                  <IconButton size="small" color="error" onClick={() => knowledgeDeleteMut.mutate(item.id)}><DeleteIcon fontSize="small" /></IconButton>
+                  <Tooltip title={t('brandProfile.knowledge.download', 'Download')}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => { e.stopPropagation(); handleKbDownload(item.id); }}
+                      aria-label={t('brandProfile.knowledge.download', 'Download')}
+                      sx={{ minWidth: 44, minHeight: 44 }}
+                    >
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={t('common.delete', 'Verwijderen')}>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={(e) => { e.stopPropagation(); knowledgeDeleteMut.mutate(item.id); }}
+                      aria-label={t('common.delete', 'Verwijderen')}
+                      sx={{ minWidth: 44, minHeight: 44 }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </ListItemSecondaryAction>
               </ListItem>
             ))}
@@ -587,6 +655,90 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
             else personaCreateMut.mutate(personaForm);
           }} disabled={!personaForm.name || personaCreateMut.isPending || personaUpdateMut.isPending}>
             {personaDialog?.id ? 'Bijwerken' : 'Aanmaken'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Knowledge Base preview dialog (Blok 1 — EU AI Act transparency) */}
+      <Dialog
+        open={!!previewState}
+        onClose={closeKbPreview}
+        maxWidth="md"
+        fullWidth
+        fullScreen={isMobile}
+        aria-labelledby="kb-preview-title"
+      >
+        <DialogTitle id="kb-preview-title" sx={{ pr: 7 }}>
+          {previewState?.source_name || t('brandProfile.knowledge.preview', 'Voorbeeld')}
+          <IconButton
+            onClick={closeKbPreview}
+            aria-label={t('common.close', 'Sluiten')}
+            sx={{ position: 'absolute', right: 8, top: 8, minWidth: 44, minHeight: 44 }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: isMobile ? 1 : 2 }}>
+          {previewState?.isLoading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          )}
+          {previewState?.type === 'pdf' && (
+            <iframe
+              src={previewState.blobUrl}
+              style={{ width: '100%', height: isMobile ? '70vh' : '70vh', border: 0 }}
+              title={previewState.source_name}
+            />
+          )}
+          {previewState?.type === 'json' && (
+            <>
+              {previewState.source_url && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  URL: {previewState.source_url}
+                </Typography>
+              )}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                {previewState.word_count} {t('brandProfile.knowledge.words', 'woorden')}
+              </Typography>
+              <Box
+                component="pre"
+                sx={{
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  bgcolor: 'action.hover',
+                  p: 2,
+                  borderRadius: 1,
+                  maxHeight: '60vh',
+                  overflow: 'auto',
+                  m: 0,
+                }}
+              >
+                {previewState.content_excerpt || t('brandProfile.knowledge.previewEmpty', '(geen inhoud beschikbaar)')}
+              </Box>
+              {previewState.download_required && (
+                <Alert severity="info" sx={{ mt: 1.5 }}>
+                  {t('brandProfile.knowledge.downloadForFull', 'Voorbeeld toont eerste 5000 tekens. Download voor de volledige inhoud.')}
+                </Alert>
+              )}
+            </>
+          )}
+          {previewState?.type === 'error' && (
+            <Alert severity="error">{previewState.error}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {previewState?.id && (
+            <Button
+              onClick={() => handleKbDownload(previewState.id)}
+              startIcon={<DownloadIcon />}
+            >
+              {t('brandProfile.knowledge.download', 'Download')}
+            </Button>
+          )}
+          <Button onClick={closeKbPreview}>
+            {t('common.close', 'Sluiten')}
           </Button>
         </DialogActions>
       </Dialog>

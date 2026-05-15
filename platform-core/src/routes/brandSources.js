@@ -18,6 +18,8 @@
  */
 
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import { mysqlSequelize } from '../config/database.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { scrapeAndStore, scrapeUrl, fetchSitemapLastmod } from '../services/websiteScraperService.js';
@@ -553,6 +555,145 @@ router.get('/ai-quality/export.csv', adminAuth('editor'), async (req, res) => {
   } catch (err) {
     logger.error('[BrandSources] ai-quality/export.csv error:', err.message);
     res.status(500).json({ success: false, error: { code: 'CSV_EXPORT_ERROR', message: err.message } });
+  }
+});
+
+// -------------------------------------------------------------------
+// File-serving helpers (path traversal hardening + MIME whitelist)
+// -------------------------------------------------------------------
+
+const KNOWLEDGE_DIR = path.join(
+  process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage',
+  'knowledge'
+);
+
+const MIME_BY_EXT = {
+  '.pdf':  'application/pdf',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.doc':  'application/msword',
+  '.txt':  'text/plain; charset=utf-8',
+  '.csv':  'text/csv; charset=utf-8',
+};
+
+function safeExtension(filename) {
+  const ext = path.extname(filename || '').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(MIME_BY_EXT, ext) ? ext : null;
+}
+
+function serveKnowledgeFile(res, row, opts = {}) {
+  const disposition = opts.disposition || 'attachment';
+  // Path traversal hardening: only basename + whitelisted extension
+  const basename = path.basename(row.file_path || '');
+  const ext = safeExtension(basename);
+  if (!ext) {
+    return res.status(400).json({ success: false, error: { code: 'INVALID_FILE', message: 'Unsupported file type' } });
+  }
+  const absPath = path.join(KNOWLEDGE_DIR, basename);
+  // Defense in depth — verify resolved path stays inside KNOWLEDGE_DIR
+  if (!absPath.startsWith(KNOWLEDGE_DIR + path.sep)) {
+    return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+  }
+  if (!fs.existsSync(absPath)) {
+    logger.warn(`[BrandSources] file missing on disk for source ${row.id}: ${absPath}`);
+    return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+  }
+  // Audit log (GDPR Art. 30) — every access to a brand document is recorded
+  logger.info(`[BrandSources] file_access source=${row.id} dest=${row.destination_id} disposition=${disposition}`);
+  // Sanitize download filename: alphanumeric + . - _ only
+  const downloadName = (row.source_name || `source-${row.id}${ext}`).replace(/[^\w.\-]/g, '_');
+  res.setHeader('Content-Type', MIME_BY_EXT[ext] || 'application/octet-stream');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Disposition', `${disposition}; filename="${downloadName}"`);
+  return fs.createReadStream(absPath).pipe(res);
+}
+
+// -------------------------------------------------------------------
+// GET /:id/download — Forced download (destination_admin)
+// -------------------------------------------------------------------
+
+router.get('/:id/download', adminAuth('destination_admin'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+    }
+    const [[row]] = await mysqlSequelize.query(
+      'SELECT id, destination_id, source_type, source_name, file_path FROM brand_knowledge WHERE id = :id LIMIT 1',
+      { replacements: { id } }
+    );
+    // Cross-tenant + not-found return same 404 (anti-enumeration)
+    if (!row || !isAuthorizedForDest(req, row.destination_id)) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+    }
+    if (row.source_type !== 'document' || !row.file_path) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILE', message: 'This source has no downloadable file' } });
+    }
+    return serveKnowledgeFile(res, row, { disposition: 'attachment' });
+  } catch (err) {
+    logger.error('[BrandSources] download error:', err.message);
+    return res.status(500).json({ success: false, error: { code: 'DOWNLOAD_ERROR', message: 'Internal error' } });
+  }
+});
+
+// -------------------------------------------------------------------
+// GET /:id/preview — Inline preview (editor) — PDF via browser viewer,
+// non-documents return JSON excerpt for <pre> rendering
+// -------------------------------------------------------------------
+
+router.get('/:id/preview', adminAuth('editor'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+    }
+    const [[row]] = await mysqlSequelize.query(
+      `SELECT id, destination_id, source_type, source_name, source_url, content_text, file_path, word_count
+       FROM brand_knowledge WHERE id = :id LIMIT 1`,
+      { replacements: { id } }
+    );
+    if (!row || !isAuthorizedForDest(req, row.destination_id)) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Knowledge source not found' } });
+    }
+    // Non-document types (url, text, website_scrape, mistral_websearch): return text excerpt as JSON
+    if (row.source_type !== 'document' || !row.file_path) {
+      logger.info(`[BrandSources] preview_excerpt source=${row.id} dest=${row.destination_id} type=${row.source_type}`);
+      return res.json({
+        success: true,
+        data: {
+          id: row.id,
+          source_type: row.source_type,
+          source_name: row.source_name,
+          source_url: row.source_url || null,
+          word_count: row.word_count,
+          content_excerpt: (row.content_text || '').substring(0, 5000),
+          inline_pdf: false,
+        },
+      });
+    }
+    // Document types: try inline PDF; for DOCX/TXT/CSV fall back to JSON excerpt
+    const basename = path.basename(row.file_path || '');
+    const ext = safeExtension(basename);
+    if (ext === '.pdf') {
+      return serveKnowledgeFile(res, row, { disposition: 'inline' });
+    }
+    // DOCX/TXT/CSV — parsed content_text is the truth source; return as JSON
+    logger.info(`[BrandSources] preview_excerpt source=${row.id} dest=${row.destination_id} type=document_${ext}`);
+    return res.json({
+      success: true,
+      data: {
+        id: row.id,
+        source_type: row.source_type,
+        source_name: row.source_name,
+        source_url: null,
+        word_count: row.word_count,
+        content_excerpt: (row.content_text || '').substring(0, 5000),
+        inline_pdf: false,
+        download_required: true,  // hint to UI: full content only via download
+      },
+    });
+  } catch (err) {
+    logger.error('[BrandSources] preview error:', err.message);
+    return res.status(500).json({ success: false, error: { code: 'PREVIEW_ERROR', message: 'Internal error' } });
   }
 });
 
