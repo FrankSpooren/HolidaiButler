@@ -8896,3 +8896,23 @@ Sessie van 8 commits op `dev` branch. Drie sporen parallel: security hardening (
 - OpenTelemetry/Mongoose/BullMQ/Vite SemVer-major bumps — per upgrade Frank-akkoord
 - Knowledge Base preview: DOCX native rendering (mammoth → HTML in iframe?) — nu fallback naar content_text excerpt
 - Knowledge Base: PDF.js worker voor advanced features (search, annotations) — overkill voor MVP
+
+
+## Sessie 15-05-2026: Content Studio UX Consistency
+
+### CLAUDE.md v5.1.0 | MS v8.41
+
+**7 Fixes:**
+1. WorkflowProgressIndicator: actuele fase filled+bold+glow, voltooide outlined+opacity 0.55, toekomstige outlined+opacity 0.4
+2. Duplicate image in popup: legacy image resolution verwijderd uit LIST+DETAIL endpoints (DTO ContentItemResource.V1 is single source of truth)
+3. Ideeen tab toolbar: density toggle + kolommen-button + sneltoetsen-button (EU digitale toegankelijkheid) + inline header filter dropdowns (Bron/Type/Status variant=standard)
+4. Kolom-toggle bug: ALL_COLUMNS key 'source' hernoemd naar 'type' (controleerde Type-kolom maar heette 'Bron' in popup)
+5. Popovers (Kolommen + Sneltoetsen) verplaatst buiten tab-conditionals (renderde alleen in Items tab)
+6. Kolom label 'Bijgewerkt' -> 'Datum' (consistentie popup vs header)
+7. Kolom-breedtes: Acties 70->100px, SEO 55->65px, Score 70->80px, Checkbox padding=none (identiek aan Items)
+
+**Bestanden gewijzigd:**
+- `admin-module/src/components/common/WorkflowProgressIndicator.jsx`
+- `admin-module/src/pages/ContentStudioPage.jsx`
+- `admin-module/src/pages/ContentAnalyseTab.jsx`
+- `platform-core/src/routes/adminPortal.js` (legacy image resolution verwijderd)
