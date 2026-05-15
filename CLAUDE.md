@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.1.1
+> **Versie**: 5.2.0
 > **Laatst bijgewerkt**: 15 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -207,7 +207,7 @@ CHANGELOG analyse vóór upgrade bevestigde: **geen breaking changes** in 0.216-
 - Lockfile backups: `/root/backups/2026-05-15/package.json.pre-otel` + `package-lock.json.pre-otel` (SHA256 vastgelegd)
 
 ### Niet in scope (aparte sessies — blijven action items)
-- Sentry `^7.91.0` → Sentry 8.x/9.x (OTel-native rewrite, raakt deze stack significant)
+- Sentry `^7.91.0` → Sentry 10.x — **voltooid v5.2.0 (2026-05-15)** met dual-export (Tempo + Sentry) via @sentry/opentelemetry
 - `OTEL_EXPORTER_OTLP_ENDPOINT` env var formaliseren (cosmetisch — fallback `http://localhost:4317` werkt)
 - Temporal worker (`src/temporal/worker.js`) eigen OTel init implementeren (MEMORY.md beschreef dit als bestaand maar code heeft geen tracing import)
 - Mongoose / BullMQ / Vite major bumps
@@ -216,6 +216,94 @@ CHANGELOG analyse vóór upgrade bevestigde: **geen breaking changes** in 0.216-
 - MEMORY.md "0.74 → 0.218" claim was outdated: actuele state bij sessie-start was al `^0.215.0`. Delta naar 0.218 is feitelijk minor (3 releases), niet major.
 - OTel SDK 0.x versioning suggereert experimental, maar trace API surface is in praktijk stabiel — CHANGELOG-onderzoek vóór upgrade is goedkope verzekering.
 - Tempo zonder Grafana = SSH-based verificatie. Voor toekomstige observability werk overweeg Grafana installatie.
+
+---
+
+## 🐛 v5.2.0 — Sentry SDK 7 → 10 + OTel-native dual-export (COMPLEET 15 mei 2026)
+
+**Sessie-resultaat**: 2 commits op `dev` (`4617ec4` backend + `f8a00f7` frontend). Tweede van de 4 SemVer-major follow-ups uit v5.0.0 audit afgerond. Bouwt voort op v5.1.1 OTel 0.218 upgrade.
+
+### Wat is gefixt
+
+**Backend (`platform-core`)**:
+- `@sentry/node` `^7.91.0` → `^10.53.0` (3-major spring: v7 → v10)
+- **NIEUW**: `@sentry/opentelemetry` `^10.53.1` (voor custom OTel coexistence)
+- **NIEUW**: `@sentry/profiling-node` `^10.53.1` (CPU/memory profiles bij 10% sample rate)
+
+**Frontend (`admin-module`)**:
+- `@sentry/react` `^8.48.0` → `^10.53.0` (2-major bump v8 → v10)
+- Transitive: `@sentry/browser` + `@sentry/core` ook naar 10.53.1
+
+### tracing.js refactor
+
+`src/observability/tracing.js` van 37 → 84 regels. Belangrijkste structurele wijzigingen:
+- `Sentry.init()` nu **bundled in tracing.js** vóór NodeSDK constructor (was in `index.js`)
+- **Self-loading dotenv** — ESM imports zijn gehoisted boven `index.js` `dotenv.config()`, dus tracing.js laadt `.env` zelf vóór Sentry.init(). Idempotent.
+- `skipOpenTelemetrySetup: true` — disable Sentry's auto OTel SDK (anders conflict met onze NodeSDK)
+- `registerEsmLoaderHooks: false` — voorkomt duplicate spans
+- **Dual span processors** in NodeSDK config:
+  - `BatchSpanProcessor(OTLPTraceExporter)` → `otelcol-contrib` → Tempo (bestaande pad)
+  - `SentrySpanProcessor()` → Sentry.io / Bugsink (nieuwe pad)
+- `SentrySampler(sentryClient)` voor consistente trace sampling
+- `SentryPropagator` voor trace context propagation
+- `SentryAsyncLocalStorageContextManager` (NB: hernoemd in v10 van `SentryContextManager`)
+- `Sentry.preloadOpenTelemetry()` — manual ESM hook registratie
+
+`src/index.js`: aparte `Sentry.init()` block verwijderd (12 regels). Vervangen door 1 comment-regel die naar tracing.js verwijst.
+
+`src/middleware/errorHandler.js`: ongewijzigd — `Sentry.captureException(err, {extra})` signature is stabiel v7 t/m v10.
+
+`admin-module/src/main.jsx`: ongewijzigd — lazy init `import('@sentry/react').then(...)` met minimale config blijft v10 compatibel.
+
+### Breaking-changes onderzoek
+
+CHANGELOG analyse vooraf (3 migration guides via WebFetch):
+- **v7 → v8**: geen breaking changes voor onze minimale usage (geen `Handlers.errorHandler`, geen `Integrations.Http`, geen Express middleware). Auto-OTel-conflict gemitigeerd via `skipOpenTelemetrySetup`.
+- **v8 → v9**: geen impact (geen `getCurrentHub`, geen `enableTracing`, geen `@sentry/utils` direct imports).
+- **v9 → v10**: OTel deps bumped naar `2.x.x` / `0.20x.x` — wij zitten al op `0.218.x` post-v5.1.1 ✓. Default `sendDefaultPii=false` is GDPR-verbetering. `SentryContextManager` hernoemd naar `SentryAsyncLocalStorageContextManager`.
+
+### Verificatie (Phase 3 evidence)
+
+| Check | Resultaat |
+|-------|-----------|
+| Backend `node --check` (tracing.js + index.js) | SYNTAX OK |
+| Backend smoke import (5s timeout) | `[sentry] Client initialized (profiling at 10% sample rate)` + `[otel] SDK started` + IMPORT OK + exit 0 |
+| Backend npm install | exit 0, 39 packages added, 6 removed (oude v7 sub-pakketten weg) |
+| Frontend npm install | 0 vulnerabilities, 3 Sentry packages bumped |
+| Frontend Vite clean build | 20.25s, exit 0, 202 asset files, `vendor-sentry` chunk 158kB gzip lazy-split |
+| PM2 restart holidaibutler-api | online, /health 200 in 98ms |
+| Sentry test event | event ID `13c590b31d974fc3be3c71853284d812` captured, `flush=true` |
+| Tempo regression | 20 traces / 5 min POST = 20 traces / 5 min PRE (geen impact OTLP) |
+| trace_id propagatie | aanwezig in PM2 JSON request logs |
+| Geen OTel/Sentry errors | 0 in PM2 logs sinds restart |
+
+### Apache reverse proxy voor Sentry UI
+
+Self-hosted Sentry (mogelijk Bugsink — Sentry-protocol compatible) draait op `localhost:8000` via docker-proxy. Geen publieke route bestond.
+
+- `mod_proxy_wstunnel` enabled (Sentry UI gebruikt websockets)
+- `/etc/apache2/sites-available/sentry.holidaibutler.com.conf` aangemaakt
+- Vereist Frank-actie: DNS A-record `sentry.holidaibutler.com` → `91.98.71.87` (toegevoegd 14:08, propagatie nog gaande tijdens deze commit)
+- Na DNS resolve: `a2ensite` + `certbot --apache --redirect -d sentry.holidaibutler.com`
+
+### Rollback points
+
+- Git tag op `dev` HEAD vóór upgrade: `pre-sentry-upgrade-2026-05-15-1347`
+- Lockfile + source backups: `/root/backups/2026-05-15/{platform-core-package*,admin-module-package*,tracing.js,index.js}.pre-sentry`
+
+### Niet in scope (resterende action items)
+
+- Mongoose / BullMQ / Vite major bumps (3 aparte sessies — v5.0.0 follow-ups, 2/4 nu gedaan)
+- `OTEL_EXPORTER_OTLP_ENDPOINT` env var formaliseren (cosmetisch — fallback werkt)
+- Temporal worker eigen OTel/Sentry init (aspiratie, geen actueel risico)
+- Grafana UI installeren + Tempo data-source (visuele observability)
+
+### Process learnings
+
+1. **ESM module-load order vs `dotenv.config()`**: imports zijn gehoisted **boven** alle executable statements in index.js. Een geïmporteerde module die `process.env.X` nodig heeft tijdens evaluatie moet zelf `dotenv.config()` aanroepen. Anders is env-var undefined.
+2. **Sentry v10 hernoemt class-exports** vergeleken met v8 docs: `SentryContextManager` → `SentryAsyncLocalStorageContextManager`. Altijd `Object.keys(import(...))` checken in v10 ipv blind v8 docs te volgen.
+3. **Sentry auto-OTel-setup conflict** is reëel maar volledig oplosbaar via officieel pad: `skipOpenTelemetrySetup: true` + `@sentry/opentelemetry` SpanProcessor in eigen NodeSDK config. Dual-export (Sentry + Tempo) is mogelijk zonder code-duplicatie.
+4. **Self-hosted Sentry (of Bugsink) zonder publieke route** vereist Apache reverse proxy + DNS record voor browser-toegang. Voor enterprise observability hoort dat als infrastructuur, niet als follow-up.
 
 ---
 
@@ -1087,6 +1175,7 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **5.2.0** | **2026-05-15** | **Sentry SDK 7 → 10 + OTel-native dual-export (tweede follow-up van v5.0.0 audit)**. Backend `@sentry/node` ^7.91.0 → ^10.53.0 (3-major spring) + NIEUW `@sentry/opentelemetry` + `@sentry/profiling-node`. Frontend `@sentry/react` ^8.48.0 → ^10.53.0. `tracing.js` refactor 37→84 regels: Sentry.init() vóór NodeSDK (skipOpenTelemetrySetup=true), self-loading dotenv (ESM hoisting), dual span processors (OTLPTraceExporter → Tempo + SentrySpanProcessor → Sentry), SentrySampler + SentryPropagator + SentryAsyncLocalStorageContextManager (NB v10 rename), Sentry.preloadOpenTelemetry() voor ESM hooks. `index.js` Sentry init verwijderd (12 regels), `main.jsx` ongewijzigd. CHANGELOG analyse vooraf bevestigde geen breaking changes voor minimale usage (alleen `Sentry.init()` + `captureException(err, {extra})`). v10 default `sendDefaultPii=false` = GDPR-verbetering. **Verificatie**: backend smoke `[sentry] Client initialized` + `[otel] SDK started`, Vite frontend build 20.25s clean, PM2 /health 200, Sentry test event `13c590b31d974fc3be3c71853284d812` flush=true, Tempo regression 20=20 traces/5min (geen impact), trace_ids in JSON logs. **Apache reverse proxy** (`sentry.holidaibutler.com.conf` + `proxy_wstunnel` enabled) klaar voor publieke Sentry UI na DNS propagatie + certbot. Rollback: tag `pre-sentry-upgrade-2026-05-15-1347` + `/root/backups/2026-05-15/`. 6 bestanden (4 backend + 2 frontend). Resterende follow-ups: Mongoose/BullMQ/Vite (2/4 nu gedaan). |
 | **5.1.1** | **2026-05-15** | **OpenTelemetry SDK 0.218 bump (eerste follow-up van v5.0.0 audit)**. Patch-niveau upgrade ondanks 0.x versioning. `@opentelemetry/sdk-node` `^0.215.0`→`^0.218.0`, `exporter-trace-otlp-grpc` idem, `auto-instrumentations-node` `^0.73.0`→`^0.76.0`. CHANGELOG-analyse vooraf: geen breaking changes, alleen features (`startNodeSDK()` no-arg, ViewOptions wiring, `log_level` config) + routine sub-instrumentation bumps. **Bonus**: npm audit delta `8 (5L, 3H) → 5 (5L)` — 3 high CVEs transitief gefixt. Verificatie: smoke import `[otel] SDK started` + IMPORT OK, PM2 holidaibutler-api online + `/health` 200 in 110ms, **Tempo HTTP API query: 10 hb-platform-core traces in laatste 30 min** (root SELECT/GET/POST spans, dur 1-24ms), trace_id propagatie in PM2 request logs. Rollback: tag `pre-otel-upgrade-2026-05-15-1308` + `/root/backups/2026-05-15/`. Scope: `dev` branch + `holidaibutler-api` PM2 process. Niet naar test/main deze sessie. 2 bestanden (package.json, package-lock.json). Resterende SemVer-major follow-ups: Mongoose, BullMQ, Vite, Sentry 7→8. |
 | **5.1.0** | **2026-05-15** | **Content Studio UX Consistency + Bug Fixes**. (1) Workflow progress indicator: actuele fase visueel dominant, voltooide+toekomstige gedimd. (2) Duplicate image fix: legacy image resolution verwijderd uit LIST+DETAIL endpoints (DTO is single source). (3) Content Studio tabel-consistentie: Ideeen tab toolbar 1:1 met Items (density toggle, kolommen-button, sneltoetsen-button, inline header filter dropdowns). (4) Kolom-toggle bug: ALL_COLUMNS key 'source' hernoemd naar 'type' (toggle controleerde verkeerde kolom). (5) Popovers buiten tab-conditionals (werken nu op elke tab). (6) Kolom 'Bijgewerkt' hernoemd naar 'Datum'. (7) Kolom-breedtes: Acties 70->100px, SEO 55->65px, Score 70->80px, Checkbox padding=none. |
 | **4.93.0** | **2026-05-14** | **Integrale Content Item Workflow + Publisher Safety Guards**. Frank's eis (punt 1A-E): logische enterprise UX workflow met consistente status overal (Tab Items linker/rechter paneel + Tab Kalender). **5 UI-statussen** vervangen 13 DB-enum mix: Concept (DB: draft/pending_review/in_review/reviewed/changes_requested/generating) / Goedgekeurd (approved) / Ingepland (scheduled/publishing) / Gepubliceerd (published) / + auxiliary Afgewezen/Mislukt/Gearchiveerd. **WorkflowStatus.js** (admin-module/src/lib/) — single source of truth voor mapping + labels (5 locales) + colors + icons + stage progression + canApprove/canSchedule/canPublish helpers. **WorkflowStatusChip + WorkflowProgressIndicator** (Stijl B badge-rij) components. **Refactor platform-breed**: ConceptDialog header (aggStatus chip → WorkflowProgressIndicator), per-platform tab chip (emoji → WorkflowStatusChip), Stap 3 per-platform chip (hardcoded → getStatusLabel), Approve button (handmatige check → getAvailableActions.canApprove). ContentStudioPage local StatusChip → delegates to WorkflowStatusChip. ContentCalendarTab raw enum chip → WorkflowStatusChip + Approve action voor concept-stage items + MISSED indicator badge bij scheduled_at past + published_at NULL. **DTO Resource patch GET /content/items/:id detail endpoint** (Issue B fix — image hydratie via ContentItemResource.V1 — eerder enkel op LIST endpoint). **CRITICAL Publisher Safety Guards (3 lagen defense-in-depth)**: (1) **Dedupe-guard**: publishItem() blokkeert wanneer publish_url OF published_at gezet (voorkomt re-publish; ALREADY_PUBLISHED 409). (2) **Status-guard**: alleen approved/scheduled/publishing/failed items mogen publiceren (INVALID_STATE_FOR_PUBLISH 409). (3) **Future-schedule-guard**: scheduled_at > NOW() blokkeert publish tenzij options.force=true (PUBLISH_TOO_EARLY 409). publish-now + republish endpoints passeren expliciet force:true voor user-initiated immediate publish. processScheduledPublications query ook gefilterd op published_at IS NULL AND publish_url IS NULL. **Migration 009 workflow_configurations** (Fase B prep): per-tenant FSM transitions + approval_steps + publish_rules. Schema-only met seed van default workflow voor alle 5 destinations (Calpe/Texel/WarreWijzer/Alicante/BUTE). Activatie post-5e destination. **Incidenten transparency**: 3 ongeautoriseerde Facebook publicaties veroorzaakt door autonome diagnostic publish-calls (TEST 4 item 248, SQL fix items 252+253+256, dedupe-guard test item 248). Frank handmatig verwijderd in FB/IG, DB gereverteerd. Vanaf nu: 0 backend publish-calls zonder schriftelijke per-actie toestemming. Future-schedule-guard voorkomt herhaling. 17 bestanden gewijzigd. |
