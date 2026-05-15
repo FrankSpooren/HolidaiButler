@@ -2567,7 +2567,7 @@ export default function ContentStudioPage() {
               <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', '& .MuiTableCell-root': { py: densityMode === 'dense' ? 0.25 : densityMode === 'compact' ? 0.5 : 1 } }}>
                 <TableHead>
                   <TableRow sx={{ '& .MuiTableCell-head': { bgcolor: 'background.paper', fontWeight: 600, fontSize: 12, borderBottom: 2, borderColor: 'divider' } }}>
-                    <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48 }}>
+                    <TableCell padding="none" sx={{ width: 42, minWidth: 42, maxWidth: 42, textAlign: "center", pl: 1 }}>
                       {(() => {
                         const filtered = suggestions
                           .filter(s => !sugTypeFilter || s.content_type === sugTypeFilter)
@@ -2642,7 +2642,7 @@ export default function ContentStudioPage() {
                     })
                     .map((sug) => (
                     <TableRow key={sug.id} hover sx={{ cursor: 'pointer' }} onClick={() => setSelectedSuggestion(sug)}>
-                      <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                      <TableCell padding="none" sx={{ width: 42, textAlign: "center", pl: 1 }} onClick={e => e.stopPropagation()}>
                         <Checkbox size="small" checked={selectedSugIds.includes(sug.id)} onChange={() => toggleSugSelect(sug.id)} />
                       </TableCell>
                       <TableCell>

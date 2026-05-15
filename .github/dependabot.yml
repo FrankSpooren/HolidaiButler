@@ -1,0 +1,278 @@
+# HolidaiButler Dependabot configuration
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Strategy (decided 2026-05-15):
+#  - Weekly grouped PRs per ecosystem (Monday 09:00 Europe/Amsterdam)
+#  - Patch + minor bundled per group → low review overhead
+#  - Major bumps SEPARATE PRs → require explicit human evaluation
+#  - Hard-ignore list for breaking deps until follow-up sessions evaluate them
+#  - Max 5 open PRs per ecosystem to prevent backlog noise
+
+version: 2
+
+updates:
+  # ─── platform-core (Node/Express backend) ──────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/platform-core"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+      - "platform-core"
+    commit-message:
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      production-patches:
+        applies-to: version-updates
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+      production-security:
+        applies-to: security-updates
+        dependency-type: "production"
+      development-patches:
+        applies-to: version-updates
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      # OpenTelemetry major bump (SemVer-major, breaks observability stack — pending eval)
+      - dependency-name: "@opentelemetry/auto-instrumentations-node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/sdk-node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/exporter-prometheus"
+        update-types: ["version-update:semver-major"]
+
+  # ─── admin-module (React frontend, Vite build) ─────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/admin-module"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+      - "admin-module"
+    commit-message:
+      prefix: "fix(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      production-patches:
+        applies-to: version-updates
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+      production-security:
+        applies-to: security-updates
+        dependency-type: "production"
+      development-patches:
+        applies-to: version-updates
+        dependency-type: "development"
+        update-types:
+          - "patch"
+          - "minor"
+    ignore:
+      # Vite major bump (build chain — needs MUI/recharts compat verification)
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "esbuild"
+        update-types: ["version-update:semver-major"]
+
+  # ─── admin-module backend (separate package.json) ──────────────────────
+  - package-ecosystem: "npm"
+    directory: "/admin-module/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+      - "admin-module-backend"
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+          - "minor"
+      security:
+        applies-to: security-updates
+
+  # ─── customer-portal/frontend ──────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/customer-portal/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+      - "customer-portal"
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types:
+          - "patch"
+          - "minor"
+      security:
+        applies-to: security-updates
+
+  # ─── ticketing-module (root + frontend + backend) ──────────────────────
+  - package-ecosystem: "npm"
+    directory: "/ticketing-module"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "ticketing"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  - package-ecosystem: "npm"
+    directory: "/ticketing-module/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "ticketing-frontend"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  - package-ecosystem: "npm"
+    directory: "/ticketing-module/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "ticketing-backend"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  # ─── agenda-module (root + frontend + backend) ─────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/agenda-module"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "agenda"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  - package-ecosystem: "npm"
+    directory: "/agenda-module/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "agenda-frontend"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  - package-ecosystem: "npm"
+    directory: "/agenda-module/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security", "agenda-backend"]
+    commit-message:
+      prefix: "fix(deps)"
+      include: "scope"
+    groups:
+      patches:
+        applies-to: version-updates
+        update-types: ["patch", "minor"]
+      security:
+        applies-to: security-updates
+
+  # ─── GitHub Actions workflows ──────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci(deps)"
+      include: "scope"
+    groups:
+      all-actions:
+        applies-to: version-updates
+        update-types: ["patch", "minor", "major"]
