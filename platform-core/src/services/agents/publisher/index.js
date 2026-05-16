@@ -105,6 +105,14 @@ class PublisherAgent extends BaseAgent {
         contentItem.body_en = applyUtmToContent(contentItem.body_en, contentItem, contentItem.target_platform);
       }
 
+      // Fix 4 (BUTE follow-up 2026-05-16): snapshot social_metadata before
+      // metadata-prep mutations. Used at the end to write-back to DB only
+      // when something actually changed (avoids no-op UPDATEs and gives ops
+      // visibility into the actual payload sent to the platform).
+      const _originalSocialMetadata = typeof contentItem.social_metadata === 'string'
+        ? contentItem.social_metadata
+        : (contentItem.social_metadata ? JSON.stringify(contentItem.social_metadata) : null);
+
       // Set or correct UTM-tagged destination URL in social_metadata.
       // Fix 2 (BUTE incident 2026-05-16): the previous "only when missing"
       // guard let stale calpetrip.com links from contentGenerator slip through
@@ -210,6 +218,26 @@ class PublisherAgent extends BaseAgent {
           }
         } catch (resolveErr) {
           logger.warn(`[Publisher] Media resolution failed (non-blocking):`, resolveErr.message);
+        }
+      }
+
+      // Fix 4 (BUTE follow-up 2026-05-16): persist resolved social_metadata
+      // to DB when it changed (link correction + media_ids -> image_url
+      // resolution). Makes retry/replay idempotent and lets ops see the
+      // actual publish payload after the fact. Non-blocking: a write
+      // failure does not abort the publish itself.
+      const _currentSocialMetadata = typeof contentItem.social_metadata === 'string'
+        ? contentItem.social_metadata
+        : (contentItem.social_metadata ? JSON.stringify(contentItem.social_metadata) : null);
+      if (_currentSocialMetadata !== _originalSocialMetadata) {
+        try {
+          await mysqlSequelize.query(
+            `UPDATE content_items SET social_metadata = :sm, updated_at = NOW() WHERE id = :id`,
+            { replacements: { sm: _currentSocialMetadata, id: contentItemId } }
+          );
+          logger.info(`[Publisher] Persisted resolved social_metadata for item ${contentItemId}`);
+        } catch (persistErr) {
+          logger.warn(`[Publisher] Failed to persist social_metadata for item ${contentItemId} (non-blocking): ${persistErr.message}`);
         }
       }
 

@@ -90,6 +90,46 @@ export class InvalidTransitionError extends Error {
     this.to = to;
     this.itemId = itemId;
     this.statusCode = 409;  // HTTP conflict
+    this.details = { from, to, itemId };
+  }
+}
+
+/**
+ * Raised by Fix 5b media-invariant when a social_post is asked to leave
+ * 'draft' without an attached media (image). Distinct from
+ * InvalidTransitionError because the FSM-graph IS valid here — the rule
+ * being violated is a business invariant on item content.
+ */
+export class MediaRequiredError extends Error {
+  constructor(itemId, targetPlatform) {
+    super(`Item ${itemId} cannot transition to approved/scheduled: social_post on ${targetPlatform} requires at least one attached image (media_ids)`);
+    this.name = 'MediaRequiredError';
+    this.code = 'MEDIA_REQUIRED';
+    this.itemId = itemId;
+    this.targetPlatform = targetPlatform;
+    this.statusCode = 409;
+    this.details = { itemId, targetPlatform };
+  }
+}
+
+// ---------------------------------------------------------------------
+// Fix 5b helper (BUTE follow-up 2026-05-16) — invariant: social_post on
+// FB/IG/LinkedIn/X/etc requires media before it may leave 'draft' towards
+// approved/scheduled. Mirrors Fix 3 publisher pre-flight validator one
+// lifecycle step earlier so a scheduled item is always publish-ready.
+// ---------------------------------------------------------------------
+function assertMediaInvariantForSocialPost(item, newStatus) {
+  if (!['approved', 'scheduled'].includes(newStatus)) return;
+  if (item.content_type !== 'social_post') return;
+  if (!item.target_platform || item.target_platform === 'website') return;
+  let mediaIds;
+  try {
+    mediaIds = typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : (item.media_ids || []);
+  } catch {
+    mediaIds = [];
+  }
+  if (!Array.isArray(mediaIds) || mediaIds.length === 0) {
+    throw new MediaRequiredError(item.id, item.target_platform);
   }
 }
 
@@ -156,9 +196,9 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     throw new InvalidTransitionError('unknown', newStatus, itemId);
   }
 
-  // Lock row + read current status
+  // Lock row + read current status (incl. Fix 5b media-invariant inputs)
   const [[item]] = await mysqlSequelize.query(
-    'SELECT id, approval_status, scheduled_at FROM content_items WHERE id = :id LIMIT 1',
+    'SELECT id, approval_status, scheduled_at, media_ids, content_type, target_platform FROM content_items WHERE id = :id LIMIT 1',
     { replacements: { id: Number(itemId) } }
   );
   if (!item) {
@@ -192,6 +232,13 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
   if (!force && !canTransitionXState(fromStatus, newStatus, tenantTransitions)) {
     throw new InvalidTransitionError(fromStatus, newStatus, itemId);
   }
+
+  // Fix 5b (BUTE follow-up 2026-05-16): business invariant — a social_post
+  // on a non-website platform must have at least one media_id before it
+  // can leave 'draft' towards approved/scheduled. Prevents BUTE-style
+  // incidents where item 248 (media_ids=[]) reached 'scheduled' and was
+  // later published as text-only with a wrong fallback link.
+  if (!force) assertMediaInvariantForSocialPost(item, newStatus);
 
   // Build UPDATE
   const updates = ['approval_status = :newStatus', 'updated_at = NOW()'];
@@ -397,4 +444,5 @@ export default {
   deriveConceptStatus,
   syncConceptStatus,
   InvalidTransitionError,
+  MediaRequiredError,
 };

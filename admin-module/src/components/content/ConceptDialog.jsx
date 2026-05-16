@@ -55,6 +55,7 @@ import PinterestIcon from '@mui/icons-material/Pinterest';
 import LanguageIcon from '@mui/icons-material/Language';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import { useTranslation } from 'react-i18next';
+import { formatApiError } from '../../utils/formatApiError.js';
 import contentService from '../../api/contentService.js';
 import brandProfileService from '../../api/brandProfileService.js';
 import ContentImageSection from './ContentImageSection.jsx';
@@ -993,7 +994,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg('Alle items ingepland (duplicaat kanalen met 2 uur spreiding)');
     } catch (err) {
-      setSnackMsg(`Inplannen mislukt: ${err.message}`);
+      setSnackMsg(`Inplannen mislukt: ${formatApiError(err, t)}`);
     } finally {
       setPublishing(false);
     }
@@ -1012,7 +1013,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg(`${platform} ingepland op ${new Date(scheduleDatetime).toLocaleString('nl-NL')}`);
     } catch (err) {
-      setSnackMsg(`Inplannen mislukt: ${err.message}`);
+      setSnackMsg(`Inplannen mislukt: ${formatApiError(err, t)}`);
     } finally {
       setPublishing(false);
     }

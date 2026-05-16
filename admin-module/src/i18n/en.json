@@ -2129,5 +2129,12 @@
     "commerce_conversion": "Commerce & Conversion",
     "forms_assistance": "Forms & Assistance",
     "utility_practical": "Utility & Practical Info"
+  },
+  "errors": {
+    "media_required": "A {{targetPlatform}} post needs an image. Add a photo before scheduling.",
+    "invalid_transition": "This status change is not allowed (from \"{{from}}\" to \"{{to}}\").",
+    "publish_too_early": "This item is scheduled for a later time and cannot be published yet. Use Publish Now to override.",
+    "pre_publish_validation_failed": "The post is not ready to be published. Check the image, link and content.",
+    "missing_domain_config": "No website domain is configured for this destination."
   }
 }
