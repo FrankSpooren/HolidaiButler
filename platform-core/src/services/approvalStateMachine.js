@@ -90,6 +90,7 @@ export class InvalidTransitionError extends Error {
     this.to = to;
     this.itemId = itemId;
     this.statusCode = 409;  // HTTP conflict
+    this.details = { from, to, itemId };
   }
 }
 
@@ -107,6 +108,7 @@ export class MediaRequiredError extends Error {
     this.itemId = itemId;
     this.targetPlatform = targetPlatform;
     this.statusCode = 409;
+    this.details = { itemId, targetPlatform };
   }
 }
 

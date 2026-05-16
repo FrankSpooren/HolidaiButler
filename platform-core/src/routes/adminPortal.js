@@ -171,6 +171,7 @@ import {
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 import { getDestinationDomain, MissingDomainConfigError } from '../services/destinationConfig.js';
+import { sendApiError } from '../utils/apiError.js';
 import ContentItemResource from '../resources/ContentItemResource.js';
 import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError, transitionStatus, bulkTransitionStatus } from '../services/approvalStateMachine.js';
 import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
@@ -14705,7 +14706,7 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
     res.json({ success: true, data: { scheduled: scheduled.length, items: scheduled } });
   } catch (error) {
     logger.error('[AdminPortal] Auto-schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'AUTO_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'AUTO_SCHEDULE_ERROR');
   }
 });
 
@@ -15035,7 +15036,7 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'SCHEDULE_ERROR');
   }
 });
 
@@ -15077,7 +15078,7 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
     res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
   } catch (error) {
     logger.error('[AdminPortal] Cancel schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'CANCEL_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'CANCEL_SCHEDULE_ERROR');
   }
 });
 
@@ -15242,7 +15243,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     res.json({ success: true, data: { id: Number(id), scheduled_at, affected: 1 } });
   } catch (error) {
     logger.error('[AdminPortal] Reschedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'RESCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'RESCHEDULE_ERROR');
   }
 });
 
@@ -16389,7 +16390,7 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
     res.json({ success: true, data: { scheduled: bulkResult.success, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed, scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'BULK_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'BULK_SCHEDULE_ERROR');
   }
 });
 

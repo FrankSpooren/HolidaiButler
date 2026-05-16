@@ -2105,5 +2105,12 @@
     "commerce_conversion": "Commerce & Konversion",
     "forms_assistance": "Formulare & Hilfe",
     "utility_practical": "Praktische Infos"
+  },
+  "errors": {
+    "media_required": "Ein {{targetPlatform}}-Beitrag benötigt ein Bild. Bitte ein Foto hinzufügen, bevor geplant wird.",
+    "invalid_transition": "Dieser Statuswechsel ist nicht zulässig (von „{{from}}\" zu „{{to}}\").",
+    "publish_too_early": "Dieser Beitrag ist für einen späteren Zeitpunkt geplant und kann jetzt noch nicht veröffentlicht werden. Verwende „Jetzt veröffentlichen\", um dies zu umgehen.",
+    "pre_publish_validation_failed": "Der Beitrag ist noch nicht bereit zur Veröffentlichung. Bild, Link und Inhalt prüfen.",
+    "missing_domain_config": "Für dieses Reiseziel ist keine Website-Domain konfiguriert."
   }
 }
