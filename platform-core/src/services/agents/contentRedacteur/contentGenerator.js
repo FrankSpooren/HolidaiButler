@@ -22,14 +22,11 @@ import featureFlagService from '../../featureFlagService.js';
 import { mysqlSequelize as _mysqlForAudit } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
 import provenanceAuditMonitor from '../../provenanceAuditMonitor.js';
+import { getDestinationDomain } from '../../destinationConfig.js';
 
 const SEO_MINIMUM_SCORE = 75; // Target for AI improve — aligned with publication threshold (70) + margin
 
-// Domain mapping for deep links per destination
-const DESTINATION_DOMAINS = {
-  1: 'calpetrip.com',
-  2: 'texelmaps.nl',
-};
+// Domain for deep links resolved per-call via destinationConfig (DB-driven, see destinationConfig.js)
 
 /**
  * Find relevant POIs/Events from our database matching the content topic.
@@ -175,8 +172,8 @@ async function findRelevantEvents(destinationId, keywords = [], limit = 3) {
 /**
  * Build grounding context with real POIs/Events and their deep links.
  */
-function buildGroundingContext(pois, events, destinationId) {
-  const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
+async function buildGroundingContext(pois, events, destinationId) {
+  const domain = await getDestinationDomain(destinationId);
   const lines = [];
 
   if (pois.length > 0) {
@@ -378,7 +375,7 @@ export async function generateContent(suggestion, options = {}) {
     findRelevantPOIs(destinationId, keywords, contentType === 'blog' ? 15 : 5, suggestion.title || ''),
     findRelevantEvents(destinationId, keywords),
   ]);
-  const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destinationId);
+  const groundingContext = await buildGroundingContext(relevantPOIs, relevantEvents, destinationId);
 
   // Build the generation prompt — clean output, no markdown
   const systemPrompt = buildSystemPrompt(contentType, platform, toneInstruction, keywords, brandContext, groundingContext, destSourceLang);
@@ -486,7 +483,7 @@ export async function generateContent(suggestion, options = {}) {
     // Build social_metadata with UTM-tracked link
     let socialMetadata = {};
     if (platform !== 'website') {
-      const domain = DESTINATION_DOMAINS[destinationId] || 'calpetrip.com';
+      const domain = await getDestinationDomain(destinationId);
       // Use POI link if available, otherwise homepage (ensures UTM tracking always exists)
       const baseLink = relevantPOIs.length > 0
         ? `https://${domain}/pois?poi=${relevantPOIs[0].id}`
@@ -1770,7 +1767,7 @@ export async function repurposeContent(sourceItem, targetPlatforms, destinationI
     findRelevantPOIs(destId, keywords, sourceItem.content_type === 'blog' ? 15 : 5, sourceItem.title || ''),
     findRelevantEvents(destId, keywords),
   ]);
-  const groundingContext = buildGroundingContext(relevantPOIs, relevantEvents, destId);
+  const groundingContext = await buildGroundingContext(relevantPOIs, relevantEvents, destId);
 
   // Optie D Layer 1: brand context for repurpose (shared across all platforms in loop)
   let _repurposeBrandCtx = '';

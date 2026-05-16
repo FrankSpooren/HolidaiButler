@@ -13,6 +13,8 @@ import { applyUtmToContent } from './utmBuilder.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
 import { mysqlSequelize } from '../../../config/database.js';
+import { getDestinationDomain } from '../../destinationConfig.js';
+import { validateSocialPostReadiness, PrePublishValidationError } from './preFlightValidator.js';
 
 class PublisherAgent extends BaseAgent {
   constructor() {
@@ -103,25 +105,42 @@ class PublisherAgent extends BaseAgent {
         contentItem.body_en = applyUtmToContent(contentItem.body_en, contentItem, contentItem.target_platform);
       }
 
-      // Also add UTM-tagged destination URL to social_metadata if no link present
+      // Set or correct UTM-tagged destination URL in social_metadata.
+      // Fix 2 (BUTE incident 2026-05-16): the previous "only when missing"
+      // guard let stale calpetrip.com links from contentGenerator slip through
+      // for BUTE/Texel/Alicante items. Now: if the existing link host does
+      // not match the destination domain, overwrite it and log a warning.
+      let _resolvedDomain = null;
       if (contentItem.target_platform !== 'website') {
         try {
-          const [[dest]] = await mysqlSequelize.query(
-            'SELECT domain FROM destinations WHERE id = :id',
-            { replacements: { id: contentItem.destination_id } }
-          );
-          if (dest?.domain) {
-            const baseUrl = `https://${dest.domain}`;
-            const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
-            // Ensure social_metadata has the tracked link
-            let meta = {};
-            try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
-            if (!meta.link) {
-              meta.link = trackedUrl;
-              contentItem.social_metadata = JSON.stringify(meta);
+          _resolvedDomain = await getDestinationDomain(contentItem.destination_id);
+          const expectedHost = _resolvedDomain.replace(/^www\./i, '').toLowerCase();
+          const baseUrl = `https://${_resolvedDomain}`;
+          const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
+          let meta = {};
+          try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
+
+          let needsOverwrite = !meta.link;
+          if (meta.link && !needsOverwrite) {
+            try {
+              const currentHost = new URL(meta.link).hostname.replace(/^www\./i, '').toLowerCase();
+              if (currentHost !== expectedHost) {
+                logger.warn(`[Publisher] Correcting stale link host "${currentHost}" -> "${expectedHost}" for item ${contentItemId} (${contentItem.target_platform})`);
+                try { await logAgent('publisher', contentItem.destination_id, 'stale-link-corrected', { contentItemId, fromHost: currentHost, toHost: expectedHost, platform: contentItem.target_platform }); } catch (logErr) { /* non-blocking */ }
+                needsOverwrite = true;
+              }
+            } catch (urlErr) {
+              logger.warn(`[Publisher] Invalid social_metadata.link for item ${contentItemId}, replacing: ${urlErr.message}`);
+              needsOverwrite = true;
             }
           }
-        } catch (err) { console.debug('[index.js] non-blocking — UTM link is nice-to-have:', err.message); }
+          if (needsOverwrite) {
+            meta.link = trackedUrl;
+            contentItem.social_metadata = JSON.stringify(meta);
+          }
+        } catch (err) {
+          logger.warn(`[Publisher] Destination domain lookup failed for item ${contentItemId} (non-blocking): ${err.message}`);
+        }
       }
 
       // Auto-crop attached images to platform-conformant dimensions (TO DO 4b+4d)
@@ -192,6 +211,25 @@ class PublisherAgent extends BaseAgent {
         } catch (resolveErr) {
           logger.warn(`[Publisher] Media resolution failed (non-blocking):`, resolveErr.message);
         }
+      }
+
+      // Fix 3 (BUTE incident 2026-05-16): unified pre-flight validator.
+      // Catches missing images/links BEFORE the platform client call so
+      // failures land in publish_error with a clear reason instead of
+      // (a) Facebook silently publishing a text-only post with the wrong
+      // fallback link or (b) Instagram throwing a low-level error mid-flow.
+      try {
+        validateSocialPostReadiness(contentItem, _resolvedDomain ? { expectedDomain: _resolvedDomain } : {});
+      } catch (validationErr) {
+        if (validationErr instanceof PrePublishValidationError) {
+          await mysqlSequelize.query(
+            `UPDATE content_items SET approval_status = 'failed', publish_error = :err, updated_at = NOW() WHERE id = :id`,
+            { replacements: { err: validationErr.message, id: contentItemId } }
+          );
+          try { await logError('publisher', validationErr, { action: 'pre-publish-validation-failed', destination_id: contentItem.destination_id, contentItemId, details: validationErr.details }); } catch (logErr) { /* non-blocking */ }
+          throw validationErr;
+        }
+        throw validationErr;
       }
 
       const client = getClient(contentItem.target_platform);

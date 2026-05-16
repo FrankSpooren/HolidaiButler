@@ -170,6 +170,7 @@ import {
   adminApiRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { getDestinationDomain, MissingDomainConfigError } from '../services/destinationConfig.js';
 import ContentItemResource from '../resources/ContentItemResource.js';
 import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError, transitionStatus, bulkTransitionStatus } from '../services/approvalStateMachine.js';
 import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
@@ -5601,10 +5602,14 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
     const { destination, period = '30' } = req.query;
     const days = Math.min(parseInt(period) || 30, 365);
     const destId = destination ? resolveDestinationId(destination) : 1;
-    const domainMap = { 1: 'calpetrip.com', 2: 'texelmaps.nl' };
-    const domain = domainMap[destId];
-    if (!domain) {
-      return res.json({ success: true, data: { visitors: 0, pageviews: 0, pages: [], referrers: [], events: [], chart: [], devices: {} } });
+    let domain;
+    try {
+      domain = await getDestinationDomain(destId);
+    } catch (domainErr) {
+      if (domainErr instanceof MissingDomainConfigError) {
+        return res.json({ success: true, data: { visitors: 0, pageviews: 0, pages: [], referrers: [], events: [], chart: [], devices: {} } });
+      }
+      throw domainErr;
     }
 
     const cacheKey = `admin:analytics:website:${destId}:${days}`;
