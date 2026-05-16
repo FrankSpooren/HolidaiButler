@@ -9164,3 +9164,180 @@ Sessie commits: `4617ec4` + `f8a00f7` + `<docs-commit-volgt>`.
 - admin-module/src/components/common/WorkflowProgressIndicator.jsx
 - admin-module/src/pages/ContentStudioPage.jsx (tabel-consistentie)
 - admin-module/src/pages/ContentAnalyseTab.jsx (TableHead styling)
+
+
+## Sessie 16-05-2026 — BUTE Publish Resolution + Vite 8 retry + i18n
+
+### CLAUDE.md v5.3.0 → v5.4.0
+
+### Samenvatting
+Twee sessies in één: (a) Vite 8 retry op admin-module na rollback eerder
+die dag, (b) BUTE fietsfair-post incident root-cause + 5-lagen defense-in-
+depth + i18n. Eindstaat op `dev`: 7 commits, 3 merge-commits, productie
+live op zowel platform-core (PM2) als admin-module (admin.holidaibutler.com).
+
+### Vite 8 retry (admin-module, feature/vite8-retry-2026-05-15)
+Eerdere poging op 15 mei werd gerolled back wegens React error #130 in
+`vendor-interactive` chunk. Diagnose via 5 iteraties:
+- H6 `resolve.dedupe` alleen: no-op (npm-tree al flat)
+- H11 chunk-allocatie (react-dom + scheduler in verkeerde chunk): technisch
+  correct, symptoom verplaatste maar bleef
+- H15 MUI helper-split tussen mui-icons en mui-core: falsifieerde
+- H17 echte root cause: `@mui/icons-material@5.18.0` dual-format zonder
+  `exports` field. Sub-path imports `import MenuIcon from '@mui/icons-
+  material/Menu'` retourneren onder Rolldown/Oxc de CJS namespace
+  `{ default: Fn }` ipv `Fn` → error #130 voor alle 27+ icon-importers in
+  Sidebar/Header/DestinationSwitcher/NotificationsCenter/CommandPalette/
+  ShortcutsOverlay
+
+Fix: inline Vite plugin `muiIconsEsmRedirect` (enforce:'pre' + resolveId
+hook) redirect `@mui/icons-material/<Icon>` → `@mui/icons-material/esm/
+<Icon>`. Plus migratie `manualChunks` function-form → Vite 8 native
+`codeSplitting.groups`. Build perf 20s → 688ms (30x). Commit `e66dc8d`.
+
+### BUTE Publish Bundle Fix 1+2+3 (commit 94643ea, feature/bute-publish-fix-2026-05-16)
+Geplande content_items 248 (Facebook) en 249 (Instagram) voor destination
+10 (BUTE, butefair.nl) faalden 16-05-2026:
+- Item 248: ging live met calpetrip.com fallback link i.p.v. butefair.nl
+  (geen media_ids), status `published` ondanks ontbrekende image
+- Item 249: faalde met `Instagram posts require an image_url in
+  social_metadata`, bleef `failed` zonder reviewer-context
+
+**Root cause(s)** (4 onafhankelijke bugs):
+1. `contentGenerator.js`/`internalLinker.js`/`adminPortal.js` hardcoded
+   `DESTINATION_DOMAINS = {1: 'calpetrip.com', 2: 'texelmaps.nl'}` met
+   `|| 'calpetrip.com'` fallback voor onbekende destination_id
+2. `publisher/index.js` `if (!meta.link)` guard liet stale calpetrip.com
+   links staan (geen overschrijven)
+3. FB silently publishde text-only met fout og:image-fallback van link
+4. IG wierp lage-niveau error mid-flow uit `metaClient.js:362`, geen
+   uniforme pre-flight contract over platforms
+
+**Fix 1** — `src/services/destinationConfig.js` DB-driven shared service
++ `MissingDomainConfigError` (geen silent fallback). 3 hardcoded maps
+verwijderd in contentGenerator/internalLinker/adminPortal. **Fix 2** —
+`publisher/index.js` host-comparison + overschrijven bij mismatch +
+`stale-link-corrected` audit-log. **Fix 3** — nieuwe
+`preFlightValidator.js` met `validateSocialPostReadiness(item,
+{expectedDomain})`, hook na media-resolve voor `client.publish()`.
+
+### Fix 4 — DB write-back (commit 7c368c4)
+Publisher snapshot social_metadata vóór metadata-prep + persist als
+gewijzigd na media-resolve. Non-blocking. Idempotent retry/replay + ops
+audit van actuele publish-payload.
+
+### Fix 5b — FSM media-invariant (commit a0ece38)
+Originele Fix 5 voorstel (helper bij INSERT) bleek no-op want alle 9
+INSERT INTO content_items hardcoden `'draft'`. Echte bug-poort is
+transitionStatus draft→approved/scheduled. Enterprise herformulering:
+`MediaRequiredError` invariant in `approvalStateMachine.transitionStatus`.
+SELECT uitgebreid met `media_ids, content_type, target_platform`. Hook na
+`canTransitionXState`, voor UPDATE build. Eén invariant in centrale FSM
+covert ALLE call sites (manueel via UI, calendar-autofill, cron-pickup,
+re-publish, FSM-driven concept rollup). `bulkTransitionStatus` erft via
+loop. `force=true` bypasst.
+
+### i18n bundle (commit 5295589)
+Backend `src/utils/apiError.js` `sendApiError(res, err, fallbackCode)`
+helper. 5 schedule catch-blocks in `adminPortal.js` (POST schedule,
+auto-schedule, cancel-schedule, reschedule, bulk schedule) refactored:
+`return sendApiError(res, error, 'SCHEDULE_ERROR')`. `MediaRequiredError`
++ `InvalidTransitionError` constructors zetten `this.details` (resp
+`{itemId, targetPlatform}` + `{from, to, itemId}`).
+
+Frontend `admin-module/src/utils/formatApiError.js`: mapt
+`err.response.data.error.code` (snake_lower) → i18n key `errors.<code>`,
+interpoleert via `details`. Fallback naar backend `message` indien geen
+translation. 5 locales (en/nl/de/es/fr) krijgen `errors` section met
+5 keys. Wire-up in `ConceptDialog.scheduleItem` (2 plaatsen) +
+`ContentStudioPage.bulkSchedule` (1 plaats).
+
+### Iteratie-incidenten
+1. **Python patch CRLF preservation** — adminPortal.js (CRLF) + fr.json
+   (CRLF) zouden 35k+ resp 4219 regels rewriten bij generieke
+   `write_text`. Fix: detect EOL via `b'\r\n' in blob[:4096]` + post-dump
+   replace. Generieke pattern voor alle Python-patches op multi-EOL repo.
+2. **Vite 8 / Vite 4 inconsistente staat tijdens build** — npm install
+   nodig na merge van feature/vite8-retry zodat node_modules synchroon
+   met merged package.json + lockfile. Build met Vite 8 stack hierna
+   succesvol in 629ms.
+3. **Frank's enterprise-quality reflexie-vraag** "wat is beste optie
+   vanuit enterprise level kwaliteit?" forceerde Fix 5 scope-aanpassing
+   van pure helper-bij-INSERT (no-op) naar centrale FSM-invariant
+   (single source of truth, alle paths covered).
+
+### Git operations
+
+| Stap | Resultaat |
+|------|-----------|
+| Safety tag voor Vite 8 retry | `pre-vite8-retry-2026-05-15` |
+| Backup admin.dev Vite 4 baseline | `/root/backups/admin.dev-pre-vite8-retry-2026-05-15/` |
+| Backup productie admin.holidaibutler.com | `/root/backups/admin.prod-pre-bute-deploy-2026-05-16/` |
+| 3 merge-commits (--no-ff) | `f815070` (vite8) + `09e142c` (bute-publish-fix) + `7a20270` (followup) |
+| PM2 reload holidaibutler-api | pid 2479294 → 2482566 (81e restart) |
+| Admin-module deploy productie | `cp -r dist/* /var/www/admin.holidaibutler.com/` na backup |
+
+### Learnings
+
+1. **Hardcoded `{1:..., 2:...}` maps in multi-tenant SaaS zijn anti-pattern**.
+   Bron-van-waarheid = DB, eventueel met 5min cache (zoals
+   `featureFlagService` pattern). Geen `|| 'default-tenant.com'` fallback —
+   throw expliciet bij missing config zodat config-gaten loudly zichtbaar
+   worden. Schending werd niet ontdekt voor de BUTE incident omdat alle
+   testdata op id=1 (Calpe, calpetrip.com) draaide en de fallback was.
+
+2. **Defense-in-depth pattern uit FSM aggregate met invariants**. Fix 3
+   (publisher pre-flight) en Fix 5b (FSM invariant) catchen dezelfde
+   bug-class op verschillende lifecycle-poorten. Eén layer kan stuk,
+   andere vangt af. Pattern bewezen waardevol: blokkering bij FSM-
+   transitie (vroeg) + bij publish-call (last-chance) + audit-trail via
+   write-back (post-mortem zichtbaar).
+
+3. **Symptoom-locatie ≠ root-cause locatie**. Error #130 in vendor-react
+   chunk leek React-renderer probleem, was eigenlijk
+   @mui/icons-material CJS-interop in vendor-mui imports. Bundle-hash
+   identiek na een fix-poging = fix is no-op, kijk dieper. Dev-mode
+   build (`NODE_ENV=development` via `define`) geeft volledige React
+   error texts ("Check the render method of `Sidebar`") zonder source-
+   map navigatie.
+
+4. **Vite 8 `resolve.alias` regex backreference `$1` werkt NIET**.
+   Replacement is letterlijke string. Voor regex-based id rewriting
+   altijd inline plugin met `resolveId` hook + `this.resolve()`.
+
+5. **Backend error.code passthrough is voorwaarde voor frontend i18n**.
+   `try { ... } catch (err) { res.status(500).json({code:'GENERIC_ERROR'}) }`
+   anti-pattern verbergt domain-specific codes. `sendApiError` helper
+   bubbelt `err.code + err.statusCode` (4xx) door zodat frontend kan
+   mappen naar i18n key. Custom Error classes moeten `details`
+   constructor-property hebben voor i18next interpolation values.
+
+6. **MEMORY-rule Max 2 iteraties** werkt als anti-pattern detector. Vite
+   8 retry diagnose ging via 5 iteraties (met Frank-akkoord telkens) —
+   bij elke iteratie nieuwe hypothese formeel gefalsifieerd. Zonder
+   iteratie-limit had ik kunnen blijven hangen in chunk-allocation
+   theorieën.
+
+### Bestanden gewijzigd / aangemaakt
+
+| Bestand | Wijziging | Commit |
+|---------|-----------|--------|
+| `platform-core/src/services/destinationConfig.js` | NIEUW (76 r) | 94643ea |
+| `platform-core/src/services/agents/publisher/preFlightValidator.js` | NIEUW (143 r) | 94643ea |
+| `platform-core/src/services/agents/contentRedacteur/contentGenerator.js` | hardcoded map weg + service-call (3 sites) | 94643ea |
+| `platform-core/src/services/agents/seoMeester/internalLinker.js` | hardcoded map weg | 94643ea |
+| `platform-core/src/routes/adminPortal.js` | service-import + analytics/website refactor | 94643ea |
+| `platform-core/src/services/agents/publisher/index.js` | Fix 2 stale-link overwrite + Fix 3 validator hook | 94643ea |
+| `platform-core/src/services/agents/publisher/index.js` | Fix 4 write-back | 7c368c4 |
+| `platform-core/src/services/approvalStateMachine.js` | Fix 5b MediaRequiredError + invariant | a0ece38 |
+| `platform-core/src/utils/apiError.js` | NIEUW sendApiError helper | 5295589 |
+| `platform-core/src/routes/adminPortal.js` | 5 schedule catch-blocks refactor | 5295589 |
+| `admin-module/vite.config.js` | Vite 8 + muiIconsEsmRedirect plugin + codeSplitting.groups | e66dc8d |
+| `admin-module/package.json` | vite ^4.5 → ^8.0.13 + plugin-react ^4.1 → ^6.0.2 | e66dc8d |
+| `admin-module/src/utils/formatApiError.js` | NIEUW (35 r) | 5295589 |
+| `admin-module/src/i18n/{en,nl,de,fr,es}.json` | nieuwe errors section (5 keys × 5 locales) | 5295589 |
+| `admin-module/src/components/content/ConceptDialog.jsx` | 2 err.message → formatApiError | 5295589 |
+| `admin-module/src/pages/ContentStudioPage.jsx` | bulkSchedule err.message → formatApiError | 5295589 |
+
+Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
++ 3 merge-commits + docs commit (volgt).

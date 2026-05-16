@@ -1,8 +1,8 @@
 # HolidaiButler Master Strategie
 ## Multi-Destination Architecture & Texel 100% Implementatie
 
-**Datum**: 15 mei 2026
-**Versie**: 8.42
+**Datum**: 16 mei 2026
+**Versie**: 8.43
 **Eigenaar**: Frank Spooren
 **Auteur**: Claude (Strategic Analysis & Implementation)
 **Classificatie**: Strategisch / Vertrouwelijk
@@ -1704,6 +1704,59 @@ Branding, lettertype, kleurcodes en sprookjesfiguren conform warredal.be. Mobile
 ---
 
 ## Document Changelog
+
+### v8.43 — 16 mei 2026 — BUTE Publish Resolution + Vite 8 retry + i18n
+
+**Strategisch belang**: enterprise multi-tenant principe gerepareerd op
+5 codepaths. Hardcoded `{1: calpetrip.com, 2: texelmaps.nl}` maps in
+contentGenerator, internalLinker en adminPortal genereerden voor
+destination 10 (BUTE), 5 (Alicante) en 4 (WarreWijzer) Calpe-links.
+Single source of truth: `destinations.domain` via
+`src/services/destinationConfig.js` (DB-driven + 5min cache +
+`MissingDomainConfigError` zonder silent fallback). Schending van het
+"NOOIT destination-specifiek bouwen"-principe afgesloten.
+
+**Defense-in-depth architecture pattern** vastgelegd op publish-readiness
+lifecycle (6 lagen):
+1. `destinationConfig` (content-gen) — correcte link bij item-aanmaak
+2. `MediaRequiredError` FSM-invariant — blokkeert draft→approved/scheduled
+   wanneer social_post zonder media (`approvalStateMachine`)
+3. Publisher stale-link overwrite — corrigeert legacy state bij publish
+4. `preFlightValidator` — eenvormig contract FB/IG/LinkedIn/X/Pinterest/
+   TikTok/Threads (body ≥ 10 chars, link host = destinations.domain,
+   ≥ 1 resolvable image_url)
+5. `publisher/index.js` write-back — DB-audit van actuele publish payload
+6. `formatApiError` + 5 locales — localised foutmelding aan reviewer
+
+**i18n error-UX pattern** voor multi-tenant SaaS:
+- Backend `sendApiError(res, err, fallbackCode)` bubbelt `err.code` +
+  `err.statusCode` (4xx) door wanneer custom Error class
+- Custom Error classes: `MediaRequiredError`, `InvalidTransitionError`
+  exposeren `details` constructor-property voor template interpolation
+- Frontend `formatApiError(err, t)` mapt code → `errors.<code>` i18n key,
+  fallback naar backend message bij ontbrekende translation
+- 5 locales (en/nl/de/es/fr) krijgen `errors` section
+
+**Vite 8 retry succesvol** op admin-module (Vite 4.5 → 8.0.13,
+plugin-react 4.1 → 6.0.2, Rolldown/Oxc toolchain). Inline
+`muiIconsEsmRedirect` plugin (resolveId hook) lost dual-format
+`@mui/icons-material` CJS-interop op. Build time 20s → 688ms (30x).
+
+**Bestemmingen overzicht ge-update** (zie CLAUDE.md tabel):
+- Calpe id=1 domain=calpetrip.com (was hardcoded foutief
+  holidaibutler.com in internalLinker — gecorrigeerd)
+- Texel id=2 domain=texelmaps.nl
+- WarreWijzer id=4 domain=warrewijzer.be (was uit hardcoded map →
+  Calpe fallback)
+- Alicante id=5 domain=alicantebutler.com (correctie van id=3 in
+  hardcoded `idToCode` map in adminPortal:5596 → buiten huidige scope,
+  geregistreerd als follow-up)
+- BUTE id=10 domain=butefair.nl content_only (nieuw toegevoegd aan
+  Bestemmingen tabel)
+
+**Commits op `dev`** (7 + 3 merge): zie CLAUDE.md sectie "BUTE Publish
+Resolution" voor volledige lijst.
+
 
 | Versie | Datum | Wijzigingen |
 |--------|-------|-------------|

@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.3.0
-> **Laatst bijgewerkt**: 15 mei 2026
+> **Versie**: 5.4.0
+> **Laatst bijgewerkt**: 16 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -14,10 +14,15 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 ### Actieve Bestemmingen
 | Bestemming | Status | Domein | destination_id |
 |------------|--------|--------|----------------|
-| **Calpe** | ✅ LIVE | holidaibutler.com | 1 |
+| **Calpe** | ✅ LIVE | calpetrip.com | 1 |
 | **Texel** | ✅ LIVE | texelmaps.nl | 2 |
-| **Alicante** | 🟡 GEPLAND | alicante.holidaibutler.com | 3 |
 | **WarreWijzer** | 🟡 GEPLAND | warrewijzer.be | 4 |
+| **Alicante** | 🟡 GEPLAND | alicantebutler.com | 5 |
+| **BUTE** | ✅ LIVE (content_only) | butefair.nl | 10 |
+
+> **Bron van waarheid voor domains**: `destinations.domain` in DB, niet
+> hardcoded maps. Resolved via `src/services/destinationConfig.js`
+> (DB-driven + 5min cache + `MissingDomainConfigError` bij onbekende id).
 
 ---
 
@@ -46,6 +51,116 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
 7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + MS Footer (GECONSOLIDEERDE regel: datum, fase status, blokken, endpoints, admin versie, jobs, CLAUDE.md versie, MS versie).
+
+---
+
+## 🩹 BUTE Publish Resolution (v5.3.1 – v5.4.0) — COMPLEET 16 mei 2026
+
+> **Strategic context**: BUTE fietsfair-post (item 248 FB + 249 IG, scheduled
+> 16-05-2026 10:00/11:07) ging als incident live met de verkeerde fallback
+> link (calpetrip.com i.p.v. butefair.nl) en faalde op Instagram met
+> `image_url in social_metadata`. Root-cause analyse legde 4 gerelateerde
+> bugs bloot. Resolution: 5-lagen defense-in-depth + i18n error-UX.
+
+### Fix 1 — DB-driven destination domains (v5.3.1, commit 94643ea)
+Hardcoded `DESTINATION_DOMAINS = {1: 'calpetrip.com', 2: 'texelmaps.nl'}` met
+`|| 'calpetrip.com'` fallback in 3 codepaths (contentGenerator, internalLinker,
+adminPortal) genereerde Calpe-link voor alle niet-hardcoded destinations (BUTE
+id=10, Alicante id=5, Warrewijzer id=4). Vervangen door
+`src/services/destinationConfig.js` shared service (DB lookup + 5min cache
++ `MissingDomainConfigError` zonder silent fallback). Schending van het
+multi-tenant principe gerepareerd.
+
+### Fix 2 — Publisher stale-link correction (v5.3.1, commit 94643ea)
+`publisher/index.js` had `if (!meta.link)` guard die DB-driven correctie
+alleen toepaste bij ontbrekende link — historische foute calpetrip.com links
+uit (Fix 1)-bug bleven dus staan. Nu: detect host-mismatch vs
+`destinations.domain` + overwrite met UTM-tracked correcte URL + log
+`stale-link-corrected` audit-event.
+
+### Fix 3 — Unified pre-flight validator (v5.3.1, commit 94643ea)
+Nieuw `src/services/agents/publisher/preFlightValidator.js`. Eenvormig
+contract over FB/IG/LinkedIn/X/Pinterest/TikTok/Threads: een social_post
+moet hebben (a) body ≥ 10 chars, (b) geldige `social_metadata.link` met
+host = `destinations.domain`, (c) ≥ 1 resolvable `image_url` na media_ids-
+resolution. Faalt met `PrePublishValidationError` → `publish_error` met
+duidelijke reden. Vervangt asymmetrische FB-text-only-publish vs IG-throw.
+
+### Fix 4 — DB write-back resolved social_metadata (v5.4.0, commit 7c368c4)
+Publisher snapshot social_metadata vóór mutaties + persist als gewijzigd na
+media-resolve, voor `client.publish()`. Makes retry/replay idempotent +
+geeft ops zicht in actuele publish payload. Non-blocking try/catch.
+
+### Fix 5b — FSM media-invariant (v5.4.0, commit a0ece38)
+Nieuwe `MediaRequiredError` class in `src/services/approvalStateMachine.js`
++ `assertMediaInvariantForSocialPost` helper. Blokkeert draft→approved/
+scheduled wanneer social_post op non-website platform geen media_ids heeft.
+Hook na `canTransitionXState`, voor UPDATE build. `force=true` bypasst.
+`bulkTransitionStatus` erft coverage via loop. Originele Fix 5 voorstel
+(concept→item inheritance bij INSERT) bleek no-op (alle INSERTs hardcoded
+`'draft'`); enterprise herformulering naar centrale FSM-invariant.
+
+### i18n bundle — backend error.code passthrough + frontend translation
+(v5.4.0, commit 5295589)
+Backend `src/utils/apiError.js` `sendApiError(res, err, fallbackCode)`
+bubbelt err.code + err.statusCode (4xx) naar HTTP-response wanneer custom
+Error class (`MediaRequiredError`, `InvalidTransitionError`). Plus
+`details` constructor-property gehoist voor i18next-interpolation. 5
+schedule catch-blocks in `adminPortal.js` gerefactord. Frontend
+`admin-module/src/utils/formatApiError.js` mapt `error.code` (snake-lower)
+→ i18n key `errors.<code>`. 5 locales (en/nl/de/es/fr) krijgen `errors`
+section met 5 keys: `media_required`, `invalid_transition`,
+`publish_too_early`, `pre_publish_validation_failed`,
+`missing_domain_config`. Wire-up in `ConceptDialog.scheduleItem` +
+`ContentStudioPage.bulkSchedule`.
+
+### Vite 8 retry (admin-module, commit e66dc8d → merged)
+Vite 4.5 → 8.0.13 + plugin-react 4.1 → 6.0.2 + Rolldown/Oxc toolchain.
+Eerdere poging (15-05-2026) gerolled back door React error #130 in
+`@mui/icons-material` sub-path imports — dual-format zonder `exports`
+field, Rolldown gaf CJS namespace `{ default: Fn }` ipv `Fn`. Resolved via
+inline `muiIconsEsmRedirect` plugin (resolveId hook + enforce:'pre') die
+alle `@mui/icons-material/<Icon>` redirect naar `/esm/<Icon>`. Plus
+`codeSplitting.groups` (Vite 8 native) + scheduler in vendor-react matcher
++ combined vendor-mui chunk. Build time 20s → 688ms (30x).
+
+### Defense-in-depth resultaat (6 lagen)
+| Layer | Locatie | Effect |
+|-------|---------|--------|
+| 1 | `destinationConfig` (Fix 1) | Correcte link bij content-gen |
+| 2 | `MediaRequiredError` FSM-invariant (Fix 5b) | Blokkeert draft→scheduled zonder media |
+| 3 | Publisher stale-link overwrite (Fix 2) | Corrigeert legacy state bij publish |
+| 4 | `preFlightValidator` (Fix 3) | Blokkeert publish-call bij ontbrekende image/link |
+| 5 | Publisher write-back (Fix 4) | DB-audit van actuele publish payload |
+| 6 | `formatApiError` + 5 locales | Localised foutmelding voor reviewer |
+
+### Nieuwe modules
+- `platform-core/src/services/destinationConfig.js`
+- `platform-core/src/services/agents/publisher/preFlightValidator.js`
+- `platform-core/src/utils/apiError.js`
+- `admin-module/src/utils/formatApiError.js`
+
+### Commits op `dev` (chronologisch, 7 commits)
+1. `94643ea` BUTE publish bundle Fix 1+2+3
+2. `7c368c4` Fix 4 — persist resolved social_metadata to DB
+3. `a0ece38` Fix 5b — media-invariant in approvalStateMachine
+4. `5295589` i18n MEDIA_REQUIRED + backend error.code passthrough
+5. `f815070` Merge feature/vite8-retry-2026-05-15
+6. `09e142c` Merge feature/bute-publish-fix-2026-05-16
+7. `7a20270` Merge feature/bute-followup-fix45-2026-05-16
+
+### E2E verificatie
+- PM2 reload `holidaibutler-api` (pid 2482566, 81e restart, uptime stable)
+- Health endpoint 200 OK, mysql + mongodb connected
+- `destinationConfig` smoke: 5 destinations resolveerd correct, id=99
+  throws `MISSING_DOMAIN_CONFIG`
+- `approvalStateMachine` smoke: 9 `deriveConceptStatus` cases PASS,
+  `MediaRequiredError` instance correct (HTTP 409, code, details)
+- admin-module build (Vite 8) 629ms, i18n keys `media_required` +
+  `invalid_transition` + `pre_publish_validation_failed` bevestigd in
+  productie en-chunk
+- `https://admin.holidaibutler.com/` HTTP 200 OK met `rolldown-runtime`
+  asset (Vite 8 indicator)
 
 ---
 
