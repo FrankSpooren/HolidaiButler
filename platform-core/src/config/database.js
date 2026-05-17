@@ -181,8 +181,6 @@ export async function connectMongoDB() {
 
   try {
     mongoConnection = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 15000,  // 15s for Atlas network latency
       socketTimeoutMS: 45000,           // 45s socket timeout
       maxPoolSize: 10,                  // Connection pool
