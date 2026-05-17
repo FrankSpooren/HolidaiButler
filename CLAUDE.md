@@ -1,6 +1,6 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.5.0
+> **Versie**: 5.6.0
 > **Laatst bijgewerkt**: 17 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
@@ -419,6 +419,56 @@ Self-hosted Sentry (mogelijk Bugsink — Sentry-protocol compatible) draait op `
 2. **Sentry v10 hernoemt class-exports** vergeleken met v8 docs: `SentryContextManager` → `SentryAsyncLocalStorageContextManager`. Altijd `Object.keys(import(...))` checken in v10 ipv blind v8 docs te volgen.
 3. **Sentry auto-OTel-setup conflict** is reëel maar volledig oplosbaar via officieel pad: `skipOpenTelemetrySetup: true` + `@sentry/opentelemetry` SpanProcessor in eigen NodeSDK config. Dual-export (Sentry + Tempo) is mogelijk zonder code-duplicatie.
 4. **Self-hosted Sentry (of Bugsink) zonder publieke route** vereist Apache reverse proxy + DNS record voor browser-toegang. Voor enterprise observability hoort dat als infrastructuur, niet als follow-up.
+
+---
+
+## 🔍 v5.6.0 — Fase B Blok 4 Audit + Publisher Cleanup (COMPLEET 17 mei 2026)
+
+**Sessie-resultaat**: 1 commit op feature branch (`1b04701`, merge naar `dev`). P1 SemVer-major follow-up blok formeel **gesloten 4/4** na audit-discovery dat aangenomen 5e bump (BullMQ-major) niet bestaat.
+
+### Audit-bevindingen
+
+Pre-upgrade verificatie toonde 3 stale prompt-aannames:
+
+1. **BullMQ major bump**: `bullmq` `^5.66.5` is **al latest major v5** (5.76.10 binnen-major). Geen 5e SemVer-major beschikbaar. Bull v4 `^4.12.0` in root + `platform-core` is **ongebruikte dependency** (alleen `ticketing-module/ReminderService.js` verwijst ernaar — code zelf niet wired-up).
+2. **Fase B Blok 4 (BullMQ delayed-jobs) activatie**: **al LIVE sinds v4.97**. Scheduler-callers in `approvalStateMachine.js:319+328`, Worker `content-publish-item` in `workers.js:2058` (concurrency=4, lazy-import), `backfillScheduled()` bij PM2 boot in `src/index.js:598`, 5-min orphan safety-net in `publisher.processScheduledPublications()`. 17 Redis-keys + scheduler-stats actief in productie.
+3. **Bull v4 = dead code**: feitelijk juist (queue leeg, geen aanroepen) MAAR **ticketing/reservations modules zijn werk-in-uitvoering** voor toekomstige enterprise-migratie sessie — niet weggooien.
+
+### Cleanup-patch (commit `1b04701`)
+
+`platform-core/src/services/agents/publisher/index.js` regel 332-345: na succesvolle `publishItem()` cancelt nu het bijbehorende BullMQ delayed-job uit `content-publish-item` queue.
+
+- Lazy-import van `contentPublishScheduler` om circular deps te vermijden
+- Non-blocking `try/catch`: scheduler-failure mag publish-success niet ongedaan maken
+- `cancelItem()` is idempotent (no-op als job niet bestaat)
+- Voorkomt onnodige dedupe-guard firing wanneer item via cron orphan safety-net, publish-now button of externe trigger reeds gepubliceerd is voor delayed-job zijn fire-time bereikt
+- Audit zag 12 historische failed jobs allemaal correct geblokkeerd door dedupe-guard — geen bug, maar logging-noise + onnodige worker cycles voorkomen
+
+### 8-punts audit verificatie
+
+| Check | Resultaat |
+|-------|-----------|
+| Pre-upgrade tag | `pre-blok4-cleanup-2026-05-17` |
+| Backup | `/root/backups/2026-05-17-blok4cleanup/package-lock.json` |
+| Node `--check` parse | PASS |
+| PM2 reload zonder restartloop | OK (109 restarts cumulatief, +1 voor reload) |
+| Health endpoint 5/5 healthy | mysql + mongodb connected, uptime 46s post-reload |
+| Backfill log bij boot | `registered=0, skipped=0, total=0` (idle state, 0 scheduled items in DB) |
+| Functional E2E | Partial — non-blocking guards maken failure-mode veilig (publish-success blijft intact bij scheduler-error) |
+| Frontend regressie | N/A (backend-only) |
+
+### Niet in scope (toekomstige sessies)
+
+- **Ticketing/Reservations enterprise migratie**: DB migrations (`bookings`/`tickets`/`availability`/`ticket_transfers`/`device_tokens`) + Bull v4 → BullMQ v5 + `ReminderService` activate + integratie + functional E2E. Aparte productie-readiness sessie.
+- Node 20 → 22 LTS upgrade (AWS SDK v3 deprecation jan 2027)
+- Mongoose duplicate schema index warnings (`AuditLog` + `CostLog` timestamp — cosmetisch)
+- Grafana UI + Tempo data-source
+
+### Process learnings
+
+1. **ALTIJD eerst FEITELIJK verifiëren** of openstaande items pending zijn vóór sessie-plan baseren op MEMORY/prompt-aannames. 3 stale aannames in 1 sessie betrapt door eerst inventarisatie.
+2. **Reflectie-vraag werkt OOK omgekeerd**: "is dit niet uitstel van executie?" pakt rationalisering, maar erkenning dat iets reeds gedaan is = NIET uitstel, wel correcte status-rapportage.
+3. **Audit-bevindingen kunnen waardevoller zijn dan implementatie**: 7/8 audit-checks PASS bewees dat platform-staat overeenkomt met enterprise-norm — geen activatie nodig.
 
 ---
 

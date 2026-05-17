@@ -328,6 +328,19 @@ class PublisherAgent extends BaseAgent {
         logger.warn(`[De Uitgever] Initial performance record failed (non-blocking): ${perfErr.message}`);
       }
 
+      // v5.6.0 Blok 4 cleanup — cancel BullMQ delayed-job na succesvolle publicatie.
+      // Voorkomt onnodige dedupe-guard firing wanneer item via andere route (cron
+      // safety-net, publish-now button, externe trigger) reeds gepubliceerd is voor
+      // de delayed job zijn fire-time bereikt. Non-blocking: cancelItem is idempotent
+      // (no-op als job niet bestaat) + scheduler-failure mag publish-success niet
+      // ongedaan maken.
+      try {
+        const schedulerMod = await import('../../contentPublishScheduler.js');
+        await schedulerMod.default.cancelItem(contentItemId);
+      } catch (cleanupErr) {
+        logger.debug(`[De Uitgever] BullMQ delayed-job cleanup failed (non-blocking): ${cleanupErr.message}`);
+      }
+
       return result;
     } catch (error) {
       // v4.94 — verification-failure UPDATE is reeds gedaan met publish_url gezet (dedupe-bescherming).
