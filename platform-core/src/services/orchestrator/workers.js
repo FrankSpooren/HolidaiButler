@@ -2001,6 +2001,12 @@ case "media-consent-expiry-check":          try {            const { mysqlSequel
       { replacements: [suggestion.id] }
     );
     const finalTitle = generatedItems[0]?.title || suggestion.title;
+    // Notify: AI content generation complete
+    try {
+      const notifSvc = (await import('../notificationService.js')).default;
+      const [[_genOwner]] = await mysqlSequelize.query("SELECT u.id FROM admin_users u WHERE u.role = 'platform_admin' LIMIT 1");
+      if (_genOwner?.id) await notifSvc.create({ userId: _genOwner.id, destinationId: Number(destinationId), type: 'ai_complete', title: 'AI Content gegenereerd', message: `"${finalTitle.substring(0,50)}" (${generatedItems.length} versie${generatedItems.length>1?'s':''})`, actionUrl: '/content-studio?tab=3', actionLabel: 'Bekijken' });
+    } catch (_) { /* non-blocking */ }
     await mysqlSequelize.query(
       "UPDATE content_concepts SET title = ?, approval_status = 'draft', updated_at = NOW() WHERE id = ?",
       { replacements: [finalTitle, conceptId] }
