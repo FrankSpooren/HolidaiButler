@@ -9,6 +9,7 @@
 import BaseAgent from '../base/BaseAgent.js';
 import { getClient } from './clients/platformClientFactory.js';
 import { sanitizeContent } from '../contentRedacteur/contentSanitizer.js';
+import notificationService from '../../notificationService.js';
 import { applyUtmToContent } from './utmBuilder.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
@@ -309,6 +310,11 @@ class PublisherAgent extends BaseAgent {
       try { const [[pi]] = await mysqlSequelize.query('SELECT concept_id FROM content_items WHERE id = :id', { replacements: { id } }); if (pi?.concept_id) { const [its] = await mysqlSequelize.query("SELECT approval_status FROM content_items WHERE concept_id = :cid AND approval_status != 'deleted'", { replacements: { cid: pi.concept_id } }); const prio = ['draft','generating','pending_review','in_review','reviewed','rejected','approved','failed','scheduled','publishing','published']; let h=0; for(const it of its){const i=prio.indexOf(it.approval_status);if(i>h)h=i;} await mysqlSequelize.query('UPDATE content_concepts SET approval_status = :s, updated_at = NOW() WHERE id = :cid', { replacements: { s: prio[h]||'draft', cid: pi.concept_id } }); } } catch(e) { /* non-blocking */ }
 
 // Track media usage — increment usage_count for media items used in this content      try {        const mediaIds = typeof contentItem.media_ids === "string" ? JSON.parse(contentItem.media_ids) : contentItem.media_ids;        if (Array.isArray(mediaIds) && mediaIds.length > 0) {          for (const mid of mediaIds) {            const numId = typeof mid === "string" && mid.startsWith("media:") ? parseInt(mid.replace("media:", "")) : parseInt(mid);            if (!isNaN(numId) && numId > 0) {              await mysqlSequelize.query("UPDATE media SET usage_count = usage_count + 1, last_used_at = NOW() WHERE id = ?", { replacements: [numId] });            }          }        }      } catch (usageErr) { /* non-critical */ }
+      // Notify: publish success
+      try {
+        const [[_pubOwner]] = await mysqlSequelize.query("SELECT u.id FROM admin_users u WHERE u.role = 'platform_admin' LIMIT 1");
+        if (_pubOwner?.id) await notificationService.create({ userId: _pubOwner.id, destinationId: contentItem.destination_id, type: 'publish_success', title: 'Publicatie geslaagd', message: `${(contentItem.title || '').substring(0,60)} op ${contentItem.target_platform}`, actionUrl: '/content-studio?tab=3', actionLabel: 'Bekijken' });
+      } catch (_) { /* non-blocking */ }
       await logAgent('publisher', contentItem.destination_id, 'content-published', {
         contentItemId,
         platform: contentItem.target_platform,
@@ -354,6 +360,11 @@ class PublisherAgent extends BaseAgent {
       // Sync concept status after publish failure
       try { const [[fi]] = await mysqlSequelize.query('SELECT concept_id FROM content_items WHERE id = :id', { replacements: { id } }); if (fi?.concept_id) { const [its] = await mysqlSequelize.query("SELECT approval_status FROM content_items WHERE concept_id = :cid AND approval_status != 'deleted'", { replacements: { cid: fi.concept_id } }); const prio = ['draft','generating','pending_review','in_review','reviewed','rejected','approved','failed','scheduled','publishing','published']; let h=0; for(const it of its){const i=prio.indexOf(it.approval_status);if(i>h)h=i;} await mysqlSequelize.query('UPDATE content_concepts SET approval_status = :s, updated_at = NOW() WHERE id = :cid', { replacements: { s: prio[h]||'draft', cid: fi.concept_id } }); } } catch(e) { /* non-blocking */ }
 
+      // Notify: publish failed
+      try {
+        const [[_failOwner]] = await mysqlSequelize.query("SELECT u.id FROM admin_users u WHERE u.role = 'platform_admin' LIMIT 1");
+        if (_failOwner?.id) await notificationService.create({ userId: _failOwner.id, destinationId: contentItem.destination_id, type: 'publish_failed', severity: 'high', title: 'Publicatie mislukt', message: `${(contentItem.title || '').substring(0,40)} op ${contentItem.target_platform}: ${(error.message || '').substring(0,60)}`, actionUrl: '/content-studio?tab=3', actionLabel: 'Bekijken' });
+      } catch (_) { /* non-blocking */ }
       await logError('publisher', error, { action: 'publish-failed', destination_id: contentItem.destination_id });
       throw error;
     }
