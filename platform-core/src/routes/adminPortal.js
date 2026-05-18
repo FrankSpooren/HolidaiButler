@@ -13194,6 +13194,7 @@ router.delete('/content/items/:id', adminAuth('editor'), writeAccess(['platform_
     });
     // Sync concept status so parent reflects deletion
     await syncConceptStatus(itemId);
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(req.params.id), Number(req.params.id)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { id: itemId, deleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item delete error:', error);
@@ -13237,6 +13238,7 @@ router.post('/content/concepts/:id/approve', adminAuth('editor'), writeAccess(['
     // Sync concept status
     await syncConceptStatusByConceptId(conceptId);
 
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(conceptId), Number(conceptId)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { concept_id: conceptId, approved_items: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Concept approve error:', error);
@@ -14598,6 +14600,7 @@ router.delete('/content/items/:id/images/:mediaId', adminAuth('editor'), writeAc
       { replacements: { mediaIds: JSON.stringify(filtered), id: Number(id) } }
     );
 
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(req.params.id), Number(req.params.id)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { media_ids: filtered } });
   } catch (error) {
     logger.error('[AdminPortal] Image detach error:', error);
@@ -14830,6 +14833,7 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
     }
 
     logger.info(`[AdminPortal] Auto-scheduled ${scheduled.length} items for destination ${destId}`);
+    await invalidateContentCache(Number(destId));
     res.json({ success: true, data: { scheduled: scheduled.length, items: scheduled } });
   } catch (error) {
     logger.error('[AdminPortal] Auto-schedule error:', error);
@@ -15160,6 +15164,7 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     // Sync concept status
     await syncConceptStatus(Number(id));
 
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(id), Number(id)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Schedule error:', error);
@@ -15202,6 +15207,7 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
       comment: 'Cancelled scheduled publish'
     });
     await syncConceptStatus(req.params.id);
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(req.params.id), Number(req.params.id)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
   } catch (error) {
     logger.error('[AdminPortal] Cancel schedule error:', error);
@@ -15334,6 +15340,7 @@ router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['p
     // Direct publish — same as publish-now
     const publisher = (await import('../services/agents/publisher/index.js')).default;
     const result = await publisher.publishItem(Number(id), { force: true }); // v4.93.0 publish-now is expliciete force-action
+    try { const [[_rp]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ?', { replacements: [Number(req.params.id)] }); if (_rp?.destination_id) await invalidateContentCache(_rp.destination_id); } catch (_) {}
     res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
   } catch (error) {
     logger.error('[AdminPortal] Republish error:', error);
@@ -15367,6 +15374,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
       comment: `Rescheduled to ${parsedScheduledAt}`,
       force: true
     });
+    try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(id), Number(id)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
     res.json({ success: true, data: { id: Number(id), scheduled_at, affected: 1 } });
   } catch (error) {
     logger.error('[AdminPortal] Reschedule error:', error);
