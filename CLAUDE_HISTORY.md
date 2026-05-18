@@ -9355,3 +9355,64 @@ Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 
 **Bestanden gewijzigd:**
 - `platform-core/src/routes/adminPortal.js` (invalidateContentCache helper + 13 aanroepen + ensurePlatformCompatibleMedia + PLATFORM_ASPECT_RULES)
+
+
+## Sessie 18-05-2026: FASE B Planning — Node 22 LTS Migration
+
+### Planning-deliverable (geen feature-release)
+
+**Doel**: Staged migratie planning Node 20.19.6 → 22.22.3 LTS. Gedreven door AWS SDK v3 `NodeVersionSupportWarning` (hard cutoff jan-2027).
+
+**Deliverable**: `docs/migrations/NODE-22-MIGRATION-PLAN.md` (461 regels) — geen code-wijzigingen.
+
+**Scope (Frank's beslissingen 2026-05-18)**:
+1. `holidaibutler-admin-api` (stopped state): ONDERZOEKEN in Sessie 1 pre-werk (grep endpoints + DB-tabel-isolatie). Scenario A: `git rm` bij volledige migratie naar platform-core. Scenario B: starten + Wave 2 cutover (+1.5u).
+2. GDPR Optie A retention (Art. 5(1)(e) Storage Limitation): 90d snapshot + 30d staging-VPS + PII-scrub SQL vóór staging-tests + DPA / privacy notice update.
+3. Gedifferentieerde soak per blast-radius: Wave 1+2+4 = 24u, Wave 3 (ticketing 3 native bindings) = 48u, Wave 5 (platform-core atomic 8 procs + 3 native) = 72u. Cumulatief staging-soak ~192u (~8 dagen).
+4. PM2 v6→v7 upgrade: STRIKT SEPARAAT (Future FASE D, niet meenemen in Node 22 sessies — single-variable-change discipline).
+5. Target prod-cutover compleet: **30 juni 2026** (6 maanden buffer vóór AWS jan-2027 deadline).
+
+**Plan-analyse (samengevat)**:
+- 13 PM2 processen → 6 unieke codebases. Platform-core hostst 9 processen via 1 node_modules tree (atomic-swap vereist).
+- 30+ top-packages compat-matrix geverifieerd via `npm view`: **0 blockers** voor Node 22.
+- 2 latent-risico's (geen showstoppers): `@walletpass/pass-js` 7.x vereist Node ≥24 (blijf op 6.x), `puppeteer-core` 25.x vereist ≥22.12 (huidige 24.43.1 OK).
+- Native bindings rebuild-doelen: `sharp` + `@sentry/profiling-node` + `@temporalio/core-bridge` (platform-core), `@walletpass/pass-js` + `passkit-generator` + `firebase-admin` gRPC (ticketing).
+- Geen ESM gotchas: 0 voorkomens `assert {type:'json'}` of `with {type:'json'}` in alle `src/`-trees.
+- Effort: ~25–26.5u actief over 5 uitvoer-sessies + ~14–16 dagen kalendertijd (incl. soak-periodes).
+
+**Test-strategie**: Optie A — Hetzner snapshot + PII-scrub staging-VPS + cumulatief 192u staging-soak + gedifferentieerd 24/48/72u prod-soak per wave.
+
+**Upgrade-volgorde (productie)**:
+- Sessie 1: pre-werk (nvm install + ecosystem.config refactor + admin-module onderzoek)
+- Sessie 2: Hetzner snapshot + staging-VPS provisioning + PII-scrub
+- Sessie 3 (staging): alle 5 waves volledig op staging + 192u cumulatieve soak
+- Sessie 3 (prod): Wave 1 agenda → Wave 2 admin conditioneel → Wave 3 ticketing → Wave 4 hb-websites
+- Sessie 4 (prod): Wave 5 platform-core atomic (8 processen)
+- Sessie 5: post-cutover 30d monitoring + 90d snapshot retention cron
+
+**Strategische keuzes met onderbouwing**:
+- **nvm-route boven apt**: per-process `interpreter` switch via PM2 ecosystem.config, instant rollback via `nvm use 20` + `pm2 reload`, geen apt-pakket conflicten.
+- **Optie A staging boven Optie C in-place**: echte productie-replica + clean rollback-pad, geen direct prod-impact bij regressies.
+- **Express 4 + Next 15 + Mongoose 9 ongewijzigd**: single-variable-change principe, major-bumps zijn aparte FASE-projecten.
+
+**Bestanden gewijzigd**:
+- `docs/migrations/NODE-22-MIGRATION-PLAN.md` (NIEUW, 461 regels)
+
+**Sessie commits**:
+- `0c6d29d` — docs(node22): initiële plan-document FASE B Planning
+- `4bab261` — docs(node22): definitieve scope per Frank's beslispunten + GDPR amendment
+- `da6e067` — Merge branch 'feature/node22-migration-plan-2026-05-18' into dev (`--no-ff`)
+
+**Tags**:
+- `plan/node22-v1.0` (op merge-commit `da6e067`) — planning-versie anker, geen feature-release
+- `pre-node22-plan-merge-2026-05-18` (op pre-merge dev HEAD `d6a7759`) — rollback-anchor
+
+**Anti-pattern guards toegepast**:
+- Reflectie-vraag *"Is dit planning of uitvoering?"* — alle acties waren documentatie/state-checks, geen `nvm install`/`pm2 reload`
+- Geen verboden rationaliseringen ("pragmatisch", "voor nu", "minimale effort") in scope-keuzes
+- Bewijs eerst, claim daarna: alle versie-claims via directe `npm view` queries, geen MEMORY-stale aannames
+- Parallel-sessie detectie: 3 events tijdig gedetecteerd (`242126e`, `f7b9a53`, `d6a7759` = v5.7.0 release tijdens sessie)
+- Branch-drift correctie: telkens `feature/node22-migration-plan-2026-05-18` expliciet ge-checkout vóór operatie
+- EU AI Act / GDPR check: Frank's vraag triggerde correctie van eerste advies (onbeperkt snapshot → 90d retention Art. 5(1)(e))
+
+**Volgende stap**: FASE B Uitvoer Sessie 1 (pre-werk: nvm install + ecosystem.config refactor + admin-module onderzoek) als nieuwe sessie. Niet eerder dan 22-05-2026 (v5.6.2 + v5.7.0 soak-window).
