@@ -1,3 +1,7 @@
+// OpenTelemetry + Sentry bootstrap — MUST be first import (ESM hoisted,
+// dependencies evaluated depth-first before @temporalio/worker)
+// OTEL_SERVICE_NAME=hb-temporal-worker injected via PM2 --update-env
+import '../observability/tracing.js';
 import { Worker } from '@temporalio/worker';
 import path from 'path';
 import { fileURLToPath } from 'url';
