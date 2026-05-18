@@ -9416,3 +9416,20 @@ Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 - EU AI Act / GDPR check: Frank's vraag triggerde correctie van eerste advies (onbeperkt snapshot → 90d retention Art. 5(1)(e))
 
 **Volgende stap**: FASE B Uitvoer Sessie 1 (pre-werk: nvm install + ecosystem.config refactor + admin-module onderzoek) als nieuwe sessie. Niet eerder dan 22-05-2026 (v5.6.2 + v5.7.0 soak-window).
+
+
+## Sessie 18-05-2026 (deel 2): Notification Producers + Cache + Auto-Crop
+
+### CLAUDE.md v5.8.0
+
+**Fixes deze sessie (totaal):**
+1. Gateway-level `invalidateContentCache()` op 13/25 content mutatie-endpoints (was 5)
+2. Auto-crop bij image-koppeling (`ensurePlatformCompatibleMedia()` + `PLATFORM_ASPECT_RULES`)
+3. DB migratie: `media.parent_media_id` + `media.auto_platform`
+4. Notification producers: 5 toegevoegd (was 2). publish_success, publish_failed, ai_complete, content approved, publish-now failed. Alle non-blocking try/catch, target platform_admin.
+5. Root cause Instagram aspect ratio: image editor `fit:"inside"` behoudt ratio, IG Post preset produceerde 1080x496 i.p.v. 1080x1080
+
+**Bestanden gewijzigd:**
+- `platform-core/src/routes/adminPortal.js` (cache invalidation + approve notification + publish-now failed notification)
+- `platform-core/src/services/agents/publisher/index.js` (publish_success + publish_failed notifications)
+- `platform-core/src/services/orchestrator/workers.js` (ai_complete notification)
