@@ -14439,6 +14439,96 @@ router.post('/content/images/format', adminAuth('editor'), writeAccess(['platfor
 });
 
 /**
+ * ensurePlatformCompatibleMedia — Auto-crop image if aspect ratio is incompatible
+ * with the target platform. Creates a new media variant via Sharp center-crop.
+ * Returns the original ID if compatible, or the new variant ID if cropped.
+ */
+const PLATFORM_ASPECT_RULES = {
+  instagram: { min: 0.8, max: 1.91, idealW: 1080, idealH: 1080 },   // 4:5 to 1.91:1
+  facebook:  { min: 0.5, max: 2.0,  idealW: 1200, idealH: 630 },    // lenient
+  linkedin:  { min: 0.8, max: 1.91, idealW: 1200, idealH: 627 },
+  x:         { min: 0.56, max: 2.0, idealW: 1200, idealH: 675 },
+  tiktok:    { min: 0.5, max: 0.65, idealW: 1080, idealH: 1920 },   // 9:16 portrait
+  pinterest: { min: 0.56, max: 0.8, idealW: 1000, idealH: 1500 },   // 2:3 portrait
+};
+
+async function ensurePlatformCompatibleMedia(mediaId, platform, destId) {
+  const rules = PLATFORM_ASPECT_RULES[platform];
+  if (!rules) return mediaId; // unknown platform, pass through
+
+  // Only process numeric media library IDs (not poi: prefixed or URLs)
+  const numId = Number(mediaId);
+  if (!Number.isFinite(numId) || numId <= 0) return mediaId;
+
+  const [[media]] = await mysqlSequelize.query(
+    'SELECT id, filename, width, height, destination_id, mime_type, category, alt_text, original_name, tags, tags_ai FROM media WHERE id = ?',
+    { replacements: [numId] }
+  );
+  if (!media || !media.width || !media.height) return mediaId;
+
+  const ratio = media.width / media.height;
+  if (ratio >= rules.min && ratio <= rules.max) return mediaId; // already compatible
+
+  // Auto center-crop to ideal dimensions
+  try {
+    const sharp = (await import('sharp')).default;
+    const path = (await import('path')).default;
+    const fs = (await import('fs')).default;
+    const STORAGE_ROOT = process.env.STORAGE_ROOT || '/var/www/api.holidaibutler.com/storage';
+    const srcPath = path.join(STORAGE_ROOT, 'media', String(media.destination_id), media.filename);
+    if (!fs.existsSync(srcPath)) return mediaId;
+
+    // Calculate crop region: center-crop to target aspect ratio
+    const targetRatio = rules.idealW / rules.idealH;
+    let cropW, cropH, cropX, cropY;
+    if (ratio > targetRatio) {
+      // Image is wider than target: crop sides
+      cropH = media.height;
+      cropW = Math.round(media.height * targetRatio);
+      cropX = Math.round((media.width - cropW) / 2);
+      cropY = 0;
+    } else {
+      // Image is taller than target: crop top/bottom
+      cropW = media.width;
+      cropH = Math.round(media.width / targetRatio);
+      cropX = 0;
+      cropY = Math.round((media.height - cropH) / 2);
+    }
+
+    const ext = path.extname(media.filename);
+    const newFilename = Date.now() + '-auto-' + platform + ext;
+    const outPath = path.join(STORAGE_ROOT, 'media', String(media.destination_id), newFilename);
+
+    const info = await sharp(srcPath)
+      .extract({ left: cropX, top: cropY, width: cropW, height: cropH })
+      .resize({ width: rules.idealW, height: rules.idealH, fit: 'cover', position: 'centre' })
+      .toFile(outPath);
+
+    const fileStats = fs.statSync(outPath);
+
+    // INSERT variant media record
+    const [newId] = await mysqlSequelize.query(
+      `INSERT INTO media (destination_id, filename, original_name, mime_type, size_bytes, width, height,
+       category, alt_text, tags, tags_ai, parent_media_id, auto_platform, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      { replacements: [
+        media.destination_id, newFilename,
+        (media.original_name || media.filename).replace(ext, '') + ' (' + platform + ')' + ext,
+        media.mime_type, fileStats.size, info.width, info.height,
+        media.category, media.alt_text, media.tags, media.tags_ai,
+        media.id, platform, 'system-auto-crop'
+      ] }
+    );
+
+    logger.info(`[AutoCrop] Created ${platform}-compatible variant: media ${media.id} (${media.width}x${media.height}) -> ${newId} (${info.width}x${info.height})`);
+    return newId;
+  } catch (err) {
+    logger.warn(`[AutoCrop] Failed for media ${mediaId} platform ${platform}: ${err.message}`);
+    return mediaId; // graceful fallback to original
+  }
+}
+
+/**
  * POST /content/items/:id/images — Attach image(s) to content item
  * Body: { media_ids: [1,2,3] }  — array of media IDs or image URLs to link
  */
@@ -14450,9 +14540,9 @@ router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['plat
       return res.status(400).json({ success: false, error: { code: 'MISSING_MEDIA', message: 'media_ids array is required' } });
     }
 
-    // Get current media_ids
+    // Get current media_ids + target platform for auto-crop
     const [[item]] = await mysqlSequelize.query(
-      'SELECT id, media_ids FROM content_items WHERE id = :id',
+      'SELECT id, media_ids, target_platform, destination_id FROM content_items WHERE id = :id',
       { replacements: { id: Number(id) } }
     );
     if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Content item not found' } });
@@ -14460,15 +14550,24 @@ router.post('/content/items/:id/images', adminAuth('editor'), writeAccess(['plat
     let current = [];
     try { current = item.media_ids ? (typeof item.media_ids === 'string' ? JSON.parse(item.media_ids) : item.media_ids) : []; } catch { current = []; }
 
+    // Auto-crop images for platform compatibility (Optie C — zero-effort for user)
+    const platform = item.target_platform || 'website';
+    const compatibleIds = [];
+    for (const mid of media_ids) {
+      const compatId = await ensurePlatformCompatibleMedia(mid, platform, item.destination_id);
+      compatibleIds.push(compatId);
+    }
+
     // Merge new media_ids, deduplicate
-    const merged = [...new Set([...current, ...media_ids])];
+    const merged = [...new Set([...current, ...compatibleIds])];
 
     await mysqlSequelize.query(
       'UPDATE content_items SET media_ids = :mediaIds, updated_at = NOW() WHERE id = :id',
       { replacements: { mediaIds: JSON.stringify(merged), id: Number(id) } }
     );
 
-    res.json({ success: true, data: { media_ids: merged } });
+    const autoCropped = compatibleIds.filter((id, i) => id !== media_ids[i]);
+    res.json({ success: true, data: { media_ids: merged, auto_cropped: autoCropped.length > 0 ? autoCropped : undefined } });
   } catch (error) {
     logger.error('[AdminPortal] Image attach error:', error);
     res.status(500).json({ success: false, error: { code: 'IMAGE_ATTACH_ERROR', message: error.message } });

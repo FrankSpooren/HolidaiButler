@@ -67,7 +67,7 @@ if (sentryClient) {
 // 4) NodeSDK with dual export + Sentry context coordination (when client active)
 const sdk = new NodeSDK({
   resource: resourceFromAttributes({
-    'service.name': 'hb-platform-core',
+    'service.name': process.env.OTEL_SERVICE_NAME || 'hb-platform-core',
     'service.version': process.env.APP_VERSION || 'unknown',
     'deployment.environment': process.env.NODE_ENV || 'development',
   }),
