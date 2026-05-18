@@ -2144,5 +2144,12 @@
     "commerce_conversion": "Commerce & Conversie",
     "forms_assistance": "Formulieren & Hulp",
     "utility_practical": "Praktische Info"
+  },
+  "errors": {
+    "media_required": "{{targetPlatform}}-bericht heeft een afbeelding nodig. Voeg een foto toe voordat je inplant.",
+    "invalid_transition": "Deze statuswijziging is niet toegestaan (van \"{{from}}\" naar \"{{to}}\").",
+    "publish_too_early": "Dit item is voor een later tijdstip ingepland en kan nu nog niet gepubliceerd worden. Gebruik \"Nu publiceren\" om dit te omzeilen.",
+    "pre_publish_validation_failed": "De post is nog niet klaar om te publiceren. Controleer de afbeelding, link en inhoud.",
+    "missing_domain_config": "Geen websitedomein geconfigureerd voor deze bestemming."
   }
 }

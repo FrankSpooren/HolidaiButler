@@ -62,8 +62,7 @@ const auditLogSchema = new mongoose.Schema({
   duration: Number,
   timestamp: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 }, {
   collection: "audit_logs",

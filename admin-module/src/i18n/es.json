@@ -2105,5 +2105,12 @@
     "commerce_conversion": "Comercio y Conversion",
     "forms_assistance": "Formularios y Ayuda",
     "utility_practical": "Info Practica"
+  },
+  "errors": {
+    "media_required": "Una publicación de {{targetPlatform}} necesita una imagen. Añade una foto antes de programar.",
+    "invalid_transition": "Este cambio de estado no está permitido (de «{{from}}» a «{{to}}»).",
+    "publish_too_early": "Este elemento está programado para más tarde y aún no se puede publicar. Usa «Publicar ahora» para anular esto.",
+    "pre_publish_validation_failed": "La publicación aún no está lista. Revisa la imagen, el enlace y el contenido.",
+    "missing_domain_config": "No hay dominio de sitio web configurado para este destino."
   }
 }

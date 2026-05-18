@@ -51,6 +51,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import { useTranslation } from 'react-i18next';
+import { formatApiError } from '../utils/formatApiError.js';
 import WorkflowStatusChip from '../components/common/WorkflowStatusChip.jsx';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, Legend } from 'recharts';
 import useAuthStore from '../stores/authStore.js';
@@ -2153,7 +2154,7 @@ export default function ContentStudioPage() {
       setSelectedIds([]);
       loadItems();
     } catch (err) {
-      setItemError(err.message);
+      setItemError(formatApiError(err, t));
     } finally {
       setBulkLoading(false);
     }

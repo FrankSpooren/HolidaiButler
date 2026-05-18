@@ -7,6 +7,7 @@
 
 import { mysqlSequelize } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
+import { getDestinationBaseUrl } from '../../destinationConfig.js';
 
 /**
  * Find POI link suggestions for given content text
@@ -67,9 +68,8 @@ export async function findLinkSuggestions(text, destinationId, maxSuggestions = 
       // Check if POI name appears in the content (case-insensitive)
       const nameLower = poiName.toLowerCase();
       if (textLower.includes(nameLower)) {
-        // Determine base URL from destination
-        const domainMap = { 1: 'https://holidaibutler.com', 2: 'https://texelmaps.nl', 4: 'https://warrewijzer.be' };
-        const baseUrl = domainMap[destinationId] || 'https://holidaibutler.com';
+        // Determine base URL from destination (DB-driven via destinationConfig)
+        const baseUrl = await getDestinationBaseUrl(destinationId);
         suggestions.push({
           poiId: poi.id,
           poiName: poiName,

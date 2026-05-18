@@ -170,6 +170,8 @@ import {
   adminApiRateLimiter
 } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { getDestinationDomain, MissingDomainConfigError } from '../services/destinationConfig.js';
+import { sendApiError } from '../utils/apiError.js';
 import ContentItemResource from '../resources/ContentItemResource.js';
 import { canTransition, deriveConceptStatus as _fsmDeriveConceptStatus, InvalidTransitionError, transitionStatus, bulkTransitionStatus } from '../services/approvalStateMachine.js';
 import { getAllAgentStatuses } from '../a2a/agentStatusService.js';
@@ -188,6 +190,24 @@ import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
+
+/**
+ * Gateway-level content cache invalidation.
+ * Call after ANY mutation on content_concepts or content_items.
+ * Invalidates all content-related cache namespaces for the destination.
+ */
+async function invalidateContentCache(destinationId) {
+  if (!destinationId) return;
+  try {
+    await Promise.all([
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'concepts-list'),
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'content-items'),
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'content-calendar'),
+    ]);
+  } catch (err) {
+    logger.debug('[invalidateContentCache] non-blocking:', err.message);
+  }
+}
 import { verifyProvenance, getProvenance, detectBodyLang, buildProvenance } from '../services/provenanceService.js';
 import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
@@ -5601,10 +5621,14 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
     const { destination, period = '30' } = req.query;
     const days = Math.min(parseInt(period) || 30, 365);
     const destId = destination ? resolveDestinationId(destination) : 1;
-    const domainMap = { 1: 'calpetrip.com', 2: 'texelmaps.nl' };
-    const domain = domainMap[destId];
-    if (!domain) {
-      return res.json({ success: true, data: { visitors: 0, pageviews: 0, pages: [], referrers: [], events: [], chart: [], devices: {} } });
+    let domain;
+    try {
+      domain = await getDestinationDomain(destId);
+    } catch (domainErr) {
+      if (domainErr instanceof MissingDomainConfigError) {
+        return res.json({ success: true, data: { visitors: 0, pageviews: 0, pages: [], referrers: [], events: [], chart: [], devices: {} } });
+      }
+      throw domainErr;
     }
 
     const cacheKey = `admin:analytics:website:${destId}:${days}`;
@@ -12641,6 +12665,7 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
         );
         createdItems.push({ id: insertResult, platform: plat });
       }
+      await invalidateContentCache(destId);
       return res.json({ success: true, data: { id: createdItems[0]?.id, concept_id: conceptId, title, manual: true, detected_language: detectedLang, items: createdItems } });
     }
 
@@ -13145,6 +13170,11 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
     // Sync concept status after item update
     await syncConceptStatus(id);
 
+    // Invalidate cache after item update
+    try {
+      const [[itemDest]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = :id', { replacements: { id: Number(id) } });
+      if (itemDest?.destination_id) await invalidateContentCache(itemDest.destination_id);
+    } catch (_) { /* non-blocking */ }
     res.json({ success: true, data: { id: Number(id), updated: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item update error:', error);
@@ -13510,6 +13540,7 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
         personaId: persona_id || null,
       }, { jobId: `concept-${conceptId}` });
       logger.info(`[ConceptGenerate] Enqueued generation job for concept ${conceptId}`);
+      await invalidateContentCache(Number(destination_id));
     } catch (enqErr) {
       logger.error(`[ConceptGenerate] Enqueue failed for concept ${conceptId}: ${enqErr.message}`);
       // Recover concept so frontend stops polling
@@ -13552,12 +13583,12 @@ router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfor
         { replacements: [String(title).substring(0, 500), conceptId] }
       );
     }
-    // Invalidate tenant cache so GET /content/concepts + calendar returns fresh data
+    // Invalidate tenant cache (gateway-level)
     const [[conceptDest]] = await mysqlSequelize.query(
       'SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] }
     );
     if (conceptDest?.destination_id) {
-      tenantCacheService.invalidateNamespace(conceptDest.destination_id, 'concepts-list').catch(() => {});
+      await invalidateContentCache(conceptDest.destination_id);
     }
     res.json({ success: true, data: { concept_id: conceptId, updated: true } });
   } catch (error) {
@@ -13588,6 +13619,9 @@ router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfo
       `UPDATE content_concepts SET approval_status = 'deleted', updated_at = NOW() WHERE id = ?`,
       { replacements: [conceptId] }
     );
+    // Invalidate cache after soft-delete
+    const [[delDest]] = await mysqlSequelize.query('SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] });
+    if (delDest?.destination_id) await invalidateContentCache(delDest.destination_id);
     res.json({ success: true, data: { concept_id: conceptId, deleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Concept delete error:', error);
@@ -14700,7 +14734,7 @@ router.post('/content/auto-schedule', adminAuth('destination_admin'), writeAcces
     res.json({ success: true, data: { scheduled: scheduled.length, items: scheduled } });
   } catch (error) {
     logger.error('[AdminPortal] Auto-schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'AUTO_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'AUTO_SCHEDULE_ERROR');
   }
 });
 
@@ -15030,7 +15064,7 @@ router.post('/content/items/:id/schedule', adminAuth('editor'), async (req, res)
     res.json({ success: true, data: { id: Number(id), approval_status: 'scheduled', scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'SCHEDULE_ERROR');
   }
 });
 
@@ -15072,7 +15106,7 @@ router.delete('/content/items/:id/schedule', adminAuth('editor'), async (req, re
     res.json({ success: true, data: { id: Number(id), approval_status: 'approved' } });
   } catch (error) {
     logger.error('[AdminPortal] Cancel schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'CANCEL_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'CANCEL_SCHEDULE_ERROR');
   }
 });
 
@@ -15237,7 +15271,7 @@ router.patch('/content/items/:id/reschedule', adminAuth('editor'), async (req, r
     res.json({ success: true, data: { id: Number(id), scheduled_at, affected: 1 } });
   } catch (error) {
     logger.error('[AdminPortal] Reschedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'RESCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'RESCHEDULE_ERROR');
   }
 });
 
@@ -16384,7 +16418,7 @@ router.post('/content/bulk/schedule', adminAuth('editor'), writeAccess(['platfor
     res.json({ success: true, data: { scheduled: bulkResult.success, success: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed, scheduled_at } });
   } catch (error) {
     logger.error('[AdminPortal] Bulk schedule error:', error);
-    res.status(500).json({ success: false, error: { code: 'BULK_SCHEDULE_ERROR', message: error.message } });
+    return sendApiError(res, error, 'BULK_SCHEDULE_ERROR');
   }
 });
 

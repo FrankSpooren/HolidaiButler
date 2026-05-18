@@ -13,6 +13,8 @@ import { applyUtmToContent } from './utmBuilder.js';
 import { logAgent, logError } from '../../orchestrator/auditTrail/index.js';
 import logger from '../../../utils/logger.js';
 import { mysqlSequelize } from '../../../config/database.js';
+import { getDestinationDomain } from '../../destinationConfig.js';
+import { validateSocialPostReadiness, PrePublishValidationError } from './preFlightValidator.js';
 
 class PublisherAgent extends BaseAgent {
   constructor() {
@@ -103,25 +105,50 @@ class PublisherAgent extends BaseAgent {
         contentItem.body_en = applyUtmToContent(contentItem.body_en, contentItem, contentItem.target_platform);
       }
 
-      // Also add UTM-tagged destination URL to social_metadata if no link present
+      // Fix 4 (BUTE follow-up 2026-05-16): snapshot social_metadata before
+      // metadata-prep mutations. Used at the end to write-back to DB only
+      // when something actually changed (avoids no-op UPDATEs and gives ops
+      // visibility into the actual payload sent to the platform).
+      const _originalSocialMetadata = typeof contentItem.social_metadata === 'string'
+        ? contentItem.social_metadata
+        : (contentItem.social_metadata ? JSON.stringify(contentItem.social_metadata) : null);
+
+      // Set or correct UTM-tagged destination URL in social_metadata.
+      // Fix 2 (BUTE incident 2026-05-16): the previous "only when missing"
+      // guard let stale calpetrip.com links from contentGenerator slip through
+      // for BUTE/Texel/Alicante items. Now: if the existing link host does
+      // not match the destination domain, overwrite it and log a warning.
+      let _resolvedDomain = null;
       if (contentItem.target_platform !== 'website') {
         try {
-          const [[dest]] = await mysqlSequelize.query(
-            'SELECT domain FROM destinations WHERE id = :id',
-            { replacements: { id: contentItem.destination_id } }
-          );
-          if (dest?.domain) {
-            const baseUrl = `https://${dest.domain}`;
-            const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
-            // Ensure social_metadata has the tracked link
-            let meta = {};
-            try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
-            if (!meta.link) {
-              meta.link = trackedUrl;
-              contentItem.social_metadata = JSON.stringify(meta);
+          _resolvedDomain = await getDestinationDomain(contentItem.destination_id);
+          const expectedHost = _resolvedDomain.replace(/^www\./i, '').toLowerCase();
+          const baseUrl = `https://${_resolvedDomain}`;
+          const trackedUrl = applyUtmToContent(baseUrl, contentItem, contentItem.target_platform);
+          let meta = {};
+          try { meta = typeof contentItem.social_metadata === 'string' ? JSON.parse(contentItem.social_metadata) : (contentItem.social_metadata || {}); } catch (err) { console.debug('[index.js] :', err.message); }
+
+          let needsOverwrite = !meta.link;
+          if (meta.link && !needsOverwrite) {
+            try {
+              const currentHost = new URL(meta.link).hostname.replace(/^www\./i, '').toLowerCase();
+              if (currentHost !== expectedHost) {
+                logger.warn(`[Publisher] Correcting stale link host "${currentHost}" -> "${expectedHost}" for item ${contentItemId} (${contentItem.target_platform})`);
+                try { await logAgent('publisher', contentItem.destination_id, 'stale-link-corrected', { contentItemId, fromHost: currentHost, toHost: expectedHost, platform: contentItem.target_platform }); } catch (logErr) { /* non-blocking */ }
+                needsOverwrite = true;
+              }
+            } catch (urlErr) {
+              logger.warn(`[Publisher] Invalid social_metadata.link for item ${contentItemId}, replacing: ${urlErr.message}`);
+              needsOverwrite = true;
             }
           }
-        } catch (err) { console.debug('[index.js] non-blocking — UTM link is nice-to-have:', err.message); }
+          if (needsOverwrite) {
+            meta.link = trackedUrl;
+            contentItem.social_metadata = JSON.stringify(meta);
+          }
+        } catch (err) {
+          logger.warn(`[Publisher] Destination domain lookup failed for item ${contentItemId} (non-blocking): ${err.message}`);
+        }
       }
 
       // Auto-crop attached images to platform-conformant dimensions (TO DO 4b+4d)
@@ -194,6 +221,45 @@ class PublisherAgent extends BaseAgent {
         }
       }
 
+      // Fix 4 (BUTE follow-up 2026-05-16): persist resolved social_metadata
+      // to DB when it changed (link correction + media_ids -> image_url
+      // resolution). Makes retry/replay idempotent and lets ops see the
+      // actual publish payload after the fact. Non-blocking: a write
+      // failure does not abort the publish itself.
+      const _currentSocialMetadata = typeof contentItem.social_metadata === 'string'
+        ? contentItem.social_metadata
+        : (contentItem.social_metadata ? JSON.stringify(contentItem.social_metadata) : null);
+      if (_currentSocialMetadata !== _originalSocialMetadata) {
+        try {
+          await mysqlSequelize.query(
+            `UPDATE content_items SET social_metadata = :sm, updated_at = NOW() WHERE id = :id`,
+            { replacements: { sm: _currentSocialMetadata, id: contentItemId } }
+          );
+          logger.info(`[Publisher] Persisted resolved social_metadata for item ${contentItemId}`);
+        } catch (persistErr) {
+          logger.warn(`[Publisher] Failed to persist social_metadata for item ${contentItemId} (non-blocking): ${persistErr.message}`);
+        }
+      }
+
+      // Fix 3 (BUTE incident 2026-05-16): unified pre-flight validator.
+      // Catches missing images/links BEFORE the platform client call so
+      // failures land in publish_error with a clear reason instead of
+      // (a) Facebook silently publishing a text-only post with the wrong
+      // fallback link or (b) Instagram throwing a low-level error mid-flow.
+      try {
+        validateSocialPostReadiness(contentItem, _resolvedDomain ? { expectedDomain: _resolvedDomain } : {});
+      } catch (validationErr) {
+        if (validationErr instanceof PrePublishValidationError) {
+          await mysqlSequelize.query(
+            `UPDATE content_items SET approval_status = 'failed', publish_error = :err, updated_at = NOW() WHERE id = :id`,
+            { replacements: { err: validationErr.message, id: contentItemId } }
+          );
+          try { await logError('publisher', validationErr, { action: 'pre-publish-validation-failed', destination_id: contentItem.destination_id, contentItemId, details: validationErr.details }); } catch (logErr) { /* non-blocking */ }
+          throw validationErr;
+        }
+        throw validationErr;
+      }
+
       const client = getClient(contentItem.target_platform);
       const result = await client.publish(contentItem);
 
@@ -260,6 +326,19 @@ class PublisherAgent extends BaseAgent {
         );
       } catch (perfErr) {
         logger.warn(`[De Uitgever] Initial performance record failed (non-blocking): ${perfErr.message}`);
+      }
+
+      // v5.6.0 Blok 4 cleanup — cancel BullMQ delayed-job na succesvolle publicatie.
+      // Voorkomt onnodige dedupe-guard firing wanneer item via andere route (cron
+      // safety-net, publish-now button, externe trigger) reeds gepubliceerd is voor
+      // de delayed job zijn fire-time bereikt. Non-blocking: cancelItem is idempotent
+      // (no-op als job niet bestaat) + scheduler-failure mag publish-success niet
+      // ongedaan maken.
+      try {
+        const schedulerMod = await import('../../contentPublishScheduler.js');
+        await schedulerMod.default.cancelItem(contentItemId);
+      } catch (cleanupErr) {
+        logger.debug(`[De Uitgever] BullMQ delayed-job cleanup failed (non-blocking): ${cleanupErr.message}`);
       }
 
       return result;
