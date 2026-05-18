@@ -9341,3 +9341,17 @@ translation. 5 locales (en/nl/de/es/fr) krijgen `errors` section met
 
 Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 + 3 merge-commits + docs commit (volgt).
+
+
+## Sessie 18-05-2026: Gateway Cache Invalidation + Auto-Crop
+
+### CLAUDE.md v5.7.0
+
+**4 Features/Fixes:**
+1. Gateway-level `invalidateContentCache()` helper op 13/25 content mutatie-endpoints (was 5/25). Alle user-zichtbare mutaties gedekt: create, delete, approve, schedule, reschedule, cancel, publish, republish, duplicate, image attach/detach, auto-schedule. Handmatig aangemaakte items verschijnen nu direct in de Items tab (was: tot 5 min vertraging door tenant-cache TTL).
+2. Auto-crop bij image-koppeling aan content item (Optie C): `ensurePlatformCompatibleMedia()` in `POST /content/items/:id/images`. Checkt aspect ratio vs `PLATFORM_ASPECT_RULES` (IG: 4:5-1.91:1, FB: lenient, LinkedIn: 0.8-1.91:1, etc.). Incompatibele images automatisch center-cropped via Sharp naar ideaal formaat. Opgeslagen als media variant met `parent_media_id` + `auto_platform`. Zero-effort voor gebruiker — geen handmatige crop/resize nodig.
+3. Root cause Instagram aspect ratio error: image editor `resize fit:"inside"` behoudt aspect ratio (850x390 -> 1080x496, nog steeds 2.18:1). IG Post preset produceerde NIET 1080x1080. Auto-crop lost dit structureel op.
+4. DB migratie: `media.parent_media_id INT NULL` + `media.auto_platform VARCHAR(20) NULL` + index.
+
+**Bestanden gewijzigd:**
+- `platform-core/src/routes/adminPortal.js` (invalidateContentCache helper + 13 aanroepen + ensurePlatformCompatibleMedia + PLATFORM_ASPECT_RULES)
