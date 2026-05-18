@@ -190,6 +190,24 @@ import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
+
+/**
+ * Gateway-level content cache invalidation.
+ * Call after ANY mutation on content_concepts or content_items.
+ * Invalidates all content-related cache namespaces for the destination.
+ */
+async function invalidateContentCache(destinationId) {
+  if (!destinationId) return;
+  try {
+    await Promise.all([
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'concepts-list'),
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'content-items'),
+      tenantCacheService.invalidateNamespace(Number(destinationId), 'content-calendar'),
+    ]);
+  } catch (err) {
+    logger.debug('[invalidateContentCache] non-blocking:', err.message);
+  }
+}
 import { verifyProvenance, getProvenance, detectBodyLang, buildProvenance } from '../services/provenanceService.js';
 import { generateProvenancePDF } from '../services/provenanceReportService.js';
 
@@ -12647,6 +12665,7 @@ router.post('/content/items/generate', adminAuth('editor'), writeAccess(['platfo
         );
         createdItems.push({ id: insertResult, platform: plat });
       }
+      await invalidateContentCache(destId);
       return res.json({ success: true, data: { id: createdItems[0]?.id, concept_id: conceptId, title, manual: true, detected_language: detectedLang, items: createdItems } });
     }
 
@@ -13151,6 +13170,11 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
     // Sync concept status after item update
     await syncConceptStatus(id);
 
+    // Invalidate cache after item update
+    try {
+      const [[itemDest]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = :id', { replacements: { id: Number(id) } });
+      if (itemDest?.destination_id) await invalidateContentCache(itemDest.destination_id);
+    } catch (_) { /* non-blocking */ }
     res.json({ success: true, data: { id: Number(id), updated: true } });
   } catch (error) {
     logger.error('[AdminPortal] Content item update error:', error);
@@ -13516,6 +13540,7 @@ router.post('/content/concepts/generate', adminAuth('editor'), writeAccess(['pla
         personaId: persona_id || null,
       }, { jobId: `concept-${conceptId}` });
       logger.info(`[ConceptGenerate] Enqueued generation job for concept ${conceptId}`);
+      await invalidateContentCache(Number(destination_id));
     } catch (enqErr) {
       logger.error(`[ConceptGenerate] Enqueue failed for concept ${conceptId}: ${enqErr.message}`);
       // Recover concept so frontend stops polling
@@ -13558,12 +13583,12 @@ router.patch('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfor
         { replacements: [String(title).substring(0, 500), conceptId] }
       );
     }
-    // Invalidate tenant cache so GET /content/concepts + calendar returns fresh data
+    // Invalidate tenant cache (gateway-level)
     const [[conceptDest]] = await mysqlSequelize.query(
       'SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] }
     );
     if (conceptDest?.destination_id) {
-      tenantCacheService.invalidateNamespace(conceptDest.destination_id, 'concepts-list').catch(() => {});
+      await invalidateContentCache(conceptDest.destination_id);
     }
     res.json({ success: true, data: { concept_id: conceptId, updated: true } });
   } catch (error) {
@@ -13594,6 +13619,9 @@ router.delete('/content/concepts/:id', adminAuth('editor'), writeAccess(['platfo
       `UPDATE content_concepts SET approval_status = 'deleted', updated_at = NOW() WHERE id = ?`,
       { replacements: [conceptId] }
     );
+    // Invalidate cache after soft-delete
+    const [[delDest]] = await mysqlSequelize.query('SELECT destination_id FROM content_concepts WHERE id = ?', { replacements: [conceptId] });
+    if (delDest?.destination_id) await invalidateContentCache(delDest.destination_id);
     res.json({ success: true, data: { concept_id: conceptId, deleted: true } });
   } catch (error) {
     logger.error('[AdminPortal] Concept delete error:', error);
