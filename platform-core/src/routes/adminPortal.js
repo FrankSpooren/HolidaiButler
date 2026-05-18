@@ -13239,6 +13239,13 @@ router.post('/content/concepts/:id/approve', adminAuth('editor'), writeAccess(['
     await syncConceptStatusByConceptId(conceptId);
 
     try { const [[_cd]] = await mysqlSequelize.query('SELECT destination_id FROM content_items WHERE id = ? UNION SELECT destination_id FROM content_concepts WHERE id = ? LIMIT 1', { replacements: [Number(conceptId), Number(conceptId)] }); if (_cd?.destination_id) await invalidateContentCache(_cd.destination_id); } catch (_) {}
+    // Notify: content approved
+    try {
+      const [[approveDest]] = await mysqlSequelize.query('SELECT destination_id, title FROM content_concepts WHERE id = ?', { replacements: [conceptId] });
+      if (approveDest?.destination_id && req.adminUser?.id) {
+        await notificationService.create({ userId: req.adminUser.id, destinationId: approveDest.destination_id, type: 'success', title: 'Content goedgekeurd', message: `"${(approveDest.title || '').substring(0,50)}" goedgekeurd (${bulkResult.success} items)`, actionUrl: '/content-studio?tab=3', actionLabel: 'Bekijken' });
+      }
+    } catch (_) { /* non-blocking */ }
     res.json({ success: true, data: { concept_id: conceptId, approved_items: bulkResult.success, skipped: bulkResult.skipped, failed: bulkResult.failed } });
   } catch (error) {
     logger.error('[AdminPortal] Concept approve error:', error);
