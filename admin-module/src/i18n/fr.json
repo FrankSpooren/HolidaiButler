@@ -2102,5 +2102,12 @@
       "noContentDay": "Aucun contenu prévu pour ce jour.",
       "noContentWeek": "Aucun élément"
     }
+  },
+  "errors": {
+    "media_required": "Une publication {{targetPlatform}} nécessite une image. Ajoutez une photo avant de programmer.",
+    "invalid_transition": "Ce changement de statut n’est pas autorisé (de « {{from}} » à « {{to}} »).",
+    "publish_too_early": "Cet élément est programmé pour plus tard et ne peut pas encore être publié. Utilisez « Publier maintenant » pour contourner.",
+    "pre_publish_validation_failed": "La publication n’est pas encore prête. Vérifiez l’image, le lien et le contenu.",
+    "missing_domain_config": "Aucun domaine de site web configuré pour cette destination."
   }
 }

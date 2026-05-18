@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.3.0
-> **Laatst bijgewerkt**: 15 mei 2026
+> **Versie**: 5.6.1
+> **Laatst bijgewerkt**: 18 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -14,10 +14,15 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 ### Actieve Bestemmingen
 | Bestemming | Status | Domein | destination_id |
 |------------|--------|--------|----------------|
-| **Calpe** | ✅ LIVE | holidaibutler.com | 1 |
+| **Calpe** | ✅ LIVE | calpetrip.com | 1 |
 | **Texel** | ✅ LIVE | texelmaps.nl | 2 |
-| **Alicante** | 🟡 GEPLAND | alicante.holidaibutler.com | 3 |
 | **WarreWijzer** | 🟡 GEPLAND | warrewijzer.be | 4 |
+| **Alicante** | 🟡 GEPLAND | alicantebutler.com | 5 |
+| **BUTE** | ✅ LIVE (content_only) | butefair.nl | 10 |
+
+> **Bron van waarheid voor domains**: `destinations.domain` in DB, niet
+> hardcoded maps. Resolved via `src/services/destinationConfig.js`
+> (DB-driven + 5min cache + `MissingDomainConfigError` bij onbekende id).
 
 ---
 
@@ -46,6 +51,116 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 5. **Geen Workarounds**: Problemen oplossen bij de root cause.
 6. **Staging-First Workflow**: Content wijzigingen eerst naar `poi_content_staging`, review door Frank, dan pas naar POI tabel.
 7. **Versie-Sync Controle**: Na elke fase/blok controleer: CLAUDE.md header versie, MS header versie + datum + status, Gerelateerde Documentatie versies, Admin Portal versie + endpoint count, BullMQ/Scheduled Jobs getal, MS Roadmap tabel + Fase detail + Changelog + MS Footer (GECONSOLIDEERDE regel: datum, fase status, blokken, endpoints, admin versie, jobs, CLAUDE.md versie, MS versie).
+
+---
+
+## 🩹 BUTE Publish Resolution (v5.3.1 – v5.4.0) — COMPLEET 16 mei 2026
+
+> **Strategic context**: BUTE fietsfair-post (item 248 FB + 249 IG, scheduled
+> 16-05-2026 10:00/11:07) ging als incident live met de verkeerde fallback
+> link (calpetrip.com i.p.v. butefair.nl) en faalde op Instagram met
+> `image_url in social_metadata`. Root-cause analyse legde 4 gerelateerde
+> bugs bloot. Resolution: 5-lagen defense-in-depth + i18n error-UX.
+
+### Fix 1 — DB-driven destination domains (v5.3.1, commit 94643ea)
+Hardcoded `DESTINATION_DOMAINS = {1: 'calpetrip.com', 2: 'texelmaps.nl'}` met
+`|| 'calpetrip.com'` fallback in 3 codepaths (contentGenerator, internalLinker,
+adminPortal) genereerde Calpe-link voor alle niet-hardcoded destinations (BUTE
+id=10, Alicante id=5, Warrewijzer id=4). Vervangen door
+`src/services/destinationConfig.js` shared service (DB lookup + 5min cache
++ `MissingDomainConfigError` zonder silent fallback). Schending van het
+multi-tenant principe gerepareerd.
+
+### Fix 2 — Publisher stale-link correction (v5.3.1, commit 94643ea)
+`publisher/index.js` had `if (!meta.link)` guard die DB-driven correctie
+alleen toepaste bij ontbrekende link — historische foute calpetrip.com links
+uit (Fix 1)-bug bleven dus staan. Nu: detect host-mismatch vs
+`destinations.domain` + overwrite met UTM-tracked correcte URL + log
+`stale-link-corrected` audit-event.
+
+### Fix 3 — Unified pre-flight validator (v5.3.1, commit 94643ea)
+Nieuw `src/services/agents/publisher/preFlightValidator.js`. Eenvormig
+contract over FB/IG/LinkedIn/X/Pinterest/TikTok/Threads: een social_post
+moet hebben (a) body ≥ 10 chars, (b) geldige `social_metadata.link` met
+host = `destinations.domain`, (c) ≥ 1 resolvable `image_url` na media_ids-
+resolution. Faalt met `PrePublishValidationError` → `publish_error` met
+duidelijke reden. Vervangt asymmetrische FB-text-only-publish vs IG-throw.
+
+### Fix 4 — DB write-back resolved social_metadata (v5.4.0, commit 7c368c4)
+Publisher snapshot social_metadata vóór mutaties + persist als gewijzigd na
+media-resolve, voor `client.publish()`. Makes retry/replay idempotent +
+geeft ops zicht in actuele publish payload. Non-blocking try/catch.
+
+### Fix 5b — FSM media-invariant (v5.4.0, commit a0ece38)
+Nieuwe `MediaRequiredError` class in `src/services/approvalStateMachine.js`
++ `assertMediaInvariantForSocialPost` helper. Blokkeert draft→approved/
+scheduled wanneer social_post op non-website platform geen media_ids heeft.
+Hook na `canTransitionXState`, voor UPDATE build. `force=true` bypasst.
+`bulkTransitionStatus` erft coverage via loop. Originele Fix 5 voorstel
+(concept→item inheritance bij INSERT) bleek no-op (alle INSERTs hardcoded
+`'draft'`); enterprise herformulering naar centrale FSM-invariant.
+
+### i18n bundle — backend error.code passthrough + frontend translation
+(v5.4.0, commit 5295589)
+Backend `src/utils/apiError.js` `sendApiError(res, err, fallbackCode)`
+bubbelt err.code + err.statusCode (4xx) naar HTTP-response wanneer custom
+Error class (`MediaRequiredError`, `InvalidTransitionError`). Plus
+`details` constructor-property gehoist voor i18next-interpolation. 5
+schedule catch-blocks in `adminPortal.js` gerefactord. Frontend
+`admin-module/src/utils/formatApiError.js` mapt `error.code` (snake-lower)
+→ i18n key `errors.<code>`. 5 locales (en/nl/de/es/fr) krijgen `errors`
+section met 5 keys: `media_required`, `invalid_transition`,
+`publish_too_early`, `pre_publish_validation_failed`,
+`missing_domain_config`. Wire-up in `ConceptDialog.scheduleItem` +
+`ContentStudioPage.bulkSchedule`.
+
+### Vite 8 retry (admin-module, commit e66dc8d → merged)
+Vite 4.5 → 8.0.13 + plugin-react 4.1 → 6.0.2 + Rolldown/Oxc toolchain.
+Eerdere poging (15-05-2026) gerolled back door React error #130 in
+`@mui/icons-material` sub-path imports — dual-format zonder `exports`
+field, Rolldown gaf CJS namespace `{ default: Fn }` ipv `Fn`. Resolved via
+inline `muiIconsEsmRedirect` plugin (resolveId hook + enforce:'pre') die
+alle `@mui/icons-material/<Icon>` redirect naar `/esm/<Icon>`. Plus
+`codeSplitting.groups` (Vite 8 native) + scheduler in vendor-react matcher
++ combined vendor-mui chunk. Build time 20s → 688ms (30x).
+
+### Defense-in-depth resultaat (6 lagen)
+| Layer | Locatie | Effect |
+|-------|---------|--------|
+| 1 | `destinationConfig` (Fix 1) | Correcte link bij content-gen |
+| 2 | `MediaRequiredError` FSM-invariant (Fix 5b) | Blokkeert draft→scheduled zonder media |
+| 3 | Publisher stale-link overwrite (Fix 2) | Corrigeert legacy state bij publish |
+| 4 | `preFlightValidator` (Fix 3) | Blokkeert publish-call bij ontbrekende image/link |
+| 5 | Publisher write-back (Fix 4) | DB-audit van actuele publish payload |
+| 6 | `formatApiError` + 5 locales | Localised foutmelding voor reviewer |
+
+### Nieuwe modules
+- `platform-core/src/services/destinationConfig.js`
+- `platform-core/src/services/agents/publisher/preFlightValidator.js`
+- `platform-core/src/utils/apiError.js`
+- `admin-module/src/utils/formatApiError.js`
+
+### Commits op `dev` (chronologisch, 7 commits)
+1. `94643ea` BUTE publish bundle Fix 1+2+3
+2. `7c368c4` Fix 4 — persist resolved social_metadata to DB
+3. `a0ece38` Fix 5b — media-invariant in approvalStateMachine
+4. `5295589` i18n MEDIA_REQUIRED + backend error.code passthrough
+5. `f815070` Merge feature/vite8-retry-2026-05-15
+6. `09e142c` Merge feature/bute-publish-fix-2026-05-16
+7. `7a20270` Merge feature/bute-followup-fix45-2026-05-16
+
+### E2E verificatie
+- PM2 reload `holidaibutler-api` (pid 2482566, 81e restart, uptime stable)
+- Health endpoint 200 OK, mysql + mongodb connected
+- `destinationConfig` smoke: 5 destinations resolveerd correct, id=99
+  throws `MISSING_DOMAIN_CONFIG`
+- `approvalStateMachine` smoke: 9 `deriveConceptStatus` cases PASS,
+  `MediaRequiredError` instance correct (HTTP 409, code, details)
+- admin-module build (Vite 8) 629ms, i18n keys `media_required` +
+  `invalid_transition` + `pre_publish_validation_failed` bevestigd in
+  productie en-chunk
+- `https://admin.holidaibutler.com/` HTTP 200 OK met `rolldown-runtime`
+  asset (Vite 8 indicator)
 
 ---
 
@@ -304,6 +419,56 @@ Self-hosted Sentry (mogelijk Bugsink — Sentry-protocol compatible) draait op `
 2. **Sentry v10 hernoemt class-exports** vergeleken met v8 docs: `SentryContextManager` → `SentryAsyncLocalStorageContextManager`. Altijd `Object.keys(import(...))` checken in v10 ipv blind v8 docs te volgen.
 3. **Sentry auto-OTel-setup conflict** is reëel maar volledig oplosbaar via officieel pad: `skipOpenTelemetrySetup: true` + `@sentry/opentelemetry` SpanProcessor in eigen NodeSDK config. Dual-export (Sentry + Tempo) is mogelijk zonder code-duplicatie.
 4. **Self-hosted Sentry (of Bugsink) zonder publieke route** vereist Apache reverse proxy + DNS record voor browser-toegang. Voor enterprise observability hoort dat als infrastructuur, niet als follow-up.
+
+---
+
+## 🔍 v5.6.0 — Fase B Blok 4 Audit + Publisher Cleanup (COMPLEET 17 mei 2026)
+
+**Sessie-resultaat**: 1 commit op feature branch (`1b04701`, merge naar `dev`). P1 SemVer-major follow-up blok formeel **gesloten 4/4** na audit-discovery dat aangenomen 5e bump (BullMQ-major) niet bestaat.
+
+### Audit-bevindingen
+
+Pre-upgrade verificatie toonde 3 stale prompt-aannames:
+
+1. **BullMQ major bump**: `bullmq` `^5.66.5` is **al latest major v5** (5.76.10 binnen-major). Geen 5e SemVer-major beschikbaar. Bull v4 `^4.12.0` in root + `platform-core` is **ongebruikte dependency** (alleen `ticketing-module/ReminderService.js` verwijst ernaar — code zelf niet wired-up).
+2. **Fase B Blok 4 (BullMQ delayed-jobs) activatie**: **al LIVE sinds v4.97**. Scheduler-callers in `approvalStateMachine.js:319+328`, Worker `content-publish-item` in `workers.js:2058` (concurrency=4, lazy-import), `backfillScheduled()` bij PM2 boot in `src/index.js:598`, 5-min orphan safety-net in `publisher.processScheduledPublications()`. 17 Redis-keys + scheduler-stats actief in productie.
+3. **Bull v4 = dead code**: feitelijk juist (queue leeg, geen aanroepen) MAAR **ticketing/reservations modules zijn werk-in-uitvoering** voor toekomstige enterprise-migratie sessie — niet weggooien.
+
+### Cleanup-patch (commit `1b04701`)
+
+`platform-core/src/services/agents/publisher/index.js` regel 332-345: na succesvolle `publishItem()` cancelt nu het bijbehorende BullMQ delayed-job uit `content-publish-item` queue.
+
+- Lazy-import van `contentPublishScheduler` om circular deps te vermijden
+- Non-blocking `try/catch`: scheduler-failure mag publish-success niet ongedaan maken
+- `cancelItem()` is idempotent (no-op als job niet bestaat)
+- Voorkomt onnodige dedupe-guard firing wanneer item via cron orphan safety-net, publish-now button of externe trigger reeds gepubliceerd is voor delayed-job zijn fire-time bereikt
+- Audit zag 12 historische failed jobs allemaal correct geblokkeerd door dedupe-guard — geen bug, maar logging-noise + onnodige worker cycles voorkomen
+
+### 8-punts audit verificatie
+
+| Check | Resultaat |
+|-------|-----------|
+| Pre-upgrade tag | `pre-blok4-cleanup-2026-05-17` |
+| Backup | `/root/backups/2026-05-17-blok4cleanup/package-lock.json` |
+| Node `--check` parse | PASS |
+| PM2 reload zonder restartloop | OK (109 restarts cumulatief, +1 voor reload) |
+| Health endpoint 5/5 healthy | mysql + mongodb connected, uptime 46s post-reload |
+| Backfill log bij boot | `registered=0, skipped=0, total=0` (idle state, 0 scheduled items in DB) |
+| Functional E2E | Partial — non-blocking guards maken failure-mode veilig (publish-success blijft intact bij scheduler-error) |
+| Frontend regressie | N/A (backend-only) |
+
+### Niet in scope (toekomstige sessies)
+
+- **Ticketing/Reservations enterprise migratie**: DB migrations (`bookings`/`tickets`/`availability`/`ticket_transfers`/`device_tokens`) + Bull v4 → BullMQ v5 + `ReminderService` activate + integratie + functional E2E. Aparte productie-readiness sessie.
+- Node 20 → 22 LTS upgrade (AWS SDK v3 deprecation jan 2027)
+- Mongoose duplicate schema index warnings (`AuditLog` + `CostLog` timestamp — cosmetisch)
+- Grafana UI + Tempo data-source
+
+### Process learnings
+
+1. **ALTIJD eerst FEITELIJK verifiëren** of openstaande items pending zijn vóór sessie-plan baseren op MEMORY/prompt-aannames. 3 stale aannames in 1 sessie betrapt door eerst inventarisatie.
+2. **Reflectie-vraag werkt OOK omgekeerd**: "is dit niet uitstel van executie?" pakt rationalisering, maar erkenning dat iets reeds gedaan is = NIET uitstel, wel correcte status-rapportage.
+3. **Audit-bevindingen kunnen waardevoller zijn dan implementatie**: 7/8 audit-checks PASS bewees dat platform-staat overeenkomt met enterprise-norm — geen activatie nodig.
 
 ---
 
@@ -1175,6 +1340,8 @@ git pull origin dev
 
 | Versie | Datum | Samenvatting |
 |--------|-------|-------------|
+| **5.6.1** | **2026-05-18** | **FASE A Cosmetic Cleanup**. (A1) Mongoose duplicate `timestamp:1` schema index fix in AuditLog + CostLog (`platform-core/src/services/orchestrator/{auditTrail,costController}/models/`) — verwijderd field-level `index: true` redundant met explicit `schema.index({timestamp:1}, {expireAfterSeconds:7776000})`. Mongoose 9 warning "Duplicate schema index" eliminated (was: 2/process-start). (A1b) **TTL retention geactiveerd** via `dropIndex("timestamp_1")` + `Model.createIndexes()`: beide collections nu met `expireAfterSeconds=7776000` (90 dagen) — voorheen genegeerd door Mongoose vanwege duplicate-key collision (pre-existing functionele bug ontdekt in A1 audit, latent records-pruning werkte niet). (A2) Remote feature branch cleanup: 11 → 6 branches op origin. Verwijderd (alle MERGED in dev): `admin-module-standalone`, `backup-pre-restructure-2025-12-12`, `feature/holibot-2.0`, `feature/media-library-v3`, `upgrade/otel-0.218`. Bewust behouden: `feature/media-library-v2` + `v2.1` (1 commit ahead WIP), `original-files-import` (historisch), `test` (102 commits ahead actief). (A3) `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317` geformaliseerd in `platform-core/.env` (regel 169) — was impliciet via NodeSDK constructor default in `tracing.js:58`. **Audit 8/8 PASS per blok**: Mongoose duplicate-index warning 0 matches, MongoDB single `timestamp_1` per collection mét TTL, smoke 9-27 audit_logs inserts post-action, health 5/5 healthy, PM2 reload normal (110→111), Tempo trace-export onaangetast (`hb-platform-core` 115 traceID/10min). 1 commit `dc99ee8` op `feature/v5.6.1-cosmetic-cleanup-2026-05-17`, merge `f4bca72` op dev. **Rollback**: tag `pre-blok-a1-mongoose-index-2026-05-17`. **Backups**: `/root/backups/2026-05-17-branches-pre-cleanup/`, `/root/backups/2026-05-18-blok-a3-otel-env/`, `/root/backups/2026-05-18-blok-a1b-ttl/`. **Bonus observatie**: GitHub Dependabot 253 vulnerabilities op default branch (3C/100H/131M/19L) — separate v5.6.x security-sessie aanbevolen, niet in FASE A scope. 2 bestanden code (AuditLog.js, CostLog.js). |
+| **5.5.0** | **2026-05-17** | **Mongoose 7.8.8 → 9.6.2 (3-major spring, 4e follow-up van v5.0.0 audit)**. MongoDB driver 5.9.2 → 7.2.0 transitive. Beide root + platform-core packages bijgewerkt naar `^9.6.2`. CHANGELOG-analyse vooraf via WebFetch (migrating_to_8 + migrating_to_9): 9+14 breaking changes, 0 matches in onze codebase (geen `findOneAndRemove`/`rawResult`/`schema.pre()`/`background:true`/`isValidObjectId(num)`/UUID). Pre-scan miste echter `useNewUrlParser`/`useUnifiedTopology` (deprecated mongoose 6, verwijderd in mongodb driver 7) — boot-restartloop gedetecteerd in 8-punts audit stap 4 met `❌ MongoDB connection failed: options usenewurlparser, useunifiedtopology are not supported`. Fix: 2 regels verwijderd uit `mongoose.connect()` options in `platform-core/src/config/database.js`. **8-punts audit 8/8 PASS**: npm audit ROOT 14→10 vulnerabilities (-4 inclusief mongodb driver CVEs), smoke import `mongoose 9.6.2` met alle expected APIs, functional connect 21 collections, PM2 reload stable (uptime stabiel post-fix), `/health` toont `{"mongodb":"connected"}`, `GET /api/v1/pois 200 OK` met MongoDB content, Tempo 5 recente traces `hb-platform-core`, frontend regressie admin.prod + admin.dev + customer + texelmaps allemaal HTTP 200. **Mongoose 9 vereist Node 20.19.0+** (we draaien 20.19.6 ✅). AWS SDK v3 NodeVersionSupportWarning verschijnt (warning: requires Node 22 vanaf januari 2027, geen blocker). Rollback: tag `pre-mongoose9-upgrade-2026-05-17-1838` + `/root/backups/2026-05-17-mongoose9/` (lockfile + package.json snapshots + ROLLBACK.md instructions). Feature branch `feature/mongoose-major-upgrade-2026-05-17`, commits 74b9e95 + 4d3f976, merge `aae4611`. **Action items teller**: 4/5 follow-up SemVer-majors voltooid (OTel + Sentry + Vite 8 + Mongoose). Resterend: BullMQ major (Fase B Blok 4 delayed-jobs, aparte sessie). 5 bestanden (package.json + lockfiles + database.js). |
 | **5.2.0** | **2026-05-15** | **Sentry SDK 7 → 10 + OTel-native dual-export (tweede follow-up van v5.0.0 audit)**. Backend `@sentry/node` ^7.91.0 → ^10.53.0 (3-major spring) + NIEUW `@sentry/opentelemetry` + `@sentry/profiling-node`. Frontend `@sentry/react` ^8.48.0 → ^10.53.0. `tracing.js` refactor 37→84 regels: Sentry.init() vóór NodeSDK (skipOpenTelemetrySetup=true), self-loading dotenv (ESM hoisting), dual span processors (OTLPTraceExporter → Tempo + SentrySpanProcessor → Sentry), SentrySampler + SentryPropagator + SentryAsyncLocalStorageContextManager (NB v10 rename), Sentry.preloadOpenTelemetry() voor ESM hooks. `index.js` Sentry init verwijderd (12 regels), `main.jsx` ongewijzigd. CHANGELOG analyse vooraf bevestigde geen breaking changes voor minimale usage (alleen `Sentry.init()` + `captureException(err, {extra})`). v10 default `sendDefaultPii=false` = GDPR-verbetering. **Verificatie**: backend smoke `[sentry] Client initialized` + `[otel] SDK started`, Vite frontend build 20.25s clean, PM2 /health 200, Sentry test event `13c590b31d974fc3be3c71853284d812` flush=true, Tempo regression 20=20 traces/5min (geen impact), trace_ids in JSON logs. **Apache reverse proxy** (`sentry.holidaibutler.com.conf` + `proxy_wstunnel` enabled) klaar voor publieke Sentry UI na DNS propagatie + certbot. Rollback: tag `pre-sentry-upgrade-2026-05-15-1347` + `/root/backups/2026-05-15/`. 6 bestanden (4 backend + 2 frontend). Resterende follow-ups: Mongoose/BullMQ/Vite (2/4 nu gedaan). |
 | **5.1.1** | **2026-05-15** | **OpenTelemetry SDK 0.218 bump (eerste follow-up van v5.0.0 audit)**. Patch-niveau upgrade ondanks 0.x versioning. `@opentelemetry/sdk-node` `^0.215.0`→`^0.218.0`, `exporter-trace-otlp-grpc` idem, `auto-instrumentations-node` `^0.73.0`→`^0.76.0`. CHANGELOG-analyse vooraf: geen breaking changes, alleen features (`startNodeSDK()` no-arg, ViewOptions wiring, `log_level` config) + routine sub-instrumentation bumps. **Bonus**: npm audit delta `8 (5L, 3H) → 5 (5L)` — 3 high CVEs transitief gefixt. Verificatie: smoke import `[otel] SDK started` + IMPORT OK, PM2 holidaibutler-api online + `/health` 200 in 110ms, **Tempo HTTP API query: 10 hb-platform-core traces in laatste 30 min** (root SELECT/GET/POST spans, dur 1-24ms), trace_id propagatie in PM2 request logs. Rollback: tag `pre-otel-upgrade-2026-05-15-1308` + `/root/backups/2026-05-15/`. Scope: `dev` branch + `holidaibutler-api` PM2 process. Niet naar test/main deze sessie. 2 bestanden (package.json, package-lock.json). Resterende SemVer-major follow-ups: Mongoose, BullMQ, Vite, Sentry 7→8. |
 | **5.3.0** | **2026-05-15** | **Content Studio + Media Library Bug Fixes**. (1) POI images Media Library: thumbnail_url via Image Resize Proxy i.p.v. relatief pad (404 op admin.holidaibutler.com). (2) Knowledge Base documenten klikbaar: MUI ListItem button (deprecated) naar ListItemButton (v5 pattern). (3) Concept-titel propagatie naar child items: PATCH /content/concepts/:id update nu ook content_items.title (kalender toonde oude titel). (4) Tenant-cache invalidatie na concept update (stale data in tabel+kalender). (5) Duplicate image fix: legacy resolution verwijderd uit LIST+DETAIL endpoints. (6) Workflow progress indicator: actuele fase visueel dominant. (7) Content Studio tabel-consistentie: Ideeen toolbar 1:1 met Items (density/kolommen/sneltoetsen). (8) Kolom-toggle bug: ALL_COLUMNS key source->type. (9) Popovers buiten tab-conditionals. |
