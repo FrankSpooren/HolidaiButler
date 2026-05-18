@@ -12,7 +12,9 @@
 
 ## 1. Executive summary
 
-AWS SDK v3 emitteert sinds v3.1045.x een `NodeVersionSupportWarning`: vanaf januari 2027 vereist de SDK Node ≥22. Deze planning beschrijft een staged migratie van Node 20.19.6 naar Node 22.22.3 LTS, opgedeeld in drie uitvoer-sessies (totaal ~24 uur effort), waarbij `holidaibutler-prod` eerst wordt gespiegeld naar een staging-VPS via Hetzner snapshot voor de volledige soak-test.
+AWS SDK v3 emitteert sinds v3.1045.x een `NodeVersionSupportWarning`: vanaf januari 2027 vereist de SDK Node ≥22. Deze planning beschrijft een staged migratie van Node 20.19.6 naar Node 22.22.3 LTS, opgedeeld in **5 uitvoer-sessies** (~25–26.5u actief werk + ~14–16 dagen kalendertijd inclusief gedifferentieerde soak-periodes), waarbij `holidaibutler-prod` eerst wordt gespiegeld naar een PII-gescrubde staging-VPS via Hetzner snapshot voor cumulatief 192u staging-soak vóór productie-cutover.
+
+**Definitieve target prod-cutover**: 30 juni 2026 (6 maanden buffer vóór AWS jan-2027 deadline).
 
 **Geen blockers gedetecteerd** in de top-30 dependency scan: alle huidige versies van Mongoose, Sentry, OpenTelemetry, Temporal, BullMQ, Express, Sequelize, mysql2, ioredis, Socket.IO, Sharp en de MCP/AI-SDK's ondersteunen Node 22.
 
@@ -20,7 +22,9 @@ AWS SDK v3 emitteert sinds v3.1045.x een `NodeVersionSupportWarning`: vanaf janu
 1. `@walletpass/pass-js` latest (7.x) vereist Node ≥24.12 — we blijven op 6.9.1 (engines `>=8`).
 2. `puppeteer-core` latest (25.x) vereist Node ≥22.12 — onze 24.43.1 blijft compatibel; eventuele latere puppeteer-bumps vereisen Node 22.12+ (de meeste 22 LTS patches voldoen daaraan binnen weken).
 
-**Test-strategie**: Optie A — Hetzner snapshot van productie + restore naar staging-VPS + 24u soak vóór productie-cutover.
+**Test-strategie**: Optie A — Hetzner snapshot + PII-scrub + staging-VPS + cumulatief 192u staging-soak + gedifferentieerd 24/48/72u prod-soak per wave (blast-radius weighted).
+
+**GDPR retention** (Art. 5(1)(e) compliant): snapshots 90d ná prod-cutover, staging-VPS 30d ná prod-cutover, hard-delete cron op dag 91.
 
 ---
 
@@ -177,10 +181,10 @@ De prompt-suggestie was "MCP servers eerst". Dit moet **bijgesteld** worden: all
 | 2 | **Sessie 1: Pre-werk** | PM2 ecosystem.config.js refactor: voeg `interpreter` field toe per process (initieel naar Node 20 path) | 0 | Nul-impact change; ecosystem.config.js wordt actief bij volgende `pm2 reload <name>` |
 | 3 | **Sessie 2 (staging)** | Hetzner snapshot productie → restore naar staging-VPS → herhaal alle stappen 4–8 op staging | n.v.t. | Zie §6 |
 | 4 | **Sessie 3 (prod): Wave 1** | `holidaibutler-agenda` (lichtste backend, geen native bindings) | 1 | Minste blast-radius; valideert nvm+PM2 interpreter switch pattern |
-| 5 | **Sessie 3: Wave 2** | `holidaibutler-admin-api` (na start vanuit stopped) — **OR**: skip indien Frank kiest voor permanent verwijderen | 1 | 15 deps, geen native, lage complexiteit |
-| 6 | **Sessie 3: Wave 3** | `holidaibutler-ticketing` (passkit + firebase-admin native rebuilds) | 1 | Eerste service met native bindings — verifieert rebuild-pad voor platform-core wave |
-| 7 | **Sessie 3: Wave 4** | `hb-websites` (Next.js, standalone) | 1 | Onafhankelijk van platform-core; React frontend |
-| 8 | **Sessie 4 (prod): Wave 5** | `platform-core` atomair: `holidaibutler-api` + `hb-temporal-worker` + 6 MCP servers (mistral/apify/deepl/pixtral/chromadb/sistrix) | **8** (apify is 1 van 6 MCP) | Grootste blast-radius; native rebuilds (sharp, profiling-node, temporalio core); apart na 24u soak van wave 1–4 |
+| 5 | **Sessie 3: Wave 2** | `holidaibutler-admin-api` — **conditioneel**: meenemen of permanent verwijderen wordt bepaald na onderzoek in Sessie 1 pre-werk (zie §10.1) | 1 of 0 | 15 deps, geen native, lage complexiteit indien meegenomen |
+| 6 | **Sessie 3: Wave 3** | `holidaibutler-ticketing` (passkit + firebase-admin native rebuilds) | 1 | Eerste service met native bindings — verifieert rebuild-pad voor platform-core wave; **48u soak** wegens 3 native bindings |
+| 7 | **Sessie 3: Wave 4** | `hb-websites` (Next.js, standalone) | 1 | Onafhankelijk van platform-core; React frontend; 24u soak |
+| 8 | **Sessie 4 (prod): Wave 5** | `platform-core` atomair: `holidaibutler-api` + `hb-temporal-worker` + 6 MCP servers (mistral/apify/deepl/pixtral/chromadb/sistrix) | **8** (apify is 1 van 6 MCP) | Grootste blast-radius; native rebuilds (sharp, profiling-node, temporalio core); **72u soak** wegens 3 native bindings + 8 processen + tenant-data flow |
 | skip | — | `holidaibutler-reservations` | 1 | Errored, FASE C scope — wordt opnieuw geactiveerd na ticketing/reservations consolidation sessie, dan ook Node 22 ineens |
 
 **Telling kruisvalidatie**: 1+1+1+1+8 = 12 active processes + 1 skipped (reservations) = 13 totaal. Klopt met PM2 list.
@@ -236,17 +240,20 @@ Voor elk PM2 process geldt het volgende rollback-pad (uitgewerkt in uitvoer-sess
 - DNS-only staging-subdomain `staging.api.holidaibutler.com` voor health-checks
 
 **Staging cutover sequence**:
-1. `hcloud server create-image --type snapshot holidaibutler-prod` → snapshot-ID noteren
+1. `hcloud server create-image --type snapshot holidaibutler-prod` → snapshot-ID noteren (= `pre-node22-prod-snapshot-<date>`, retention 90d ná prod-cutover)
 2. `hcloud server create --image <snapshot-id> --name holidaibutler-staging --type cx22 --location nbg1`
 3. SSH naar staging, verifieer alle 13 PM2 processen draaien identiek
-4. Voer Sessie 1 pre-werk uit op staging (nvm install, ecosystem.config refactor)
-5. Voer Sessie 3 Wave 1–4 uit op staging
-6. 24u soak: monitor health-endpoints, PM2 restart counters (`unstable_restarts` ≤ 0), Tempo traces, Sentry error-rate
-7. Voer Sessie 4 Wave 5 (platform-core atomic) uit op staging
-8. 24u soak: idem
-9. Smoke test suite (zie §6.3) draait op staging
-10. Bij ≥48u soak zonder regressies: akkoord van Frank voor prod-cutover
-11. Snapshot staging als rollback-anchor (`pre-node22-staging-verified-2026-MM-DD`)
+4. **PII-scrub SQL script** op staging: anonymizeer `users.email`, `customers.email/phone/address`, `bookings.guest_name/email`, `ticketing.passkit_holder_name` (GDPR Art. 32 — minimaliseer PII-exposure op niet-productie omgeving). Script lokaal voorbereiden vóór Sessie 2, atomic transaction
+5. Voer Sessie 1 pre-werk uit op staging (nvm install, ecosystem.config refactor)
+6. Voer Sessie 3 Wave 1 (`holidaibutler-agenda`) → **24u soak**
+7. Voer Sessie 3 Wave 2 (`holidaibutler-admin-api` — conditioneel per §10.1) → **24u soak**
+8. Voer Sessie 3 Wave 3 (`holidaibutler-ticketing`) → **48u soak** (3 native bindings)
+9. Voer Sessie 3 Wave 4 (`hb-websites`) → **24u soak**
+10. Voer Sessie 4 Wave 5 (`platform-core` atomic) op staging → **72u soak** (grootste blast-radius)
+11. Per-wave: monitor health-endpoints, PM2 `unstable_restarts ≤ 0`, Tempo traces, Sentry error-rate, native-binding smoke (sharp resize / Temporal workflow / Apple Wallet pass)
+12. Smoke test suite (zie §6.3) groen op staging vóór elke prod-wave
+13. Snapshot staging als rollback-anchor (`post-staging-validated-snapshot-<date>`, retention 90d ná prod-cutover)
+14. Bij staging volledig groen (cumulatief ≥192u soak = ~8 dagen): Frank's akkoord voor prod-cutover
 
 **Productie cutover sequence** (na staging-validatie):
 - Identiek aan staging stappen 4–7, maar met explicit rollback-tag-trigger bij eerste P0 alert
@@ -275,17 +282,17 @@ Verplicht groen voor go/no-go per wave:
 
 | Fase / service | Effort schatting | Risico-niveau | Rollback-complexiteit |
 |---|---|---|---|
-| Sessie 1 — pre-werk (nvm install + ecosystem.config refactor) | 2u | Laag | n.v.t. (geen state-wijziging) |
-| Sessie 2 — Hetzner snapshot + staging-VPS provisioning + initial staging health-check | 4u | Laag | Snapshot-restore (~30 min) |
-| Sessie 2/3 — Staging Node 22 upgrade volledig + 48u soak | 6u actief + 48u passieve soak | Laag-Middel | nvm use 20 + ecosystem.config restore op staging |
-| Sessie 3 Wave 1 — `holidaibutler-agenda` | 1.5u | Laag | <5 min |
-| Sessie 3 Wave 2 — `holidaibutler-admin-api` | 1.5u | Laag (mits Frank kiest 'start') | <5 min |
-| Sessie 3 Wave 3 — `holidaibutler-ticketing` (passkit/firebase native rebuilds) | 2.5u | Middel | <10 min (native rebuild verificatie nodig) |
-| Sessie 3 Wave 4 — `hb-websites` (Next.js) | 2u | Middel (frontend impact) | <10 min |
-| Sessie 4 Wave 5 — `platform-core` atomic (8 processen, native rebuilds) | 4u | **Hoog** (grootste blast-radius) | <15 min (native bindings restore + pm2 reload all) |
-| Post-cutover — 1 week monitoring + warning-cleanup verificatie + MEMORY/CLAUDE update | 2u | Laag | n.v.t. |
-| **Totaal actief werk** | **~25u** | | |
-| **Totaal kalendertijd** | **~5–7 dagen** (incl. 48u staging soak + 24u prod soak per wave) | | |
+| Sessie 1 — pre-werk (nvm install + ecosystem.config refactor + admin-module onderzoek) | 2.5u | Laag | n.v.t. (geen state-wijziging) |
+| Sessie 2 — Hetzner snapshot + staging-VPS provisioning + **PII-scrub SQL script** + initial staging health-check | 4.5u | Laag | Snapshot-restore (~30 min) |
+| Sessie 2/3 — Staging Node 22 upgrade volledig + cumulatief 192u soak (24+24+48+24+72) | 6u actief + ~8d kalendertijd passieve soak | Laag-Middel | nvm use 20 + ecosystem.config restore op staging |
+| Sessie 3 Wave 1 — `holidaibutler-agenda` (24u prod-soak na cutover) | 1.5u | Laag | <5 min |
+| Sessie 3 Wave 2 — `holidaibutler-admin-api` (conditioneel; 24u prod-soak) | 0–1.5u (afhankelijk van §10.1 onderzoek-uitkomst) | Laag | <5 min |
+| Sessie 3 Wave 3 — `holidaibutler-ticketing` (3 native rebuilds; 48u prod-soak) | 2.5u | Middel | <10 min (native rebuild verificatie nodig) |
+| Sessie 3 Wave 4 — `hb-websites` (Next.js standalone; 24u prod-soak) | 2u | Middel (frontend impact) | <10 min |
+| Sessie 4 Wave 5 — `platform-core` atomic (8 processen, 3 native rebuilds; 72u prod-soak) | 4u | **Hoog** (grootste blast-radius) | <15 min (native bindings restore + pm2 reload all) |
+| Sessie 5 — Post-cutover 30d monitoring + warning-cleanup verificatie + 90d snapshot retention cron + MEMORY/CLAUDE update | 2u | Laag | n.v.t. |
+| **Totaal actief werk** | **~25–26.5u** (range door §10.1 conditie) | | |
+| **Totaal kalendertijd** | **~14–16 dagen** (incl. cumulatief 192u staging soak + per-wave prod-soak conform §6.2) | | |
 
 ### 7.2 Risico-register
 
@@ -307,12 +314,14 @@ Verplicht groen voor go/no-go per wave:
 De volgende prerequisites moeten vóór Sessie 1 (pre-werk) groen staan:
 
 1. **Frank's akkoord** op dit plan-document (review + merge naar `dev` + tag `plan/node22-v1.0`)
-2. **Hetzner kostenakkoord** voor staging-VPS (~€6/maand + snapshot storage)
-3. **`holidaibutler-admin-api` beslissing**: starten + meenemen, of permanent verwijderen vóór Node 22 wave
+2. **Hetzner kostenakkoord** voor staging-VPS (~€6/maand voor 30d-actief-na-cutover + ~€0.36/maand snapshot storage voor 30GB × 90d retention)
+3. **`holidaibutler-admin-api` onderzoek** (Sessie 1 pre-werk, max 0.5u): grep usage van endpoints + DB-tabel-isolatie check → beslissing meenemen (Wave 2) of `git rm` codebase
 4. **`holidaibutler-reservations` confirmation**: blijft errored / FASE C scope tot Ticketing/Reservations consolidation
-5. **Onderhoudsvenster-planning**: 24u-soak periodes geven impact-vrije productie; communicatie naar destinations niet nodig (geen breaking API change verwacht), maar wel naar Frank vóór Wave 5 cutover
-6. **AWS SDK jan-2027 deadline-tracking**: blijft in MEMORY.md (al gedaan via v5.6.x changelog); doel is ruim vóór dat datum afronden — voorgestelde target-cutover prod = **uiterlijk Q3 2026**
-7. **Geen openstaande FASE A regressies**: v5.6.2 wijzigingen (Grafana/Tempo + Temporal OTel/Sentry) hebben 7-daagse soak (15-05 tot 22-05) — Sessie 2 pas plannen ná deze soak
+5. **`nvm` install op productie** als allereerste Sessie 1 pre-werk stap (`curl ... nvm-sh/nvm/v0.40.1/install.sh | bash` → `nvm install 22.22.3` → `nvm alias default 20.19.6` zodat huidige binary system-wide ongewijzigd blijft)
+6. **GDPR retention policy** (Optie A per §10.5): 90d snapshot retention, 30d staging-VPS levensduur, PII-scrub SQL voorbereid vóór Sessie 2, DPA / privacy notice update (jouw juridische review buiten technisch scope)
+7. **Onderhoudsvenster-planning**: 24/48/72u-soak periodes geven impact-vrije productie; communicatie naar destinations niet nodig (geen breaking API change verwacht), maar wel naar Frank vóór Wave 5 cutover
+8. **AWS SDK jan-2027 deadline-tracking**: blijft in MEMORY.md (al gedaan via v5.6.x changelog); doel is ruim vóór dat datum afronden — definitieve target-cutover prod = **uiterlijk 30 juni 2026** (per §10.6)
+9. **Geen openstaande FASE A regressies**: v5.6.2 wijzigingen (Grafana/Tempo + Temporal OTel/Sentry) hebben 7-daagse soak (15-05 tot 22-05) — Sessie 1 vroegst plannen 22-05-2026
 
 ---
 
@@ -343,27 +352,102 @@ Te documenteren in een vervolg-uitvoer-sessie (pre-Sessie 3) door PM2 logs te gr
 
 ---
 
-## 10. Open beslispunten voor Frank (vóór akkoord planning-document)
+## 10. Definitieve scope (Frank's beslissingen 2026-05-18)
 
-1. **`holidaibutler-admin-api`**: starten + meenemen in Wave 2 (extra 1.5u), of permanent verwijderen vóór Wave 2?
-2. **Staging-VPS levensduur**: 30 dagen (€6) na cutover bewaren als pre-migratie-anchor, of direct opheffen na succesvolle prod-cutover + 7 dagen soak?
-3. **Native rebuild verification op staging**: 24u soak per wave OF 48u soak na wave 5 (platform-core)? Plan suggereert 24u Wave 1–4 + 48u Wave 5.
-4. **Express 4 vs 5 timing**: Plan houdt Express op 4.18.2 (single-variable change). Express 5 upgrade is separate FASE post-Node22.
-5. **PM2 v6 → v7 upgrade**: PM2 latest is 7.0.1, productie heeft v6 (te verifiëren in Sessie 1). Meenemen of separaat?
-6. **Target cutover datum**: voorgesteld Q3 2026 (ruim vóór jan-2027 AWS hard cutoff). Eerder mogelijk indien planning-akkoord + staging-VPS direct beschikbaar.
+Alle 5 open beslispunten zijn beantwoord. Onderstaande beslissingen zijn vastleggend voor alle uitvoer-sessies.
+
+### 10.1 `holidaibutler-admin-api` — Onderzoeken vóór beslissing
+
+**Beslissing**: NIET blind meenemen, NIET blind verwijderen. Sessie 1 pre-werk (max 0.5u) bevat onderzoek:
+1. Grep `admin-module/backend/src/routes/` voor endpoint-paths
+2. Cross-check tegen `platform-core/src/admin/*` of `routes/admin*` — bestaan dezelfde paths daar?
+3. DB-tabel inventaris: heeft `admin-module/backend` exclusieve tabellen (geen overlap met platform-core)?
+4. Uitkomst rapporteren aan Frank vóór Wave 2:
+   - **Scenario A** (functionaliteit gemigreerd naar platform-core): `git rm -r admin-module/backend/` + remove uit `ecosystem.config.js` + commit `chore(cleanup): permanent verwijderen admin-module/backend (gemigreerd)` → duurzame opruiming, Wave 2 skip
+   - **Scenario B** (unieke functionaliteit): starten + Wave 2 cutover (+1.5u effort)
+
+**Onderbouwing**: een proces in stopped-state zonder owner is technical debt; bewuste beslissing-op-feiten sluit kwetsbaarheid duurzaam af.
+
+### 10.2 Staging-VPS levensduur + snapshot retention — Optie A (GDPR-compliant)
+
+**Beslissing**:
+- `pre-node22-prod-snapshot-<date>`: bewaar **90 dagen** ná succesvolle prod-cutover
+- `post-staging-validated-snapshot-<date>`: bewaar **90 dagen** ná succesvolle prod-cutover
+- Staging-VPS actief: **30 dagen** ná succesvolle prod-cutover, daarna `hcloud server delete` (snapshot blijft als anker)
+- Hard-delete snapshots op dag 91 via cron-job in Sessie 5 (post-cutover)
+- **PII-scrub SQL script** vóór staging-tests in Sessie 2 (+0.5u): anonymizeer email/naam/telefoon/wallet-holder in alle PII-tabellen
+- **DPA / privacy notice update**: retention-policy expliciet documenteren ("technical backups voor disaster recovery worden maximaal 90 dagen bewaard") — jouw juridische review buiten technisch scope
+
+**Onderbouwing**: GDPR Art. 5(1)(e) Storage Limitation + Art. 17 Right to Erasure. AP-handhaving Art. 5 actief, reputatie-risico bij onbeperkt bewaren weegt zwaarder dan financieel boete-risico. EU AI Act stelt geen directe constraint op snapshot-retention voor deze migratie (HolidaiButler content-generation valt vooralsnog niet onder Annex III high-risk).
+
+### 10.3 Native rebuild soak-duur — Gedifferentieerd o.b.v. blast-radius
+
+**Beslissing**: per-wave soak-duur gekoppeld aan native-binding count + blast-radius:
+
+| Wave | Service | Native bindings | Prod-soak |
+|---|---|---|---|
+| 1 | agenda | 0 | **24u** |
+| 2 | admin (conditioneel) | 0 | **24u** |
+| 3 | ticketing | 3 (passkit, pass-js, firebase gRPC) | **48u** |
+| 4 | hb-websites | 0 (Next standalone) | **24u** |
+| 5 | platform-core atomic | 3 (sharp, profiling-node, temporalio core) | **72u** |
+
+Cumulatief staging-soak: ~192u (~8 dagen kalendertijd vóór eerste prod-wave begint).
+
+**Onderbouwing**: risk-weighted soak voorkomt overspecificatie op simpele services + onderspecificatie op kritieke services. Wave 5 verdient 72u omdat Sentry profiler memory-druk patroon pas na 24+u ABI-issues blootlegt + Temporal workflows zijn long-running.
+
+### 10.4 PM2 v6 → v7 upgrade — STRIKT SEPARAAT
+
+**Beslissing**: NIET meenemen in Node 22 sessies. PM2 v6.x blijft op productie.
+
+**Voorwaarde in Sessie 1 pre-werk**: verifieer huidige PM2-versie (`pm2 -v`) + bevestig dat huidige versie engines.node-compatible is met Node 22.22.3 via `npm view pm2@<huidige> engines.node`. Verwachting: alle PM2 v6.x versies hebben `engines.node >=12` of `>=14` — Node 22 dekt dat ruim.
+
+Future FASE-stroom: "FASE D PM2 v7 upgrade" als eigen project ná 30d post-Node22-cutover stabilisatie.
+
+**Onderbouwing**: single-variable-change principe — orthogonale changes ontkoppelen is fundament van diagnoseerbaarheid in productie. PM2 v6→v7 is major-bump met eigen schema-changes (ecosystem.config.js), eigen CLI breaking changes, eigen soak.
+
+### 10.5 Target cutover datum — Uiterlijk 30 juni 2026
+
+**Beslissing**: definitieve target = **30 juni 2026** (eind Q2 / vroege Q3 2026) voor Wave 5 prod-cutover compleet, post-cutover monitoring start.
+
+**Mijlpaal-planning** (per uitvoer-sessie):
+
+| Mijlpaal | Streefdatum | Go/no-go gate |
+|---|---|---|
+| v5.6.2 7-daagse FASE A soak | 15-05 → 22-05-2026 | Geen P0/P1 regressies in v5.6.2 |
+| Sessie 1 pre-werk (nvm install + ecosystem.config refactor + admin-module onderzoek + PII-scrub SQL voorbereid) | week 22 (vanaf 25-05) | nvm install groen + Frank's admin-module beslissing |
+| Sessie 2 staging snapshot + provisioning + PII-scrub uitvoer | week 23 | Staging health-check 13/13 PM2 processes online |
+| Sessie 3/4 staging Node 22 alle 5 waves + cumulatief 192u soak | week 23–24 | Smoke suite groen + Sentry error-rate ≤ baseline |
+| Sessie 3 prod Wave 1 (agenda) + 24u soak | week 25 | PM2 unstable_restarts=0 + health-endpoint 200 |
+| Sessie 3 prod Wave 2 (admin conditioneel) + 24u soak | week 25 | Idem |
+| Sessie 3 prod Wave 3 (ticketing) + 48u soak | week 25 | + Apple Wallet pass-generate smoke |
+| Sessie 3 prod Wave 4 (hb-websites) + 24u soak | week 25–26 | + frontend render-smoke |
+| Sessie 4 prod Wave 5 (platform-core atomic) + 72u soak | week 26 | + Temporal workflow + sharp resize + MCP-queries groen |
+| Sessie 5 post-cutover 30d monitoring + 90d snapshot retention cron + MEMORY/CLAUDE update | week 27+ | n.v.t. (verlengde monitoring) |
+| Target cutover prod compleet | **uiterlijk 30 juni 2026** | Alle 5 waves geverifieerd in productie |
+
+Marge t.o.v. AWS hard cutoff (jan-2027): **6 maanden buffer** voor onverwachte regressies + holiday-season freeze.
+
+**Onderbouwing**: alle planning is rond, geen technische blockers, geen rationele reden tot uitstel. Eerdere cutover = langere periode Node 22 productie-leertijd vóór externe deadline.
 
 ---
 
-## 11. Status-rapport (einde planning-sessie)
+## 11. Status-rapport (einde planning-sessie + Frank's beslissingen verwerkt)
 
 | Aspect | Waarde |
 |---|---|
-| Plan-document gemaakt | `docs/migrations/NODE-22-MIGRATION-PLAN.md` |
+| Plan-document | `docs/migrations/NODE-22-MIGRATION-PLAN.md` (gepatcht met definitieve scope 2026-05-18) |
 | Per-service inventaris | 6 unieke codebases mapped naar 13 PM2 processen |
-| Per-dependency compat-matrix | 30+ top-packages geverifieerd, 0 blockers |
-| Test-strategie | Optie A (Hetzner snapshot + staging VPS) gekozen met motivering |
-| Effort-totaal schatting | ~25u over 4 uitvoer-sessies + 5–7 dagen kalendertijd |
-| Volgende stap | Frank reviewt plan + akkoord voor FASE B Sessie 1 (pre-werk: nvm install + ecosystem.config refactor) |
+| Per-dependency compat-matrix | 30+ top-packages geverifieerd, 0 blockers voor Node 22 |
+| Test-strategie | Optie A (Hetzner snapshot + staging-VPS + cumulatief 192u staging soak + PII-scrub) |
+| Snapshot retention | 90d ná prod-cutover (GDPR Art. 5(1)(e) compliant) |
+| Staging-VPS levensduur | 30d ná prod-cutover |
+| Soak-strategie | Gedifferentieerd: Wave 1+2+4 = 24u, Wave 3 = 48u, Wave 5 = 72u |
+| PM2 v6→v7 upgrade | STRIKT SEPARAAT — Future FASE D, niet in Node 22 sessies |
+| Target cutover prod compleet | **30 juni 2026** (6 maanden buffer vóór AWS jan-2027 deadline) |
+| Effort-totaal schatting | ~25–26.5u actief over 5 uitvoer-sessies + ~14–16 dagen kalendertijd (incl. soaks) |
+| MEMORY.md uitbreiding | +2 regels: ESM JSON imports guardrail + GDPR 90d snapshot retention |
+| Volgende stap | Frank reviewt gepatcht plan + akkoord voor merge naar `dev` + tag `plan/node22-v1.0` + start FASE B Sessie 1 (pre-werk) als nieuwe sessie |
 
 ---
 
