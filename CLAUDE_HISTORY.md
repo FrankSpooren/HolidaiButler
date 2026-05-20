@@ -9433,3 +9433,124 @@ Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 - `platform-core/src/routes/adminPortal.js` (cache invalidation + approve notification + publish-now failed notification)
 - `platform-core/src/services/agents/publisher/index.js` (publish_success + publish_failed notifications)
 - `platform-core/src/services/orchestrator/workers.js` (ai_complete notification)
+
+
+## Sessie 18-20-05-2026: Hetzner SSL Incident & Recovery (v5.9.0)
+
+> <!-- HETZNER-SSL-RECOVERY-V5.9.0 -->
+
+### Incident overzicht
+
+**42 uur productie-outage** (18-05 14:24 → 20-05 09:01 UTC). Vijf samenwerkende oorzaken, drie opeenvolgende Hetzner IP-blockades, drie support-rondes, één telefonische escalatie. Uiteindelijke root cause: mysql2-driver zet `CLIENT_SSL` capability-flag niet automatisch bij `ssl: undefined`, terwijl Hetzner DB-user op `REQUIRE SSL` stond.
+
+### Tijdlijn (UTC)
+
+| Datum-tijd | Wat | Door |
+|---|---|---|
+| 18-05 ~13:00 | FASE B Sessie 1 start (Node 22 pre-werk) | Frank + AI |
+| 18-05 ~14:15 | Backup-script inspectie toont productie-pwd in chat | AI-fout |
+| 18-05 14:20-14:24 | Pwd-rotatie konsoleH + REQUIRE SSL activatie | Frank |
+| 18-05 14:24 | Hetzner IP-block cyclus 1 — productie down | Hetzner auto-defense |
+| 18-05 15:24 | Auto-unblock (60min cooldown) → restart attempt → block cyclus 2 | — |
+| 18-05 16:47 | Auto-unblock cyclus 2 | — |
+| 18-05 17:00 | Eerste Hetzner support-ticket | Frank |
+| 18-05 → 19-05 | 3 tickets, 24u geen Hetzner-respons | — |
+| 19-05 13:00 | HeidiSQL thuis-IP test → confirms pwd-fout-hypothese | Frank |
+| 19-05 ~15:30 | Telefonische escalatie naar Hetzner technical | Frank |
+| 20-05 ~07:00 | Hetzner email: "attempting unencrypted connection met REQUIRE SSL" — **echte root cause** | Hetzner |
+| 20-05 08:00 | CA-cert download + SSL CA-pinning patch | AI |
+| 20-05 08:06 | Eerste recovery — alle endpoints HTTP 200 | AI |
+| 20-05 ~08:20 | TLS read ECONNRESET → mysql2 pool retry-storm → block cyclus 3 | — |
+| 20-05 ~09:00 | Hetzner IP-unban opnieuw | Hetzner |
+| 20-05 09:01 | Defensive pool config + mysql2 3.15.3 consistency + final restart | AI |
+| 20-05 09:01+ | Volledig hersteld, alle smoke-tests groen | — |
+| 20-05 09:30+ | Spawn-task uitvoer: visualTrendDiscovery fix + agenda_events table + ETL 843 events + JSON-parse hook | AI |
+
+### Root cause (5 samenwerkende oorzaken)
+
+1. **AI-fout (primaire trigger)**: `cat /root/daily_mysql_backup.sh` toonde hardcoded pwd in chat.
+2. **Ontbrekende volgorde-discipline**: pwd-rotatie zonder eerst PM2-services te stoppen → failed-auth-burst → fail2ban.
+3. **mysql2 CLIENT_SSL flag**: `ssl: undefined` zet de capability-flag niet → server (REQUIRE SSL on) weigert auth.
+4. **Hetzner UI miscommunicatie**: eerste twee support-rondes wezen verkeerd (netwerk-block, pwd-sync), pas derde response bracht echte oorzaak.
+5. **mysql2 3.16.0 regressie**: agenda + ticketing draaiden op 3.16.0 met SSL-handling-bug → ETIMEDOUT op TCP-niveau zelfs met correcte SSL CA-config.
+
+### Commits + branches
+
+| Branch | Commit | Doel |
+|---|---|---|
+| `dev` | `6989521` | Sessie 1 pre-werk (nvm + ecosystem.config.cjs + audit + PII-draft) |
+| `dev` | `05f1849` | Scenario A — admin-module/backend verwijderd |
+| `dev` | `0035dfc` | Sessie 2 plan-document |
+| `feature/orchestrator-import-fix-2026-05-20` | `b55eb9d` | visualTrendDiscovery import-pad fix (3 occurrences) |
+| `feature/agenda-events-table-2026-05-20` | `04097f9` | DDL doc voor agenda_events tabel (Event.sync result) |
+| `feature/agenda-events-table-2026-05-20` | `7404520` | ETL legacy agenda → events + Event.js afterFind JSON-parse hook |
+
+### Wat is hersteld + state
+
+| Service | Status post-recovery |
+|---|---|
+| `holidaibutler-api` | ✅ Online, SSL CA-pinned, defensive pool |
+| `hb-temporal-worker` | ✅ Online, idem |
+| `holidaibutler-agenda` | ✅ Online, 843 events live, JSON-parse hook actief |
+| `holidaibutler-ticketing` | ✅ Online, mysql2 downgraded 3.16.0 → 3.15.3 |
+| `hb-websites` + 6 MCP servers | ✅ Niet aangeraakt tijdens incident |
+| `holidaibutler-reservations` | ❌ Errored — pre-existing FASE C scope |
+
+### Verificaties post-recovery (allemaal groen)
+
+- `/health` HTTP 200, mysql+mongodb connected
+- `/api/v1/pois` returnt echte data (was 500 tijdens incident)
+- `/api/v1/admin-portal/auth/login` POST → 401 INVALID_CREDENTIALS (correct, niet 500)
+- calpetrip.com homepage HTTP 200
+- admin.holidaibutler.com HTTP 200
+- Restart-counts stabiel sinds finale start (geen crashes, geen retry-storms)
+- TLSv1.3 / AES-256-GCM cipher actief op alle DB-verbindingen
+- 843 events in `agenda_events` met JSON multilingual correct gelezen via Sequelize
+
+### Bestanden gewijzigd in deze sessie
+
+**Server-side (productie)**:
+- `platform-core/src/config/database.js` (SSL CA-pinning + defensive pool master+replica)
+- `agenda-module/src/config/database.js` (idem + dialectOptions block toegevoegd)
+- `agenda-module/src/models/Event.js` (afterFind hook voor 21 JSON velden)
+- `agenda-module/scripts/migrate-legacy-agenda-to-events.js` (NIEUW, ETL script)
+- `agenda-module/.env` (DB_PASSWORD synced naar platform-core .env)
+- `agenda-module/package.json` (mysql2 ^3.6.5 → 3.15.3 pin)
+- `ticketing-module/config/database.js` (SSL CA-pinning + defensive pool, 3 environments)
+- `ticketing-module/package.json` (mysql2 → 3.15.3)
+- `platform-core/src/services/orchestrator/workers.js` (3× visualTrendDiscovery import-pad fix)
+
+**Server-side (verwijderd Scenario A)**:
+- `admin-module/backend/` complete tree (`git rm -r`, 42 files)
+
+**Server-side (nieuw)**:
+- `/etc/ssl/certs/hetzner-mariadb-ca.pem` (Hetzner CA-cert)
+- `ecosystem.config.cjs` (bootstrap voor Node 22 wave-cutover)
+- `docs/migrations/NODE-22-MIGRATION-PLAN.md` (461 regels)
+- `docs/migrations/node22-session1-admin-module-investigation.md` (105 regels)
+- `docs/migrations/node22-session2-plan.md` (265 regels)
+- `docs/migrations/node22-session2-pii-scrub.sql` (270 regels)
+- `docs/migrations/node22-incident-post-mortem.md` (150 regels)
+- `docs/migrations/2026-05-20-create-agenda-events-table.sql` (DDL)
+- `/root/scripts/node22-recovery-restart.sh`
+- `/root/scripts/patch-pool-defensive.py`
+- `/root/backups/2026-05-18-node22-session1/` (admin-module backup + dump.pm2 baseline)
+- `/root/backups/2026-05-20-agenda-pre-etl/agenda-data.json` (843 rijen JSON backup)
+
+### Spawn-tasks aangemaakt (chip-tray)
+
+- ETL agenda → agenda_events (uitgevoerd in deze sessie)
+- Restore agenda_events DB table (uitgevoerd in deze sessie)
+- Fix Orchestrator visualTrendDiscovery import path (uitgevoerd in deze sessie)
+- Add CA-pinned SSL to mysql2 config (uitgevoerd in deze sessie)
+- Remove dead adminModule HTTP client (openstaand)
+- Enforce REQUIRE SSL on prod DB user (openstaand)
+- Harden mysql credentials in /root scripts (openstaand)
+- Fix agenda module mysql2 ETIMEDOUT (gefixt door downgrade 3.16.0 → 3.15.3)
+
+### Volgende stappen
+
+- PR + merge van `feature/orchestrator-import-fix-2026-05-20` en `feature/agenda-events-table-2026-05-20` naar `dev`
+- Commit ongecommite recovery-changes op `dev`
+- FASE B Sessie 2 (Node 22 migratie — staging snapshot + PII-scrub) plannen, niet eerder dan na 30d incident-soak (= ~20-06-2026)
+- mysql2 3.16.0+ versie monitoring tot regressie gepatcht is
