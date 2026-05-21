@@ -133,6 +133,36 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - `/root/scripts/patch-pool-defensive.py` — idempotent pool-config patch
 - `agenda-module/scripts/migrate-legacy-agenda-to-events.js` — ETL met `--dry-run` optie
 
+### FASE B Sessie 2 — 14-dagen incident-soak (beslissing 2026-05-21)
+
+> <!-- NODE22-S2-SOAK-14D-2026-05-21 -->
+> **Beslissing**: na GO/NO-GO evaluatie 2026-05-21 — 14d soak gekozen (gradient
+> tussen 0d en 30d). Start S2-A verschoven naar **2026-06-04** (week 23).
+> Target prod-cutover 30-06-2026 blijft haalbaar. AWS jan-2027 buffer 7 maanden.
+
+**Onderbouwing**: 4 onbewezen aannames uit v5.9.0-recovery vereisen meet-window:
+defensive pool config onder vol load-cyclus (7-14d), Hetzner CA-pinning over
+maintenance-cyclus (14-30d), mysql2 3.15.3 freeze vs latente CVEs, defensive
+connectTimeout vs Hetzner-hiccup-patroon. 14d dekt ~60% van 30d-restrisico
+mits mitigatie-spawn-tasks afgerond.
+
+**Mitigatie-spawn-tasks tijdens soak** (volgorde op risico-reductie per uur effort):
+
+1. Working-tree cleanup — 19 `.bak` files + leeg artifact `R7,]hVcq2Qkvtt` weghalen, incl. shred van `agenda-module/.env.pre-pwd-sync.bak` (dead credentials residue)
+2. `hcloud` CLI install op productie-VPS (eenmalig, eis voor S2-A)
+3. mysql2 versie-monitoring inrichten (dependabot of npm-check-updates cron)
+4. Hardcoded credentials uit `/root/daily_mysql_backup.sh` + 10 Python utils
+5. Dead `adminModule` HTTP-client cleanup (`platform-core/src/integrations/adminModule.js`)
+6. PII-scrub SQL droogloop tegen prod-schema (syntax + kolom-existence, zonder uitvoer)
+
+**Frank-acties parallel**: Hetzner priority-contract evaluatie · `HETZNER_API_TOKEN`
+voorbereiden (scope server+image+ssh-key) · DNS staging.api.holidaibutler.com
+A-record voorbereiden (TTL 300s) · `REQUIRE SSL` op user `pxoziy_1` activeren.
+
+**Harde grenzen tijdens soak**: geen S2-A/B/C/D/E/F/G/H uitvoer, geen
+agenda-module wijzigingen (Scenario C status quo), geen SemVer-major bumps,
+geen productie-PM2-wijzigingen anders dan strikt noodzakelijk.
+
 ---
 
 ## 🕰️ Uitgestelde Architectuur-Beslissingen — beoordelen Q3 2026

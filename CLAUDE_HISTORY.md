@@ -9554,3 +9554,49 @@ Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 - Commit ongecommite recovery-changes op `dev`
 - FASE B Sessie 2 (Node 22 migratie — staging snapshot + PII-scrub) plannen, niet eerder dan na 30d incident-soak (= ~20-06-2026)
 - mysql2 3.16.0+ versie monitoring tot regressie gepatcht is
+
+---
+
+## Sessie 2026-05-21: FASE B Sessie 2 — GO/NO-GO + 14d soak besloten
+
+> <!-- NODE22-S2-SOAK-14D-2026-05-21 -->
+
+### Context
+
+Verwacht: start FASE B Sessie 2 (Node 22 staging snapshot + PII-scrub + D5 DB-isolatie + handover Sessie 3). Werkelijk: pre-condities-check toonde **pre-conditie 1 (30d incident-soak) hard rood** — vandaag is dag 1 ná v5.9.0 cutover, niet dag 30. Frank koos na impact-analyse voor **14d gradient-pad** in plaats van 0d (= start vandaag) of 30d (= start 20-06).
+
+### Pre-condities status (vastgesteld 2026-05-21 15:14 UTC)
+
+| # | Pre-conditie | Status |
+|---|---|---|
+| 1 | Datum ≥ 2026-06-20 (30d incident-soak) | 🔴 vandaag = dag 1 |
+| 2 | Productie stable | 🟢 11/12 services online, health 200 |
+| 3 | Geen retry-storms (50 err-lines) | 🟢 0 ETIMEDOUT/ECONNRESET/access-denied |
+| 4 | TCP naar prod-DB werkt | 🟢 OPEN |
+| 5 | D5 STAGING_DB_* (7 vars) | 🟢 alle aanwezig in platform-core/.env |
+| 6 | Hetzner CA-cert | 🟢 /etc/ssl/certs/hetzner-mariadb-ca.pem, 2472 bytes |
+| 7 | `hcloud` CLI | 🔴 NOT INSTALLED |
+| 8 | HETZNER_API_TOKEN (geroteerd) | ⏸ Frank input |
+| 9 | DNS staging-subdomain | ⏸ Frank input |
+
+### Frank's beslissing (na impact-analyse)
+
+**Gekozen pad**: 14d soak — start S2-A op **2026-06-04** (do, week 23).
+
+Restrisico ~40% van 30d-pad; gemitigeerd via 6 spawn-tasks tijdens soak (zie CLAUDE.md subsectie "FASE B Sessie 2 — 14-dagen incident-soak").
+
+### Spawn-task 1 + 2 deze sessie
+
+- **Spawn-task 1** (working-tree cleanup): 19 `.bak` files inventariseerd, incl. `agenda-module/.env.pre-pwd-sync.bak` met dead credentials (geroteerd, security hardening). Leeg artifact `R7,]hVcq2Qkvtt` (0 bytes, mtime 18-05 13:37 UTC = midden in Sessie 1, klassieke shell-paste-typo). Uitvoer in tweede commit deze sessie.
+- **Spawn-task 2** (`hcloud` CLI install): Debian apt of upstream binary, eenmalig setup zonder context-creatie. Uitvoer in tweede commit deze sessie.
+
+### Open follow-ups (post-sessie, in soak-periode)
+
+- Spawn-task 3-6 (mysql2 monitoring, `/root` credentials, dead adminModule client, PII-scrub droogloop)
+- Frank-acties parallel: Hetzner priority-contract, API-token, DNS, REQUIRE SSL pxoziy_1
+- Aanvullende housekeeping: `admin-module/.env*` (4 files) weeskinderen na Scenario A — NIET in spawn-task 1 scope, separate sessie
+
+### Volgende S2-A pre-flight (vroegst 2026-06-04)
+
+Herhaal complete pre-condities-checklist. Verifieer: ≥14d sinds v5.9.0, alle spawn-tasks gesloten, HETZNER_API_TOKEN gereed, DNS A-record gereed.
+
