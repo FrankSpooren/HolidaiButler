@@ -9633,9 +9633,9 @@ Totaal: **14 verwijderd** (13 incident/parallel-recente `.pre-*.bak` + 1 mystery
 
 ```
 # Frank via SSH-stdin, niet via chat:
-ssh holidaibutler-prod 'hcloud context create node22-migration'
+ssh holidaibutler-prod 'hcloud context create node22-migration-staging'
 # (Frank plakt token bij interactieve prompt, geen output in chat)
-hcloud context list   # verifieer ACTIVE=node22-migration
+hcloud context list   # verifieer ACTIVE=node22-migration-staging
 ```
 
 **Pre-flight S2-A status na deze sessie**:
