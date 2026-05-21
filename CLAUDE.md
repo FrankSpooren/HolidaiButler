@@ -134,6 +134,51 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 - `agenda-module/scripts/migrate-legacy-agenda-to-events.js` — ETL met `--dry-run` optie
 
 ---
+
+## 🕰️ Uitgestelde Architectuur-Beslissingen — beoordelen Q3 2026
+
+> <!-- DEFERRED-DECISIONS-V1 -->
+> **Doel van deze sectie**: bewust uitgestelde architectuur-keuzes zichtbaar maken
+> zodat ze niet wegglijden in het achterhoofd en bij elke nieuwe sessie helder is
+> dat een definitieve richting nog te kiezen is.
+
+### Agenda-module vs platform-core agenda-route (Scenario C — status quo, beslissing Q3 2026)
+
+**Vastgelegd**: 2026-05-21
+
+**Situatie**: er bestaan twee parallelle agenda-implementaties:
+
+| Wat | Endpoint | Data-bron | Status |
+|---|---|---|---|
+| **PRODUCTIE** | `/api/v1/agenda/events` op `api.holidaibutler.com` (via Apache) | `agenda` + `agenda_dates` tabellen (43 + 7 kolommen, VARCHAR-per-taal) | ✅ Live, bedient calpetrip.com |
+| **EXPERIMENTEEL** | `/api/agenda/events` op `localhost:5003` (NIET via Apache geroute) | `agenda_events` tabel (JSON multilingual, UUID PK) | ⚠ Draait, geen consumer |
+
+**Achtergrond**: een MongoDB → MySQL refactor (agenda-module met modern schema, CRUD-API, JSON multilingual) is **half uitgevoerd**: model + service + PM2-process aanwezig, maar frontend niet omgeleid + scraper niet omgeschakeld. Daarbovenop: laatste scraper-run = 17-03-2026 (`agenda` tabel data is 2 maanden statisch).
+
+**Bewuste keuze (Frank, 2026-05-21)**: Scenario C — status quo behouden, beslissing uitstellen tot Q3 2026.
+
+**Bindende afspraken tot beslissing**:
+
+1. **Geen nieuwe features** op `agenda_events` tabel of op agenda-module endpoints. Voorkomt verdere bifurcatie.
+2. **Geen nieuwe features** op `agenda` + `agenda_dates` tabellen anders dan strikt noodzakelijke productie-fixes. Voorkomt dat refactor onmogelijk wordt.
+3. **agenda_events** bevat 843 events (ETL pass 1 van 20-05-2026), is **niet** een productie-data-laag — beschouw als refactor-target met snapshot-data.
+4. **agenda-module PM2-service** blijft draaien als "ready voor toekomstige cutover" — niet kosten-efficiënt maar acceptabel voor refactor-optionaliteit.
+
+**Te besluiten in Q3 2026 (strategische sessie)**:
+
+- **Scenario A**: refactor afmaken. Frontend omleiden naar agenda-module endpoint, scraper revivaliseren of admin-CRUD-flow opzetten, multi-tenancy in `agenda_events.destination_id` toevoegen, iCal-export porten, 5 interne consumers omleiden (Holibot, search, content top-25, AI content, orchestrator). Effort: 2-3 hele sessies. Pro: enterprise-conform schema-evolutie, schaalt naar 50 destinations.
+- **Scenario B**: refactor terugdraaien. `pm2 delete holidaibutler-agenda` + `git rm agenda-module/` + `DROP TABLE agenda_events`. Behoud `agenda` + `agenda_dates` als enige data-laag (zoals admin-module Scenario A). Effort: 1u. Pro: minder operationele complexiteit.
+
+**Pre-conditie voor beslissing**: helderheid over event-acquisitie-strategie:
+- Is HolidaiButler actief evenementen aan het scrapen / aggregeren?
+- Komen events van automated scrapers of destination-admin CRUD?
+- Verwachte volume bij 50-destination scale?
+
+Zonder antwoord op deze vragen is elke tabel-keuze een gok.
+
+**Documentatie-anker**: zie `docs/migrations/agenda-architecture-analysis-2026-05-21.md` (TODO indien dieper documentatie gewenst). Huidige toelichting in CLAUDE_HISTORY.md sessie-entries 20-21 mei 2026.
+
+---
 ## 🩹 BUTE Publish Resolution (v5.3.1 – v5.4.0) — COMPLEET 16 mei 2026
 
 > **Strategic context**: BUTE fietsfair-post (item 248 FB + 249 IG, scheduled
