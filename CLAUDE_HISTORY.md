@@ -9587,8 +9587,67 @@ Restrisico ~40% van 30d-pad; gemitigeerd via 6 spawn-tasks tijdens soak (zie CLA
 
 ### Spawn-task 1 + 2 deze sessie
 
-- **Spawn-task 1** (working-tree cleanup): 19 `.bak` files inventariseerd, incl. `agenda-module/.env.pre-pwd-sync.bak` met dead credentials (geroteerd, security hardening). Leeg artifact `R7,]hVcq2Qkvtt` (0 bytes, mtime 18-05 13:37 UTC = midden in Sessie 1, klassieke shell-paste-typo). Uitvoer in tweede commit deze sessie.
-- **Spawn-task 2** (`hcloud` CLI install): Debian apt of upstream binary, eenmalig setup zonder context-creatie. Uitvoer in tweede commit deze sessie.
+- **Spawn-task 1** (working-tree cleanup): UITGEVOERD 2026-05-21 ~15:33 UTC. Scope verfijnd op `*.pre-*.bak` (= incident/parallel-recente residu, niet alle .bak). 12 files via `find -delete` (depths 1-5), 1 dead-credentials file (`agenda-module/.env.pre-pwd-sync.bak`) via `shred -u -n 3` (3-pass overwrite + rename + unlink), 1 leeg artifact `R7,]hVcq2Qkvtt` (0 bytes, mtime 18-05 13:37 UTC = klassieke shell-paste-typo midden in Sessie 1) via `rm`. Eindstand: `find -name '*.pre-*.bak'` = 0, `git status --short` leeg, working tree schoon vóór toekomstige S2-A snapshot.
+- **Spawn-task 2** (`hcloud` CLI install): UITGEVOERD 2026-05-21 ~15:33 UTC. `apt-get install -y hcloud-cli` → `1.39.0-2ubuntu0.24.04.3` uit Hetzner Ubuntu Noble mirror (server is Ubuntu 24.04, niet Debian zoals initieel aangenomen). `hcloud --help` + `hcloud context list` functional verified. Token-context wordt door Frank via stdin-prompt aangemaakt vlak vóór S2-A — niet vandaag, geen secrets in chat.
+
+### Spawn-task uitvoer-uitkomst (2026-05-21 commit B)
+
+> <!-- NODE22-SPAWN-1-2-EXECUTED-2026-05-21 -->
+
+**Cleanup-resultaat** (spawn-task 1):
+
+| Bestand | Methode | Reden |
+|---|---|---|
+| `agenda-module/.env.pre-pwd-sync.bak` | `shred -u -n 3` | Dead credentials residue (rotated 18-05) — DoD: 3-pass overwrite |
+| `CLAUDE.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `CLAUDE.md.pre-deferred-decisions.bak` | `find -delete` | Parallel-sessie residu (vandaag 15:07) |
+| `CLAUDE_HISTORY.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `docs/strategy/HolidaiButler_Master_Strategie.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `agenda-module/src/config/database.js.pre-ca-pinning.bak` | `find -delete` | SSL CA-pinning patch residu |
+| `agenda-module/src/config/database.js.pre-pool-fix.bak` | `find -delete` | Defensive pool patch residu |
+| `agenda-module/src/models/Event.js.pre-jsonparse.bak` | `find -delete` | JSON-parse hook patch residu |
+| `platform-core/src/config/database.js.pre-ca-pinning.bak` | `find -delete` | Idem |
+| `platform-core/src/config/database.js.pre-pool-fix.bak` | `find -delete` | Idem |
+| `platform-core/src/services/orchestrator/workers.js.pre-import-fix.bak` | `find -delete` (depth 5) | visualTrendDiscovery import-fix residu |
+| `ticketing-module/config/database.js.pre-ca-pinning.bak` | `find -delete` | Idem |
+| `ticketing-module/config/database.js.pre-pool-fix.bak` | `find -delete` | Idem |
+| `R7,]hVcq2Qkvtt` | `rm` | Onbekend leeg artifact (0 bytes, klassieke shell-paste-typo) |
+
+Totaal: **14 verwijderd** (13 incident/parallel-recente `.pre-*.bak` + 1 mystery). Git history bewaart alle pre-incident states (rollback via `git log`).
+
+**Buiten scope spawn-task 1** (gemeld voor latere housekeeping-sessie):
+- `customer-portal/frontend/backup-logos-20241216/*.bak` (4 files, dec-2024 logo-backups, pre-existing)
+- `.github/workflows/archived/deploy-test-monolithic.yml.bak` (april 2026, pre-existing)
+- `CLAUDE.md.bak` (12-04-2026, pre-existing — geen `pre-*` infix)
+- `platform-core/src/routes/adminPortal.js.bak` (06-05-2026, pre-existing)
+- `admin-module/.env*` (4 files, weeskinderen na Scenario A admin-module/backend verwijdering)
+
+**hcloud-resultaat** (spawn-task 2):
+
+- Package: `hcloud-cli 1.39.0-2ubuntu0.24.04.3` (Hetzner Ubuntu Noble mirror)
+- Functional smoke: `hcloud --help` returnt usage-output, `hcloud context list` returnt lege tabel (klaar voor context-create vlak vóór S2-A)
+- Geen reboot vereist ondanks apt-meldingen over kernel-update (separate maintenance window, geen impact op huidig sessie)
+- Versie 1.39 dekt alle S2-A/S2-B/S2-G blokken (server create-image, server create, image list, server describe, server delete, image delete)
+
+**Token-flow voor S2-A** (te uitvoeren vlak vóór 2026-06-04):
+
+```
+# Frank via SSH-stdin, niet via chat:
+ssh holidaibutler-prod 'hcloud context create node22-migration'
+# (Frank plakt token bij interactieve prompt, geen output in chat)
+hcloud context list   # verifieer ACTIVE=node22-migration
+```
+
+**Pre-flight S2-A status na deze sessie**:
+
+| Pre-conditie | Status | Verandering deze sessie |
+|---|---|---|
+| 1. Datum ≥ 2026-06-04 (14d gradient) | 🔴 dag 1 van 14 | n.v.t. (wachten) |
+| 2-6 | 🟢 onveranderd | n.v.t. |
+| 7. hcloud CLI | 🟢 nu **GROEN** | Spawn-task 2 |
+| 8-9 (Frank actions) | ⏸ | Open |
+
+Aanvullend: working tree schoon (`git status --short` leeg) — snapshot-hygiene OK voor toekomstige S2-A.
 
 ### Open follow-ups (post-sessie, in soak-periode)
 
