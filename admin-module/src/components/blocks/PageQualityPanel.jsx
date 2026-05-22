@@ -40,7 +40,7 @@ export default function PageQualityPanel({ pageId, onValidated }) {
     if (!pageId) return;
     setLoading(true);
     try {
-      const { data } = await client.get(`/admin-portal/pages/${pageId}/validate`);
+      const { data } = await client.get(`/pages/${pageId}/validate`);
       setResult(data);
       if (onValidated) onValidated(data);
     } catch {

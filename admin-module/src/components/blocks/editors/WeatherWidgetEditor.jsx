@@ -52,7 +52,10 @@ const WMO_DESCRIPTIONS = {
   99: 'Onweer met zware hagel',
 };
 
-function getWeatherDesc(code) {
+function getWeatherDesc(code, fallbackDescription) {
+  // OpenWeather geeft description direct in response (gelocaliseerd) — gebruik dat.
+  // WMO_DESCRIPTIONS blijft als backup voor edge-cases.
+  if (fallbackDescription && String(fallbackDescription).trim()) return String(fallbackDescription);
   return WMO_DESCRIPTIONS[code] || 'Onbekend';
 }
 
@@ -108,12 +111,17 @@ function WeatherPreview({ destinationId, withTip, tipLocale }) {
 
       {data && (
         <>
-          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
             <Typography variant="h4" sx={{ fontWeight: 700 }}>{data.current.temperature}°C</Typography>
             <Typography variant="body2" color="text.secondary">
-              {getWeatherDesc(data.current.weather_code)} · Wind {data.current.wind_speed} km/u
+              {getWeatherDesc(data.current.weather_code, data.current.description)}
             </Typography>
           </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            Voelt als {data.current.feels_like}°C · Wind {data.current.wind_speed} km/u
+            {data.current.humidity !== null && data.current.humidity !== undefined && ` · Vochtigheid ${data.current.humidity}%`}
+            {data.current.pressure && ` · ${data.current.pressure} hPa`}
+          </Typography>
 
           {data.brand_tip && (
             <Alert severity="info" icon={<AutoAwesomeIcon fontSize="small" />} sx={{ mb: 1.5 }}>
@@ -139,7 +147,7 @@ function WeatherPreview({ destinationId, withTip, tipLocale }) {
           )}
 
           <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
-            Bron: open-meteo.com · gratis · GDPR-compliant (EU-hosted)
+            Bron: openweathermap.org · consistent met Chatbot + personaliseerder + content-readiness · cost-tracked
           </Typography>
         </>
       )}
