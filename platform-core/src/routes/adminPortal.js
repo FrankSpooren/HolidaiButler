@@ -11301,11 +11301,19 @@ router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), w
 
       // Parse based on file type
       if (ext === '.pdf') {
-        const pdfParse = (await import('pdf-parse')).default;
+        // pdf-parse v2 API: PDFParse class met getText() / getInfo() methods
+        const { PDFParse } = await import('pdf-parse');
         const pdfBuffer = fs.readFileSync(filePath);
-        const pdfData = await pdfParse(pdfBuffer);
-        text = pdfData.text || '';
-        logger.info(`[BrandKnowledge] Parsed PDF: ${pdfData.numpages} pages, ${text.length} chars`);
+        const parser = new PDFParse({ data: pdfBuffer });
+        try {
+          const textResult = await parser.getText();
+          text = textResult?.text || '';
+          let numpages = 0;
+          try { const info = await parser.getInfo(); numpages = info?.numPages || info?.numpages || 0; } catch { /* info optional */ }
+          logger.info(`[BrandKnowledge] Parsed PDF (v2 API): ${numpages} pages, ${text.length} chars`);
+        } finally {
+          try { await parser.destroy(); } catch { /* cleanup */ }
+        }
       } else if (ext === '.docx' || ext === '.doc') {
         const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ path: filePath });
