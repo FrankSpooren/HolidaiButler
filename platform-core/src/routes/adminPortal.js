@@ -11268,7 +11268,7 @@ const knowledgeStorage = multer.diskStorage({
 });
 const knowledgeUpload = multer({
   storage: knowledgeStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -11286,7 +11286,7 @@ const knowledgeUpload = multer({
 router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), (req, res) => {
   knowledgeUpload.single('file')(req, res, async (err) => {
     if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'Bestand te groot (max 20MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
     }
     if (!req.file) {

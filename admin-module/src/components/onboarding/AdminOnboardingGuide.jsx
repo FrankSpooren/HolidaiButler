@@ -16,7 +16,7 @@ const STEPS = [
   {
     icon: PaletteIcon,
     titleKey: 'onboardingGuide.step1Title',
-    titleFallback: 'Vul uw Merk Profiel in',
+    titleFallback: 'Vul uw Merkprofiel in',
     descKey: 'onboardingGuide.step1Desc',
     descFallback: 'Voeg uw bedrijfsnaam, branche, USPs en missie toe. Dit helpt de AI om on-brand content te genereren.',
     path: '/branding',

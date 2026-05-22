@@ -60,6 +60,22 @@ OUTPUT JSON SCHEMA:
   "seo_description": "SEO description (140-160 chars)"
 }`;
 
+// Helper: robuust JSON-object extract uit AI-output (handelt markdown code-fence,
+// preamble/postamble text). v2 fix Mistral wraps json in ```json ... ``` ondanks
+// responseFormat=json_object (22-05-2026, BLOK B v4).
+function extractJsonObject(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return null;
+  // Strip markdown code-fence indien aanwezig
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const cleaned = fenceMatch ? fenceMatch[1] : raw;
+  // Extract eerste { ... } JSON object
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!objMatch) return null;
+  return JSON.parse(objMatch[0]);
+}
+
 export async function handlePagesAutoFillBasis(req, res) {
   const startedAt = Date.now();
   let aiLogId = null;
@@ -129,9 +145,10 @@ export async function handlePagesAutoFillBasis(req, res) {
 
     let generated = null;
     try {
-      generated = typeof raw === 'string' ? JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim()) : raw;
+      generated = extractJsonObject(raw);
+      if (!generated) throw new Error('No JSON object extracted from AI output');
     } catch (parseErr) {
-      logger.warn('[pages-autofill] JSON parse failed:', parseErr.message);
+      logger.warn('[pages-autofill] JSON parse failed:', parseErr.message, '— raw preview:', typeof raw === 'string' ? raw.substring(0, 200) : typeof raw);
       return res.status(502).json({ success: false, error: { code: 'AI_OUTPUT_INVALID', message: 'AI returned non-JSON output' } });
     }
 

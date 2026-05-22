@@ -283,7 +283,7 @@ export default function BrandProfileBootstrapDialog({
           <>
             <Button onClick={() => setSuggestion(null)}>Opnieuw genereren</Button>
             <Button onClick={handleAccept} variant="contained" color="primary">
-              Accepteer en vul Merk Profiel
+              Accepteer en vul Merkprofiel
             </Button>
           </>
         )}

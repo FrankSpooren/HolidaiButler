@@ -98,9 +98,10 @@ async function callMistralWithRetry({ systemPrompt, userPrompt, sources, sourceL
 
     let parsed = null;
     try {
-      parsed = typeof raw === 'string' ? JSON.parse(raw.replace(/^```json\s*|\s*```$/g, '').trim()) : raw;
+      parsed = extractJsonObject(raw);
+      if (!parsed) throw new Error('No JSON object extracted from AI output');
     } catch (parseErr) {
-      logger.warn('[brand-bootstrap] JSON parse failed (attempt ' + attempt + '):', parseErr.message);
+      logger.warn('[brand-bootstrap] JSON parse failed (attempt ' + attempt + '):', parseErr.message, '— raw preview:', typeof raw === 'string' ? raw.substring(0, 200) : typeof raw);
       continue;
     }
 
@@ -134,6 +135,22 @@ async function callMistralWithRetry({ systemPrompt, userPrompt, sources, sourceL
   }
 
   return { parsed: lastResult, validation: lastValidation, attempts: MAX_RETRIES + 1 };
+}
+
+// Helper: robuust JSON-object extract uit AI-output (handelt markdown code-fence,
+// preamble/postamble text). v2 fix Mistral wraps json in ```json ... ``` ondanks
+// responseFormat=json_object (22-05-2026, BLOK B v4).
+function extractJsonObject(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return null;
+  // Strip markdown code-fence indien aanwezig
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const cleaned = fenceMatch ? fenceMatch[1] : raw;
+  // Extract eerste { ... } JSON object
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!objMatch) return null;
+  return JSON.parse(objMatch[0]);
 }
 
 export async function handleBrandProfileBootstrap(req, res) {

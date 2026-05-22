@@ -305,8 +305,8 @@ export default function ProvenancePanel({ itemId, body }) {
                         const tooltip = hasUrl
                           ? `Open bron: ${s.url}`
                           : canDeepLink
-                            ? `Open bron in Merk Profiel → Knowledge Base`
-                            : 'Bron niet meer beschikbaar in Merk Profiel';
+                            ? `Open bron in Merkprofiel → Knowledge Base`
+                            : 'Bron niet meer beschikbaar in Merkprofiel';
                         return (
                           <Tooltip key={s.id || s.name} title={tooltip} arrow>
                             <Chip

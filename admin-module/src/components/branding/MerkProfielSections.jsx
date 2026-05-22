@@ -383,7 +383,7 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
                         }
                       }
 
-                      setSnack({ open: true, message: 'Analyse overgenomen in Merk Profiel en Tone of Voice', severity: 'success' });
+                      setSnack({ open: true, message: 'Analyse overgenomen in Merkprofiel en Tone of Voice', severity: 'success' });
                       setWebsiteAnalysis(null);
                     }}>
                       Overnemen in profiel
