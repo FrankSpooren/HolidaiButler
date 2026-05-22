@@ -31,7 +31,7 @@ import { mysqlSequelize } from '../../config/database.js';
 import { QueryTypes } from 'sequelize';
 import logger from '../../utils/logger.js';
 import { buildBrandContextStructured } from '../../services/agents/contentRedacteur/brandContext.js';
-import embeddingService from '../../services/embeddingService.js';
+import embeddingService from '../../services/holibot/embeddingService.js';
 import { validateContent } from '../../services/outputValidator.js';
 import { buildProvenance } from '../../services/provenanceService.js';
 import { translateTexts } from '../../services/translationService.js';
