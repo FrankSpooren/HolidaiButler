@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const EMBED_TYPES = [
   { value: 'youtube', label: 'YouTube' },
@@ -27,8 +27,8 @@ export default function ConsentEmbedEditor({ data, onChange }) {
       <SelectField label="Aspect ratio" value={data.aspectRatio || '16:9'} options={ASPECT_OPTIONS} onChange={v => u('aspectRatio', v)} />
       <TextField label="Height (px, optional)" value={data.height || ''} onChange={v => u('height', parseInt(v) || null)} type="number" />
       <Divider sx={{ my: 1 }} />
-      <TextField label="Consent text" value={data.consentText || ''} onChange={v => u('consentText', v)} helperText="Default: 'Click to load [type] content'" />
-      <TextField label="Privacy note" value={data.privacyNoteText || ''} onChange={v => u('privacyNoteText', v)} multiline />
+      <TranslatableField label="Consent text" value={data.consentText} onChange={v => u('consentText', v)} helperText="Default: 'Click to load [type] content'" />
+      <TranslatableField label="Privacy note" value={data.privacyNoteText} onChange={v => u('privacyNoteText', v)} multiline rows={2} />
       <TextField label="Privacy policy URL" value={data.privacyPolicyUrl || ''} onChange={v => u('privacyPolicyUrl', v)} />
       <TextField label="Thumbnail image URL" value={data.thumbnailImage || ''} onChange={v => u('thumbnailImage', v)} />
       <SwitchField label="Remember consent (per type)" checked={data.rememberConsent !== false} onChange={v => u('rememberConsent', v)} />

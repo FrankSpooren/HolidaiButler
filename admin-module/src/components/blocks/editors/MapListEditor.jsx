@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const SOURCE_OPTIONS = [
   { value: 'pois', label: 'POIs' },
@@ -33,9 +33,9 @@ export default function MapListEditor({ data, onChange }) {
         Map + List Configuration
       </Typography>
 
-      <TextField
+      <TranslatableField
         label="Title (optional)"
-        value={data.title || ''}
+        value={data.title}
         onChange={(val) => updateField('title', val)}
       />
 

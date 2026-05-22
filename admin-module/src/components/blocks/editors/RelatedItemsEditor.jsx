@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const TYPE_OPTIONS = [
   { value: 'poi', label: 'POIs' },
@@ -27,7 +27,7 @@ export default function RelatedItemsEditor({ data, onChange }) {
       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
         Related Items
       </Typography>
-      <TextField label="Title" value={data.title || ''} onChange={v => u('title', v)} helperText="Default: 'You might also like'" />
+      <TranslatableField label="Title" value={data.title} onChange={v => u('title', v)} helperText="Default: 'You might also like'" />
       <SelectField label="Item type" value={data.itemType || 'poi'} options={TYPE_OPTIONS} onChange={v => u('itemType', v)} />
       <SelectField label="Strategy" value={data.relationStrategy || 'same_category'} options={STRATEGY_OPTIONS} onChange={v => u('relationStrategy', v)} />
       <SelectField label="Layout" value={data.layout || 'grid'} options={LAYOUT_OPTIONS} onChange={v => u('layout', v)} />

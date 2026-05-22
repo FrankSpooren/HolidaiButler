@@ -47,8 +47,8 @@ export default function GalleryEditor({ block, onChange }) {
             {item.type === 'video' && (
               <ImageUploadField label="Thumbnail" value={item.thumbnailUrl} onChange={v => updateField('thumbnailUrl', v)} />
             )}
-            <TextField label="Alt Text" value={item.alt} onChange={v => updateField('alt', v)} />
-            <TextField label="Caption" value={item.caption} onChange={v => updateField('caption', v)} />
+            <TranslatableField label="Alt Text" value={item.alt} onChange={v => updateField('alt', v)} />
+            <TranslatableField label="Caption" value={item.caption} onChange={v => updateField('caption', v)} />
           </>
         )}
       />

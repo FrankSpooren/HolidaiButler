@@ -27,14 +27,14 @@ export default function FeaturedItemEditor({ data, onChange }) {
       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>
         Overrides (optional)
       </Typography>
-      <TextField label="Custom title" value={data.customTitle || ''} onChange={v => u('customTitle', v)} helperText="Overrides the item's own title" />
-      <TextField label="Custom description" value={data.customDescription || ''} onChange={v => u('customDescription', v)} multiline />
-      <TextField label="Badge text" value={data.badgeText || ''} onChange={v => u('badgeText', v)} helperText="e.g. 'Tip of the day', 'Bestseller'" />
+      <TranslatableField label="Custom title" value={data.customTitle} onChange={v => u('customTitle', v)} helperText="Overrides the item's own title" />
+      <TranslatableField label="Custom description" value={data.customDescription} onChange={v => u('customDescription', v)} multiline rows={2} />
+      <TranslatableField label="Badge text" value={data.badgeText} onChange={v => u('badgeText', v)} helperText="e.g. 'Tip of the day', 'Bestseller'" />
       <Divider sx={{ my: 1 }} />
       <SwitchField label="Show CTA button" checked={data.showCta !== false} onChange={v => u('showCta', v)} />
       {data.showCta !== false && (
         <>
-          <TextField label="CTA label" value={data.ctaLabel || ''} onChange={v => u('ctaLabel', v)} helperText="Default: 'View'" />
+          <TranslatableField label="CTA label" value={data.ctaLabel} onChange={v => u('ctaLabel', v)} helperText="Default: 'View'" />
           <TextField label="CTA link (optional)" value={data.ctaHref || ''} onChange={v => u('ctaHref', v)} helperText="Override destination URL" />
         </>
       )}

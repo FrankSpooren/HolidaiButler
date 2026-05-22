@@ -30,9 +30,9 @@ export default function ContactFormEditor({ block, onChange }) {
         renderItem={(item, _idx, updateField) => (
           <>
             <TextField label="Field Name" value={item.name} onChange={v => updateField('name', v)} required helperText="Internal name (e.g. 'email')" />
-            <TextField label="Label" value={item.label} onChange={v => updateField('label', v)} required />
+            <TranslatableField label="Label" value={item.label} onChange={v => updateField('label', v)} required />
             <SelectField label="Type" value={item.type || 'text'} onChange={v => updateField('type', v)} options={FIELD_TYPE_OPTIONS} />
-            <TextField label="Placeholder" value={item.placeholder} onChange={v => updateField('placeholder', v)} />
+            <TranslatableField label="Placeholder" value={item.placeholder} onChange={v => updateField('placeholder', v)} />
             <SwitchField label="Required" value={item.required} onChange={v => updateField('required', v)} />
             {item.type === 'select' && (
               <TextField label="Options (comma-separated)" value={(item.options || []).join(', ')} onChange={v => updateField('options', v.split(',').map(s => s.trim()).filter(Boolean))} />

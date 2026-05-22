@@ -155,7 +155,7 @@ export default function HeroEditor({ block, onChange }) {
       {/* Content */}
       <TranslatableField label="Headline" value={props.headline} onChange={v => update('headline', v)} required />
       <TranslatableField label="Description" value={props.description} onChange={v => update('description', v)} multiline rows={3} />
-      <TextField label="Tagline" value={props.tagline} onChange={v => update('tagline', v)} />
+      <TranslatableField label="Tagline" value={props.tagline} onChange={v => update('tagline', v)} />
 
       {/* Background */}
       <Divider sx={{ my: 2 }} />

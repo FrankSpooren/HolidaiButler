@@ -16,7 +16,7 @@ export default function PartnersEditor({ block, onChange }) {
         renderItem={(item, _idx, updateField) => (
           <>
             <ImageUploadField label="Logo" value={item.src} onChange={v => updateField('src', v)} />
-            <TextField label="Alt text" value={item.alt} onChange={v => updateField('alt', v)} />
+            <TranslatableField label="Alt text" value={item.alt} onChange={v => updateField('alt', v)} />
             <TextField label="Link URL" value={item.href} onChange={v => updateField('href', v)} />
           </>
         )}

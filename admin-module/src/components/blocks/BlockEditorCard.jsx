@@ -76,6 +76,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { getBlockMeta } from './blockEditorRegistry.js';
 import BlockStyleEditor from './BlockStyleEditor.jsx';
 import { useTranslation } from 'react-i18next';
+import LocaleCoverageBadge from './LocaleCoverageBadge.jsx';
 
 const VISIBILITY_OPTIONS = [
   { value: 'all', label: 'visibility.all' },
@@ -136,6 +137,7 @@ export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDu
           {meta?.label || block.type.replace('_', ' ')}
         </Typography>
         <VisibilityBadge visibility={block.visibility} />
+        <LocaleCoverageBadge props={block.props} />
         <Chip label={`#${index + 1}`} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
         <IconButton size="small" onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate">
           <ContentCopyIcon fontSize="small" />
