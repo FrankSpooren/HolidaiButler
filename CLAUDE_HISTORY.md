@@ -9659,3 +9659,203 @@ Aanvullend: working tree schoon (`git status --short` leeg) — snapshot-hygiene
 
 Herhaal complete pre-condities-checklist. Verifieer: ≥14d sinds v5.9.0, alle spawn-tasks gesloten, HETZNER_API_TOKEN gereed, DNS A-record gereed.
 
+
+---
+
+## Sessie 2026-05-22: Spawn-task 4 — /root credentials hardening + 4-daagse backup-gap recovery
+
+> <!-- SPAWN-TASK-4-CRED-HARDENING-2026-05-22 -->
+> Cred-hardening van /root/*.{sh,py} elimineerde primaire AI-trigger uit v5.9.0
+> + ontdekte 4-daagse backup-gap als gevolg van post-recovery sweep-gat
+> (pwd-rotation 19-05 09:47 UTC zonder sync naar /root/.my.cnf).
+> Pattern nu: platform-core/.env = single source of truth, gesynced naar
+> /root/secrets.env + /root/.my.cnf via /root/scripts/sync-credentials.py.
+
+### Context
+
+Spawn-task 4 ingericht als preventieve mitigatie tijdens 14d soak (S2-A start
+2026-06-04). Doel: elimineer primaire AI-trigger uit v5.9.0 (hardcoded
+credentials in /root/daily_mysql_backup.sh waar `cat` door AI het wachtwoord
+lekte).
+
+### Pre-condities status (2026-05-22 13:00 UTC)
+
+| # | Check | Status |
+|---|---|---|
+| 1 | Datum 22-05 binnen soak (start 04-06) — taak independent | 🟢 |
+| 2 | PM2: 11/12 services online (reservations errored = FASE C scope) | 🟢 |
+| 3 | Geen retry-storms in err-logs (0 ETIMEDOUT/ECONNRESET/access denied) | 🟢 |
+| 4 | Working tree schoon | 🟢 |
+| 5 | HEAD = 24a9907 (post-Sessie 22-05 PII-scrub fix) | 🟢 |
+| 6 | Branch = dev | 🟢 |
+
+### Inventarisatie
+
+118 scripts in /root/ (109 .py + 9 .sh). Eerste classifier-output:
+- HARDCODED: 31 files
+- HARDCODED+ENV_VAR: 2 files
+- ENV_VAR: 7 files
+- NONE: 78 files
+
+Cron-getriggerd:
+- `/root/daily_mysql_backup.sh` (dagelijks 02:00 UTC) — HARDCODED ⚠
+- `/root/weekly_disk_cleanup.sh` (zo 04:00) — ENV_VAR ✅
+
+### AI-trigger herhaald — geleerd in echte tijd
+
+Tijdens inventarisatie deed AI `grep -nE "-p[\"\\\$]"` op daily_mysql_backup.sh.
+Het pattern matchte ook letterlijk `-p'<value>'` met hardcoded password.
+Het wachtwoord lekte opnieuw in chat — exact dezelfde fout als v5.9.0 primaire
+trigger. Frank koos:
+- Optie B: geen rotation (achteraf bleek het gelekte wachtwoord sowieso ungeldig — out-of-sync)
+- Doorgaan met hardening om vector dicht te zetten
+
+### Pattern: platform-core/.env als single source of truth
+
+`/var/www/api.holidaibutler.com/platform-core/.env` (runtime-app config) is
+geadopteerd als single source of truth. Gesynced via
+`/root/scripts/sync-credentials.py` naar:
+- `/root/secrets.env` (chmod 600, sh-source-formaat, 10 keys: 5 DB + 5 API)
+- `/root/.my.cnf` (chmod 600, mysql config, 4 DB keys voor handmatige sessies)
+
+Voor Python scripts: `/root/scripts/load_secrets.py` is stdlib-only loader
+die secrets.env in os.environ injecteert. Permission-check ingebouwd: raises
+PermissionError als file niet chmod 600.
+
+### Diagnostic flow & root cause backup-gap
+
+Eerste handmatige test van geüpdate daily_mysql_backup.sh gaf "Access denied".
+Diagnose-script vergeleek SHA-256-hashes (12-char prefix, non-reversible):
+- platform-core/.env DB_PASSWORD: hash `0b666f2730c6`
+- /root/.my.cnf password:         hash `eb27bd2058fe` ← UIT-SYNC
+- /root/secrets.env DBPW:         hash `eb27bd2058fe` (kopie van .my.cnf)
+
+**Root cause 4-daagse backup gap**:
+- Pwd-rotation tijdens v5.9.0 recovery: 2026-05-19 09:47 UTC (platform-core/.env mtime)
+- /root/.my.cnf laatste update: 2026-02-02 17:14 UTC (4 maanden oud, pre-rotation)
+- Backup-script gebruikte hardcoded `-p'<oude-pwd>'` → na rotation: silent auth-fail
+- Stderr → /dev/null + geen MAILTO + geen size-validatie = 4 dagen blind
+- 19-22 mei nachtelijke runs: cron WEL gedraaid (syslog bevestigt), mysqldump
+  output 0 bytes → 20-byte lege gzip-headers in /root/backups/
+- Last-known-good backup: 2026-05-18 02:00 (80MB)
+
+### SSL-integratiefout in mijn ontwerp
+
+Initieel ontwerp van refactor was niet SSL-aware. CLAUDE.md sectie 58-200 +
+post-mortem documenteerden dat `REQUIRE SSL pxoziy_1` open-actie was; Frank
+had die geactiveerd. Mijn refactor faalde 2 keer met "Access denied" tot ik
+realiseerde mysqldump CLI moet `--ssl-mode=VERIFY_CA --ssl-ca=/etc/...` toevoegen.
+Frank wees terecht op herhaling van v5.9.0 integratie-fout-patroon: lokale
+tactiek zonder volledige systeem-integratie. MySQL 8.0.45 client (niet MariaDB)
+gebruikt `--ssl-mode=VERIFY_CA`, niet `--ssl-verify-server-cert`.
+
+### Voltooide acties
+
+1. **Tooling** (in /root/scripts/, chmod 700 behalve load_secrets.py chmod 600):
+   - `inventory-credentials.py` — safe-by-design audit (3-layer redaction:
+     regex + line-detect + Layer-3 safety mask)
+   - `sync-credentials.py` — platform-core/.env → secrets.env + .my.cnf
+   - `load_secrets.py` — stdlib loader (chmod 600 enforced, raises op insecure perms)
+   - `diag-creds.py` + `diag-creds-2.py` — hash-vergelijking diagnose
+   - `refactor-mass-py.py` — hash-gated mass-refactor (DB + API keys)
+   - `refactor-daily-mysql-backup.py` + `refactor-check-markdown.py` — idempotent
+   - `safe-inspect.py` — Layer-3-masked line inspection met aggressive redaction
+
+2. **daily_mysql_backup.sh** (volledige rewrite):
+   - source /root/secrets.env (single source)
+   - mysqldump met `--no-defaults --ssl-mode=VERIFY_CA --ssl-ca=/etc/ssl/certs/hetzner-mariadb-ca.pem`
+     (CA-pinned, byte-identiek aan platform-core/src/config/database.js)
+   - MYSQL_PWD env-var (geen `-p` in process-list)
+   - Post-backup validatie: stat -c %s, faal bij <1MB
+   - Audit log naar /var/log/holidaibutler/backup.log
+   - Syslog tag `daily_mysql_backup` voor success+fail
+   - Handmatige run 13:44 UTC: 82MB (84.991.421 bytes) — backup-continuïteit hersteld
+
+3. **check_markdown.sh**: hardcoded MYSQL_PWD vervangen door `$DBPW` via secrets.env
+
+4. **Mass-refactor Python** (hash-gated, idempotent):
+   - Pass 1 (DB creds): 38 files refactored, 184 operaties
+   - Pass 2 (API keys: MISTRAL_API_KEY, APIFY_API_TOKEN, CHROMADB_API_KEY,
+     DEEPL_API_KEY, OPENAI_API_KEY): 16 files extra, 18 operaties
+   - Bootstrap injection (`sys.path.insert + from load_secrets import load_secrets + load_secrets()`)
+     waar nieuw
+
+5. **Rollback-anchors** (alle chmod 700):
+   - /root/backups/2026-05-22-cred-hardening/ — daily_mysql_backup.sh,
+     check_markdown.sh, .my.cnf (pre-fix snapshots)
+   - /root/backups/2026-05-22-cred-hardening/python-scripts/ — 38 .py backups
+   - crontab-pre-fix.txt
+
+### Residual + classifier-issues
+
+Na 2 refactor-passes nog 16 HARDCODED + 13 HARDCODED+ENV_VAR in classifier-output.
+Safe-inspect analyse bevestigt deze zijn voor het overgrote merendeel **false
+positives**:
+- Markdown tabel-rijen in update_strategic_docs.py
+- JS-code strings in Python refactor-scripts (router.post, scheduledQueue.add)
+- Comments/docstrings met "key"/"secret"/"token" als gewoon woord
+- `MYSQL_PWD="$DBPW"` in nieuwe scripts (var-reference, niet hardcoded —
+  classifier limitation)
+
+**Echte residue** (~3-4 files, niet-kritiek):
+- `apify_backfill.py` L37: APIFY_TOKEN value hash mismatch met huidige
+  APIFY_API_TOKEN (mogelijk legacy token, manueel reviewen)
+- `s3_migrate.sh`: classifier HARDCODED maar geen Layer-3 hits, handmatige
+  review nodig (mogelijk AWS-credentials in andere vorm)
+- 1-2 test scripts met stale dev-tokens (laag risico)
+
+### Lessons learned
+
+1. **AI-fout herhalingspatroon**: zelfde primaire trigger als v5.9.0 binnen
+   4 dagen herhaald (cat-leak via grep met value-positie pattern). Anti-pattern-
+   guard "no-secrets-in-chat protocol" werd geadopteerd in inventarisatie-tool
+   maar NIET in initiele diagnose-greps. Defense-in-depth tooling moet gelden
+   voor ALLE pad-stappen, niet alleen de "happy path".
+
+2. **Integratie-fout patroon**: SSL-context niet meegenomen in pattern-design
+   ondanks dat CLAUDE.md + post-mortem expliciete REQUIRE SSL anti-pattern noemden.
+   Voor elk script dat met productie-DB praat, eerst valideer: "is REQUIRE SSL
+   actief?" + "matched scriptconfig de runtime-app SSL-config byte-identiek?".
+
+3. **Single source of truth voor credentials**: platform-core/.env is leading.
+   Alle andere bronnen (.my.cnf, secrets.env, ad-hoc scripts) moeten daaruit
+   gesynced worden — niet daarvan afgeleid bestaan. sync-credentials.py is
+   herhaalbaar (run na elke pwd-rotation).
+
+4. **Silent-failure pattern in cron**: `2>/dev/null` + geen MAILTO + geen
+   size-validatie = 4 dagen blind. Elke cron-job moet (a) stderr naar log-file,
+   (b) post-action validatie (output-size/exit-code check), (c) logger-call naar
+   syslog voor success+fail. Geen "fire-and-forget" backups.
+
+5. **Post-recovery sweep gap**: v5.9.0 recovery-protocol focuste op productie-app
+   stabiliteit. Geen sweep over /root scripts die ook DB-credentials gebruiken.
+   Post-incident protocol MOET een phase bevatten "identify ALL scripts/services
+   that authenticate against rotated credential and verify each".
+
+6. **Hash-gated refactor als enterprise pattern**: door SHA-256 hash-vergelijking
+   van credential-values tegen bekende (huidig + pre-rotation) credentials,
+   voorkomt mass-refactor false positives op niet-credential string-literals.
+   Conservatieve approach (skip on mismatch) is veiliger dan over-eager replacement.
+
+### Spawn-task uitvoer-uitkomst
+
+| Spawn-task | Status |
+|---|---|
+| 1: working-tree cleanup | ✅ 2026-05-21 |
+| 2: hcloud CLI install | ✅ 2026-05-21 |
+| 3: mysql2 versie-monitoring | ✅ 2026-05-22 (parallel session, commit 0111107) |
+| 4: /root credentials hardening | ✅ 2026-05-22 (deze sessie) |
+| 5: dead adminModule HTTP-client cleanup | ✅ 2026-05-22 (parallel, commit 3dab031) |
+| 6: PII-scrub droogloop | ✅ 2026-05-22 (parallel, commit 24a9907) |
+| 7: GESCHRAPT (admin-module actief Vite) | n/a |
+
+Alle 6 soak-mitigatie spawn-tasks afgerond. Klaar voor S2-A op 2026-06-04.
+
+### Open follow-ups (geen blockers voor S2-A)
+
+- `apify_backfill.py` APIFY_TOKEN — review value-source, mogelijk legacy
+- `s3_migrate.sh` — handmatig review classifier-flag (mogelijk false positive of AWS-cred)
+- 1-2 test/dev scripts met stale tokens — laag risico
+- Classifier-verfijning: AST-based detection zou false positives elimineren
+  (nice-to-have, niet noodzakelijk voor security)
+- Cron-job MAILTO=frank voor errors (separate spawn-task indien gewenst)

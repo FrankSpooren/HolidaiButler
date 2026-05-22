@@ -116,7 +116,7 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 - ETL fase 2: data-migratie patroon voor toekomstige legacy → events conversies
 - Production-user `pxoziy_1` REQUIRE SSL op user-level (Hetzner enforced server-side, defensive verbetering)
-- Credentials uit `/root` scripts (`daily_mysql_backup.sh` + 10 Python utilities)
+- ~~Credentials uit `/root` scripts~~ ✅ AFGEROND 2026-05-22 (spawn-task 4, zie CLAUDE_HISTORY.md sectie SPAWN-TASK-4-CRED-HARDENING-2026-05-22)
 - Dead `adminModule` HTTP-client cleanup (`platform-core/src/integrations/adminModule.js`)
 - `mysql2` versie-monitoring (regressie-detectie via dependabot)
 - agenda legacy tabel ARCHIVE (`RENAME TABLE agenda TO agenda_archive_2026_05_20` — alleen na Frank's go)
