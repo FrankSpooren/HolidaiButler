@@ -201,8 +201,12 @@ UPDATE consent_history SET ip_address = '0.0.0.0' WHERE ip_address NOT IN ('0.0.
 UPDATE Email_Verification_Logs SET ip_address = '0.0.0.0', user_email = 'scrub@scrubbed.invalid'
 WHERE ip_address NOT IN ('0.0.0.0', '::');
 UPDATE feature_flag_audit SET ip_address = '0.0.0.0' WHERE ip_address NOT IN ('0.0.0.0', '::');
-UPDATE financial_audit_log SET ip_address = '0.0.0.0', actor_email = 'scrub@scrubbed.invalid'
-WHERE ip_address NOT IN ('0.0.0.0', '::');
+-- financial_audit_log heeft GEEN ip_address kolom (drycheck 22-05-2026, spawn-task 6).
+-- Werkelijke kolommen: id, destination_id, event_type, entity_type, entity_id, actor_type,
+-- actor_email, old_status, new_status, amount_cents, details, created_at.
+-- Scrub alleen actor_email. TODO: details (longtext JSON) deep-scrub als aparte task.
+UPDATE financial_audit_log SET actor_email = 'scrub@scrubbed.invalid'
+WHERE actor_email IS NOT NULL AND actor_email NOT LIKE '%@scrubbed.invalid';
 UPDATE GDPR_Logs SET ip_address = '0.0.0.0', user_email = 'scrub@scrubbed.invalid'
 WHERE ip_address NOT IN ('0.0.0.0', '::');
 UPDATE payment_transactions SET ip_address = '0.0.0.0' WHERE ip_address NOT IN ('0.0.0.0', '::');
