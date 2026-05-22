@@ -30,6 +30,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import brandProfileService from '../../api/brandProfileService.js';
 import BrandProfileBootstrapDialog from '../BrandProfileBootstrapDialog.jsx';
+import { useBrandingDestinations } from '../../hooks/useBrandingEditor.js';
+import apiClient from '../../api/client.js';
 
 const INDUSTRY_OPTIONS = [
   'Toerisme & Recreatie', 'Retail & E-commerce', 'Horeca & Food', 'Cultuur & Entertainment',
@@ -77,6 +79,27 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
   });
   const knowledgeListRef = useRef(null);
   const [highlightedKbId, setHighlightedKbId] = useState(null);
+  const { data: brandingDestsData } = useBrandingDestinations();
+  const destinationBranding = (brandingDestsData?.data?.destinations || []).find(d => Number(d.id) === Number(destinationId))?.branding || {};
+  const hasBranding = Boolean(
+    (destinationBranding.payoff && String(destinationBranding.payoff).trim().length > 0) ||
+    (destinationBranding.toneOfVoice && (
+      (typeof destinationBranding.toneOfVoice === 'string' && destinationBranding.toneOfVoice.trim().length > 0) ||
+      (typeof destinationBranding.toneOfVoice === 'object' && Object.keys(destinationBranding.toneOfVoice).length > 0)
+    ))
+  );
+
+  const { data: poiStatsData } = useQuery({
+    queryKey: ['poi-count-for-bootstrap', destinationId],
+    queryFn: async () => {
+      const r = await apiClient.get('/admin-portal/pois', { params: { destinationId, limit: 1, page: 1 } });
+      return r.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: Boolean(destinationId)
+  });
+  const poiCount = poiStatsData?.data?.total ?? poiStatsData?.total ?? 0;
+
   const { data: knowledgeData, refetch: refetchKnowledge } = useQuery({
     queryKey: ['brand-knowledge', destinationId],
     queryFn: () => brandProfileService.getKnowledge(destinationId),
@@ -257,19 +280,18 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
 
   return (
     <Box>
-      {/* BLOK B — Bootstrap CTA */}
+      {/* AI Merkprofiel CTA — state-aware via dialog */}
       <Alert
-        severity={Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length === 0 ? 'info' : 'success'}
+        severity="info"
         sx={{ mb: 2 }}
         action={
           <Button color="primary" variant="contained" size="small" onClick={() => setBootstrapOpen(true)}>
-            {Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length === 0 ? 'Genereer met AI' : 'Opnieuw met AI'}
+            AI Merkprofiel
           </Button>
         }
       >
         <Typography variant="body2">
-          <strong>AI Brand Profile Bootstrap</strong> — laat AI een volledig brand_profile genereren uit Knowledge Base, branding en lokale POIs.
-          Reviewer accepteert per veld of geheel. EU AI Act provenance + validation.
+          <strong>AI Merkprofiel</strong> — gebruik AI om merkprofiel-velden te genereren of ontbrekende velden aan te vullen op basis van Knowledge Base, branding en lokale POIs. Mistral AI met EU AI Act provenance, per-zin grondingscontrole en auto-retry bij hallucinatie-detectie.
         </Typography>
       </Alert>
 
@@ -780,12 +802,15 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
 
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({ ...s, open: false }))} message={snack.message} />
 
-      {/* BLOK B — Bootstrap Dialog */}
+      {/* AI Merkprofiel Dialog */}
       <BrandProfileBootstrapDialog
         open={bootstrapOpen}
         onClose={() => setBootstrapOpen(false)}
         destinationId={destinationId}
-        hasExisting={Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length > 0}
+        currentBp={bp}
+        knowledgeCount={knowledge.totalSources || 0}
+        poiCount={poiCount}
+        hasBranding={hasBranding}
         onAccept={handleBootstrapAccept}
       />
     </Box>
