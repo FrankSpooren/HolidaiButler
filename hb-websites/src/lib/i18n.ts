@@ -1,68 +1,67 @@
-export type Locale = 'nl' | 'en' | 'es' | 'de' | 'fr';
+/**
+ * i18n runtime helpers voor hb-websites block-renderers.
+ *
+ * Sinds BLOK B/D (22-05-2026) slaan admin-blocks i18n content op als JSON-object:
+ *   { en: 'Hello', nl: 'Hallo', de: 'Hallo', es: 'Hola', fr: 'Bonjour' }
+ * Bestaande blocks (vóór 22-05-2026) hebben nog string content.
+ *
+ * `getLocalized()` is backward-compat: accepteert beide vormen, returnt
+ * juiste taal-string met sensible fallback-chain.
+ *
+ * Fallback-volgorde voor i18n-object:
+ *   1. Requested locale (bv. 'nl')
+ *   2. 'en' (universele baseline)
+ *   3. 'nl' (Dutch — primaire content voor NL-destinations)
+ *   4. Eerste niet-lege value
+ *   5. Provided fallback (default: '')
+ */
 
-const SUPPORTED_LOCALES: Locale[] = ['nl', 'en', 'es', 'de', 'fr'];
+export type I18nValue =
+  | string
+  | { [locale: string]: string | undefined | null }
+  | null
+  | undefined;
 
-export function isValidLocale(locale: string): locale is Locale {
-  return SUPPORTED_LOCALES.includes(locale as Locale);
-}
+const FALLBACK_ORDER = ['en', 'nl', 'de', 'es', 'fr'];
 
-export function getLocalizedField<T extends Record<string, unknown>>(
-  obj: T,
-  field: string,
-  locale: Locale
-): string {
-  if (locale === 'en') {
-    return (obj[field] as string) ?? '';
+export function getLocalized(value: I18nValue, locale: string = 'en', fallback: string = ''): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return fallback;
+
+  // Requested locale first
+  const requested = value[locale];
+  if (requested && String(requested).trim().length > 0) return String(requested);
+
+  // Sensible fallback chain
+  for (const lang of FALLBACK_ORDER) {
+    if (lang === locale) continue;
+    const v = value[lang];
+    if (v && String(v).trim().length > 0) return String(v);
   }
-  return (obj[`${field}_${locale}`] as string) ?? (obj[field] as string) ?? '';
+
+  // Last resort: any non-empty value
+  for (const key of Object.keys(value)) {
+    const v = value[key];
+    if (v && String(v).trim().length > 0) return String(v);
+  }
+
+  return fallback;
 }
 
 /**
- * Check if a value is an i18n object (keys are a subset of supported locales).
- * TranslatableField in admin stores values as { en: "...", nl: "...", ... }.
+ * Detect of een veld i18n-aware is (object) of legacy string.
+ * Bruikbaar voor admin-side validation (badge "vertaling ontbreekt").
  */
-function isI18nObject(value: unknown): value is Record<string, string> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const keys = Object.keys(value);
-  if (keys.length === 0) return false;
-  return keys.every(k => SUPPORTED_LOCALES.includes(k as Locale));
+export function isI18nObject(value: I18nValue): value is { [locale: string]: string | undefined | null } {
+  return value !== null && value !== undefined && typeof value === 'object';
 }
 
 /**
- * Recursively resolve i18n objects in block props to locale-specific strings.
- * Handles nested objects and arrays. Leaves non-i18n values untouched.
+ * Tel hoeveel talen NIET-leeg zijn in een i18n-object.
+ * Returnt 0 voor string of leeg object.
  */
-export function resolveLocalizedProps(
-  props: Record<string, unknown>,
-  locale: string
-): Record<string, unknown> {
-  const loc = (SUPPORTED_LOCALES.includes(locale as Locale) ? locale : 'en') as Locale;
-  const result: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(props)) {
-    result[key] = resolveValue(value, loc);
-  }
-
-  return result;
-}
-
-function resolveValue(value: unknown, locale: Locale): unknown {
-  if (isI18nObject(value)) {
-    return value[locale] ?? value.en ?? value.nl ?? Object.values(value)[0] ?? '';
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(item => resolveValue(item, locale));
-  }
-
-  if (value && typeof value === 'object' && !Array.isArray(value)) {
-    const obj = value as Record<string, unknown>;
-    const resolved: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      resolved[k] = resolveValue(v, locale);
-    }
-    return resolved;
-  }
-
-  return value;
+export function countFilledLocales(value: I18nValue): number {
+  if (!isI18nObject(value)) return value && typeof value === 'string' ? 1 : 0;
+  return Object.values(value).filter((v) => v && String(v).trim().length > 0).length;
 }

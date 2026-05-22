@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Box, Tabs, Tab, TextField, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { translateTexts } from '../../../api/translationService.js';
+import { useDestination } from '../DestinationContext.jsx';
 
 // Alle 5 ondersteunde talen — feitelijke render wordt gefilterd op `supportedLanguages` prop.
 const ALL_LANGS = [
@@ -37,13 +38,17 @@ export default function TranslatableField({
   const [tab, setTab] = useState(0);
   const [translating, setTranslating] = useState(false);
 
-  // Filter LANGS op supported_languages (of fallback default 4-talen voor backward-compat)
+  // Filter LANGS op supported_languages.
+  // Bronvolgorde: explicit prop > destination context (van PagesPage Provider) > default 4-talen
+  const destCtx = useDestination();
   const langs = useMemo(() => {
     const allowed = Array.isArray(supportedLanguages) && supportedLanguages.length > 0
       ? supportedLanguages
-      : DEFAULT_LANGS;
+      : (Array.isArray(destCtx?.supportedLanguages) && destCtx.supportedLanguages.length > 0
+          ? destCtx.supportedLanguages
+          : DEFAULT_LANGS);
     return ALL_LANGS.filter(l => allowed.includes(l.code));
-  }, [supportedLanguages]);
+  }, [supportedLanguages, destCtx?.supportedLanguages]);
 
   // Normalize value to i18n object — bevat keys voor ALLE LANGS (zodat onChange consistente keys propageert)
   const i18n = typeof value === 'string'

@@ -8,4 +8,5 @@ export { default as TranslatableField } from './TranslatableField.jsx';
 export { default as ButtonListField } from './ButtonListField.jsx';
 export { default as ItemListField } from './ItemListField.jsx';
 export { default as RichTextField } from './RichTextField.jsx';
+export { default as TranslatableRichTextField } from './TranslatableRichTextField.jsx';
 export { default as CategoryFilterField } from './CategoryFilterField.jsx';
