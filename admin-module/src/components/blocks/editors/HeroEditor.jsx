@@ -47,7 +47,7 @@ function BrandVisualPicker({ onSelect }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['brand-visuals', destinationId, source],
     queryFn: async () => {
-      const r = await apiClient.get('/admin-portal/brand-visuals', {
+      const r = await apiClient.get('/brand-visuals', {
         params: { destinationId, source, limit: 50 }
       });
       return r.data;

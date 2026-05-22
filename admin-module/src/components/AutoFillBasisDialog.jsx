@@ -42,7 +42,7 @@ export default function AutoFillBasisDialog({ open, onClose, destinationId, page
     setError(null);
     setSuggestion(null);
     try {
-      const { data } = await client.post('/admin-portal/pages/auto-fill-basis', {
+      const { data } = await client.post('/pages/auto-fill-basis', {
         destinationId, pageType, pageTopic: localTopic
       });
       if (data?.success && data.data) {

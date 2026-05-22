@@ -92,7 +92,7 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
   const { data: poiStatsData } = useQuery({
     queryKey: ['poi-count-for-bootstrap', destinationId],
     queryFn: async () => {
-      const r = await apiClient.get('/admin-portal/pois', { params: { destinationId, limit: 1, page: 1 } });
+      const r = await apiClient.get('/pois', { params: { destinationId, limit: 1, page: 1 } });
       return r.data;
     },
     staleTime: 5 * 60 * 1000,

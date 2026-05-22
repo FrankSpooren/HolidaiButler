@@ -106,7 +106,7 @@ export default function BrandProfileBootstrapDialog({
     setError(null);
     setSuggestion(null);
     try {
-      const { data } = await client.post('/admin-portal/brand-profile/bootstrap', {
+      const { data } = await client.post('/brand-profile/bootstrap', {
         destinationId,
         mode: config.mode,
         forceRegenerate: !!config.forceRegenerate
