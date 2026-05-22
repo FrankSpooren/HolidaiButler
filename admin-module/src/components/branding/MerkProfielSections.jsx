@@ -417,118 +417,7 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
         </AccordionDetails>
       </Accordion>
 
-      {/* 2. Missie, Visie & Waarden */}
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          {sectionIcon(FlagIcon, t('brandProfile.sections.mission', 'Missie, Visie & Waarden'))}
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField fullWidth multiline rows={2} size="small" label={t('brandProfile.fields.mission', 'Missie')} value={bp.mission || ''} onChange={e => setBp(p => ({ ...p, mission: e.target.value }))} placeholder="Waarom bestaan wij?" />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth size="small" label={t('brandProfile.fields.vision', 'Visie')} value={bp.vision || ''} onChange={e => setBp(p => ({ ...p, vision: e.target.value }))} placeholder="Waar werken wij naartoe?" />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('brandProfile.fields.core_values', 'Kernwaarden')}</Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
-                {(bp.core_values || []).map((v, i) => <Chip key={i} label={v} onDelete={() => removeChip('core_values', i)} size="small" color="primary" variant="outlined" />)}
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField size="small" placeholder="Voeg kernwaarde toe" value={chipInputs.core_values || ''} onChange={e => setChipInputs(p => ({ ...p, core_values: e.target.value }))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChip('core_values'))} sx={{ flex: 1 }} />
-                <Button size="small" onClick={() => addChip('core_values')} startIcon={<AddIcon />}>{t('common.add', 'Toevoegen')}</Button>
-              </Box>
-            </Grid>
-            <Grid item xs={12}>
-              <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveMut.mutate(bp)} disabled={saveMut.isPending} size="small">{t('common.save', 'Opslaan')}</Button>
-            </Grid>
-          </Grid>
-        </AccordionDetails>
-      </Accordion>
-
-      {/* 3. Doelgroepen */}
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          {sectionIcon(PeopleIcon, t('brandProfile.sections.audiences', 'Doelgroepen'))}
-          <Chip label={personas.length} size="small" sx={{ ml: 1 }} />
-        </AccordionSummary>
-        <AccordionDetails>
-          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={() => openPersonaDialog()} sx={{ mb: 2 }}>{t('brandProfile.fields.add_persona', 'Nieuwe doelgroep')}</Button>
-          {personas.map(p => (
-            <Paper key={p.id} variant="outlined" sx={{ p: 2, mb: 1.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                  <Typography variant="subtitle2" fontWeight={600}>{p.is_primary ? '★ ' : ''}{p.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {[p.age_range, p.location, p.language?.toUpperCase()].filter(Boolean).join(' · ')}
-                  </Typography>
-                  {p.interests && <Typography variant="body2" sx={{ mt: 0.5 }}>{p.interests}</Typography>}
-                </Box>
-                <Box>
-                  <IconButton size="small" onClick={() => openPersonaDialog(p)}><EditIcon fontSize="small" /></IconButton>
-                  <IconButton size="small" color="error" onClick={() => personaDeleteMut.mutate(p.id)}><DeleteIcon fontSize="small" /></IconButton>
-                </Box>
-              </Box>
-            </Paper>
-          ))}
-          {personas.length === 0 && (
-            <Box sx={{ py: 2, textAlign: 'center' }}>
-              <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>{t('brandProfile.personas.empty', 'Nog geen doelgroepen gedefinieerd.')}</Typography>
-              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setPersonaDialog({})}>{t('brandProfile.personas.addFirst', 'Eerste doelgroep toevoegen')}</Button>
-            </Box>
-          )}
-        </AccordionDetails>
-      </Accordion>
-
-      {/* 4. Tone of Voice — inline editing */}
-      <Accordion>
-        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          {sectionIcon(RecordVoiceOverIcon, t('brandProfile.sections.tone', 'Tone of Voice'))}
-        </AccordionSummary>
-        <AccordionDetails>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.personality', 'Persoonlijkheid')} value={tone.personality || ''} onChange={e => setTone(t => ({ ...t, personality: e.target.value }))} placeholder="Warm, professioneel, betrouwbaar" />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.audience', 'Doelgroep')} value={tone.audience || ''} onChange={e => setTone(t => ({ ...t, audience: e.target.value }))} placeholder="Professionals 30-55, ondernemers" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.brandValues', 'Merkwaarden')} value={tone.brandValues || ''} onChange={e => setTone(t => ({ ...t, brandValues: e.target.value }))} placeholder="Kwaliteit, innovatie, duurzaamheid" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.coreKeywords', 'Kernwoorden')} value={tone.coreKeywords || ''} onChange={e => setTone(t => ({ ...t, coreKeywords: e.target.value }))} placeholder="Woorden die uw merk typeren" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.adjectives', 'Gewenste bijvoeglijke naamwoorden')} value={tone.adjectives || ''} onChange={e => setTone(t => ({ ...t, adjectives: e.target.value }))} placeholder="Betrouwbaar, innovatief, persoonlijk" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.avoidWords', 'Vermijd deze woorden')} value={tone.avoidWords || ''} onChange={e => setTone(t => ({ ...t, avoidWords: e.target.value }))} placeholder="Goedkoop, basic, saai" />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField fullWidth size="small" label={t('brandProfile.tone.samplePhrases', 'Voorbeeldzinnen')} value={tone.samplePhrases || ''} onChange={e => setTone(t => ({ ...t, samplePhrases: e.target.value }))} placeholder="Typische zinnen die uw merk zou gebruiken" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth size="small">
-                <InputLabel>{t('brandProfile.tone.formalAddress', 'Aanspreekstijl')}</InputLabel>
-                <Select value={tone.formalAddress || 'je'} label={t('brandProfile.tone.formalAddress', 'Aanspreekstijl')} onChange={e => setTone(t => ({ ...t, formalAddress: e.target.value }))}>
-                  <MenuItem value="je">{t('brandProfile.tone.informal', 'Informeel (je/jij)')}</MenuItem>
-                  <MenuItem value="u">{t('brandProfile.tone.formal', 'Formeel (u)')}</MenuItem>
-                  <MenuItem value="mixed">{t('brandProfile.tone.mixed', 'Gemengd')}</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveToneMut.mutate(tone)} disabled={saveToneMut.isPending} size="small">
-                {saveToneMut.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
-              </Button>
-            </Grid>
-          </Grid>
-        </AccordionDetails>
-      </Accordion>
-
-      {/* 5. Knowledge Base */}
+{/* 2. Knowledge Base */}
       <Accordion defaultExpanded={!!highlightKnowledgeId}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           {sectionIcon(MenuBookIcon, t('brandProfile.sections.knowledge', 'Knowledge Base'))}
@@ -604,6 +493,117 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
           {knowledge.totalWords > 0 && (
             <Typography variant="caption" color="text.secondary">Totaal: {knowledge.totalSources} bronnen, ~{knowledge.totalWords} woorden</Typography>
           )}
+        </AccordionDetails>
+      </Accordion>
+
+            {/* 3. Missie, Visie & Waarden */}
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          {sectionIcon(FlagIcon, t('brandProfile.sections.mission', 'Missie, Visie & Waarden'))}
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField fullWidth multiline rows={2} size="small" label={t('brandProfile.fields.mission', 'Missie')} value={bp.mission || ''} onChange={e => setBp(p => ({ ...p, mission: e.target.value }))} placeholder="Waarom bestaan wij?" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label={t('brandProfile.fields.vision', 'Visie')} value={bp.vision || ''} onChange={e => setBp(p => ({ ...p, vision: e.target.value }))} placeholder="Waar werken wij naartoe?" />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{t('brandProfile.fields.core_values', 'Kernwaarden')}</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+                {(bp.core_values || []).map((v, i) => <Chip key={i} label={v} onDelete={() => removeChip('core_values', i)} size="small" color="primary" variant="outlined" />)}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField size="small" placeholder="Voeg kernwaarde toe" value={chipInputs.core_values || ''} onChange={e => setChipInputs(p => ({ ...p, core_values: e.target.value }))} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addChip('core_values'))} sx={{ flex: 1 }} />
+                <Button size="small" onClick={() => addChip('core_values')} startIcon={<AddIcon />}>{t('common.add', 'Toevoegen')}</Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveMut.mutate(bp)} disabled={saveMut.isPending} size="small">{t('common.save', 'Opslaan')}</Button>
+            </Grid>
+          </Grid>
+        </AccordionDetails>
+      </Accordion>
+
+      {/* 4. Doelgroepen */}
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          {sectionIcon(PeopleIcon, t('brandProfile.sections.audiences', 'Doelgroepen'))}
+          <Chip label={personas.length} size="small" sx={{ ml: 1 }} />
+        </AccordionSummary>
+        <AccordionDetails>
+          <Button startIcon={<AddIcon />} variant="outlined" size="small" onClick={() => openPersonaDialog()} sx={{ mb: 2 }}>{t('brandProfile.fields.add_persona', 'Nieuwe doelgroep')}</Button>
+          {personas.map(p => (
+            <Paper key={p.id} variant="outlined" sx={{ p: 2, mb: 1.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600}>{p.is_primary ? '★ ' : ''}{p.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {[p.age_range, p.location, p.language?.toUpperCase()].filter(Boolean).join(' · ')}
+                  </Typography>
+                  {p.interests && <Typography variant="body2" sx={{ mt: 0.5 }}>{p.interests}</Typography>}
+                </Box>
+                <Box>
+                  <IconButton size="small" onClick={() => openPersonaDialog(p)}><EditIcon fontSize="small" /></IconButton>
+                  <IconButton size="small" color="error" onClick={() => personaDeleteMut.mutate(p.id)}><DeleteIcon fontSize="small" /></IconButton>
+                </Box>
+              </Box>
+            </Paper>
+          ))}
+          {personas.length === 0 && (
+            <Box sx={{ py: 2, textAlign: 'center' }}>
+              <Typography color="text.secondary" variant="body2" sx={{ mb: 1 }}>{t('brandProfile.personas.empty', 'Nog geen doelgroepen gedefinieerd.')}</Typography>
+              <Button variant="outlined" size="small" startIcon={<AddIcon />} onClick={() => setPersonaDialog({})}>{t('brandProfile.personas.addFirst', 'Eerste doelgroep toevoegen')}</Button>
+            </Box>
+          )}
+        </AccordionDetails>
+      </Accordion>
+
+      {/* 5. Tone of Voice — inline editing */}
+      <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          {sectionIcon(RecordVoiceOverIcon, t('brandProfile.sections.tone', 'Tone of Voice'))}
+        </AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.personality', 'Persoonlijkheid')} value={tone.personality || ''} onChange={e => setTone(t => ({ ...t, personality: e.target.value }))} placeholder="Warm, professioneel, betrouwbaar" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.audience', 'Doelgroep')} value={tone.audience || ''} onChange={e => setTone(t => ({ ...t, audience: e.target.value }))} placeholder="Professionals 30-55, ondernemers" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.brandValues', 'Merkwaarden')} value={tone.brandValues || ''} onChange={e => setTone(t => ({ ...t, brandValues: e.target.value }))} placeholder="Kwaliteit, innovatie, duurzaamheid" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.coreKeywords', 'Kernwoorden')} value={tone.coreKeywords || ''} onChange={e => setTone(t => ({ ...t, coreKeywords: e.target.value }))} placeholder="Woorden die uw merk typeren" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.adjectives', 'Gewenste bijvoeglijke naamwoorden')} value={tone.adjectives || ''} onChange={e => setTone(t => ({ ...t, adjectives: e.target.value }))} placeholder="Betrouwbaar, innovatief, persoonlijk" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.avoidWords', 'Vermijd deze woorden')} value={tone.avoidWords || ''} onChange={e => setTone(t => ({ ...t, avoidWords: e.target.value }))} placeholder="Goedkoop, basic, saai" />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth size="small" label={t('brandProfile.tone.samplePhrases', 'Voorbeeldzinnen')} value={tone.samplePhrases || ''} onChange={e => setTone(t => ({ ...t, samplePhrases: e.target.value }))} placeholder="Typische zinnen die uw merk zou gebruiken" />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>{t('brandProfile.tone.formalAddress', 'Aanspreekstijl')}</InputLabel>
+                <Select value={tone.formalAddress || 'je'} label={t('brandProfile.tone.formalAddress', 'Aanspreekstijl')} onChange={e => setTone(t => ({ ...t, formalAddress: e.target.value }))}>
+                  <MenuItem value="je">{t('brandProfile.tone.informal', 'Informeel (je/jij)')}</MenuItem>
+                  <MenuItem value="u">{t('brandProfile.tone.formal', 'Formeel (u)')}</MenuItem>
+                  <MenuItem value="mixed">{t('brandProfile.tone.mixed', 'Gemengd')}</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <Button variant="contained" startIcon={<SaveIcon />} onClick={() => saveToneMut.mutate(tone)} disabled={saveToneMut.isPending} size="small">
+                {saveToneMut.isPending ? t('common.saving', 'Opslaan...') : t('common.save', 'Opslaan')}
+              </Button>
+            </Grid>
+          </Grid>
         </AccordionDetails>
       </Accordion>
 
