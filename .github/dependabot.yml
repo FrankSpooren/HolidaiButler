@@ -52,6 +52,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@opentelemetry/exporter-prometheus"
         update-types: ["version-update:semver-major"]
+      # mysql2 freeze op 3.15.3 — voorkom v4 auto-PR (22-05-2026, spawn-task 3)
+      - dependency-name: "mysql2"
+        update-types: ["version-update:semver-major"]
 
   # ─── admin-module (React frontend, Vite build) ─────────────────────────
   - package-ecosystem: "npm"
@@ -162,6 +165,10 @@ updates:
         update-types: ["patch", "minor"]
       security:
         applies-to: security-updates
+    ignore:
+      # mysql2 freeze op 3.15.3 — voorkom v4 auto-PR (22-05-2026, spawn-task 3)
+      - dependency-name: "mysql2"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/ticketing-module/frontend"
@@ -220,6 +227,10 @@ updates:
         update-types: ["patch", "minor"]
       security:
         applies-to: security-updates
+    ignore:
+      # mysql2 freeze op 3.15.3 — voorkom v4 auto-PR (22-05-2026, spawn-task 3)
+      - dependency-name: "mysql2"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/agenda-module/frontend"
