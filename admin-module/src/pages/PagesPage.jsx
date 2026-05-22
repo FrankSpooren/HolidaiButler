@@ -31,6 +31,7 @@ import BlockSelectorDialog from '../components/blocks/BlockSelectorDialog.jsx';
 import PageQualityPanel from '../components/blocks/PageQualityPanel.jsx';
 import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
+import AutoFillBasisDialog from '../components/AutoFillBasisDialog.jsx';
 import debounce from 'lodash.debounce';
 
 export default function PagesPage({ embedded = false }) {
@@ -58,6 +59,35 @@ export default function PagesPage({ embedded = false }) {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [previewViewport, setPreviewViewport] = useState('desktop');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [autoFillOpen, setAutoFillOpen] = useState(false);
+
+  const handleAutoFillAccept = (sugg) => {
+    if (!sugg) return;
+    const apply = (p) => ({
+      ...p,
+      slug: sugg.slug || p.slug,
+      title_en: sugg.title?.en || p.title_en,
+      title_nl: sugg.title?.nl || p.title_nl,
+      title_de: sugg.title?.de || p.title_de,
+      title_es: sugg.title?.es || p.title_es,
+      title_fr: sugg.title?.fr || p.title_fr,
+      seo_title_en: sugg.seo_title?.en || p.seo_title_en,
+      seo_title_nl: sugg.seo_title?.nl || p.seo_title_nl,
+      seo_title_de: sugg.seo_title?.de || p.seo_title_de,
+      seo_title_es: sugg.seo_title?.es || p.seo_title_es,
+      seo_title_fr: sugg.seo_title?.fr || p.seo_title_fr,
+      seo_description_en: sugg.seo_description?.en || p.seo_description_en,
+      seo_description_nl: sugg.seo_description?.nl || p.seo_description_nl,
+      seo_description_de: sugg.seo_description?.de || p.seo_description_de,
+      seo_description_es: sugg.seo_description?.es || p.seo_description_es,
+      seo_description_fr: sugg.seo_description?.fr || p.seo_description_fr,
+      og_image_url: sugg.og_image_url || p.og_image_url
+    });
+    if (editPage) setEditPage(apply);
+    else setCreateForm(apply);
+    setSnack({ open: true, message: 'Suggesties ingevuld. Bekijk en sla op.', severity: 'success' });
+  };
+
   const [expandedParents, setExpandedParents] = useState({});
   const [revisionsPage, setRevisionsPage] = useState(null);
   const previewRef = useRef(null);
@@ -518,6 +548,12 @@ export default function PagesPage({ embedded = false }) {
 
           {editTab === 0 && editPage && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* BLOK B — Auto-fill via merkprofiel */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button size="small" variant="outlined" onClick={() => setAutoFillOpen(true)}>
+                  Auto-fill via merkprofiel
+                </Button>
+              </Box>
               <TextField size="small" label={t('pages.fields.slug')} value={editPage.slug || ''} onChange={e => setEditPage(p => ({ ...p, slug: e.target.value }))} />
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField size="small" label={t('pages.fields.titleEn')} value={editPage.title_en || ''} onChange={e => setEditPage(p => ({ ...p, title_en: e.target.value }))} sx={{ flex: 1 }} />
@@ -526,6 +562,9 @@ export default function PagesPage({ embedded = false }) {
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField size="small" label={t('pages.fields.titleDe')} value={editPage.title_de || ''} onChange={e => setEditPage(p => ({ ...p, title_de: e.target.value }))} sx={{ flex: 1 }} />
                 <TextField size="small" label={t('pages.fields.titleEs')} value={editPage.title_es || ''} onChange={e => setEditPage(p => ({ ...p, title_es: e.target.value }))} sx={{ flex: 1 }} />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField size="small" label={t('pages.fields.titleFr', 'Titel (FR)')} value={editPage.title_fr || ''} onChange={e => setEditPage(p => ({ ...p, title_fr: e.target.value }))} sx={{ flex: 1 }} />
               </Box>
               <Button
                 size="small" variant="outlined" startIcon={<TranslateIcon />}
@@ -689,6 +728,15 @@ export default function PagesPage({ embedded = false }) {
       <Snackbar open={snack.open} autoHideDuration={4000} onClose={() => setSnack(s => ({ ...s, open: false }))}>
         <Alert severity={snack.severity} onClose={() => setSnack(s => ({ ...s, open: false }))}>{snack.message}</Alert>
       </Snackbar>
+
+      {/* BLOK B — Auto-fill Basis Dialog */}
+      <AutoFillBasisDialog
+        open={autoFillOpen}
+        onClose={() => setAutoFillOpen(false)}
+        destinationId={editPage?.destination_id || createForm.destination_id || destId}
+        pageType={editPage?.slug || createForm.slug || 'general'}
+        onAccept={handleAutoFillAccept}
+      />
     </Box>
   );
 }

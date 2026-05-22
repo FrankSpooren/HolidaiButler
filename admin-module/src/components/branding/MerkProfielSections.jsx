@@ -29,6 +29,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import brandProfileService from '../../api/brandProfileService.js';
+import BrandProfileBootstrapDialog from '../BrandProfileBootstrapDialog.jsx';
 
 const INDUSTRY_OPTIONS = [
   'Toerisme & Recreatie', 'Retail & E-commerce', 'Horeca & Food', 'Cultuur & Entertainment',
@@ -44,6 +45,24 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [bootstrapOpen, setBootstrapOpen] = useState(false);
+
+  const handleBootstrapAccept = (generated) => {
+    if (!generated) return;
+    setBp(prev => ({
+      ...prev,
+      company_description: generated.company_description ?? prev.company_description,
+      industry: generated.industry ?? prev.industry,
+      usps: Array.isArray(generated.usps) ? generated.usps : prev.usps,
+      mission: generated.mission ?? prev.mission,
+      vision: generated.vision ?? prev.vision,
+      core_values: Array.isArray(generated.core_values) ? generated.core_values : prev.core_values,
+      seo_keywords: Array.isArray(generated.seo_keywords) ? generated.seo_keywords : prev.seo_keywords,
+      content_goals: generated.content_goals ?? prev.content_goals
+    }));
+    setSnack({ open: true, message: 'Brand profile suggesties ingevuld. Bekijk en sla op.', severity: 'success' });
+  };
+
 
   // === DATA LOADING ===
   const { data: profileData, isLoading: profileLoading } = useQuery({
@@ -238,6 +257,22 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
 
   return (
     <Box>
+      {/* BLOK B — Bootstrap CTA */}
+      <Alert
+        severity={Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length === 0 ? 'info' : 'success'}
+        sx={{ mb: 2 }}
+        action={
+          <Button color="primary" variant="contained" size="small" onClick={() => setBootstrapOpen(true)}>
+            {Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length === 0 ? 'Genereer met AI' : 'Opnieuw met AI'}
+          </Button>
+        }
+      >
+        <Typography variant="body2">
+          <strong>AI Brand Profile Bootstrap</strong> — laat AI een volledig brand_profile genereren uit Knowledge Base, branding en lokale POIs.
+          Reviewer accepteert per veld of geheel. EU AI Act provenance + validation.
+        </Typography>
+      </Alert>
+
       {/* 1. Bedrijfsprofiel */}
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -744,6 +779,15 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
       </Dialog>
 
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({ ...s, open: false }))} message={snack.message} />
+
+      {/* BLOK B — Bootstrap Dialog */}
+      <BrandProfileBootstrapDialog
+        open={bootstrapOpen}
+        onClose={() => setBootstrapOpen(false)}
+        destinationId={destinationId}
+        hasExisting={Object.keys(bp || {}).filter(k => bp[k] && (Array.isArray(bp[k]) ? bp[k].length > 0 : true)).length > 0}
+        onAccept={handleBootstrapAccept}
+      />
     </Box>
   );
 }

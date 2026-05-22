@@ -186,6 +186,8 @@ import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCol
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
 import notificationService from '../services/notificationService.js';
+import { handleBrandProfileBootstrap } from './handlers/brandProfileBootstrap.js';
+import { handlePagesAutoFillBasis } from './handlers/pagesAutoFillBasis.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -10002,6 +10004,16 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
 /**
  * GET /pages — List pages per destination
  */
+
+/**
+ * POST /pages/auto-fill-basis — AI-genereer Tab-Basis veld-suggesties voor pagina
+ * Gebruikt: brand_profile + Knowledge Base + branding + buildBrandContextStructured + DeepL.
+ * Output: slug + title/seo_title/seo_description per supported_languages + provenance.
+ * Vereist: niet-leeg brand_profile (anders 422 met hint naar /brand-profile/bootstrap).
+ * @version BLOK B (22-05-2026)
+ */
+router.post('/pages/auto-fill-basis', adminAuth('platform_admin'), handlePagesAutoFillBasis);
+
 router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
@@ -10068,7 +10080,7 @@ router.get('/pages/:id', adminAuth('reviewer'), destinationScope, async (req, re
  */
 router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
   try {
-    const { destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, parent_id } = req.body;
+    const { destination_id, slug, title_nl, title_en, title_de, title_es, title_fr, status, layout, parent_id } = req.body;
 
     if (!destination_id || !slug || !title_en) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id, slug and title_en are required' } });
@@ -10092,8 +10104,8 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
     const layoutJson = layout ? JSON.stringify(layout) : JSON.stringify({ blocks: [] });
 
     await mysqlSequelize.query(
-      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order, parent_id)
-       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :status, :layout, :sortOrder, :parentId)`,
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, title_fr, status, layout, sort_order, parent_id)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :titleFr, :status, :layout, :sortOrder, :parentId)`,
       {
         replacements: {
           destId: destination_id,
@@ -10102,6 +10114,7 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
           titleEn: title_en,
           titleDe: title_de || null,
           titleEs: title_es || null,
+          titleFr: title_fr || null,
           status: status || 'draft',
           layout: layoutJson,
           sortOrder: (maxSort?.max_sort ?? -1) + 1,
@@ -10149,9 +10162,9 @@ router.put('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
     }
 
     const allowedFields = [
-      'slug', 'title_nl', 'title_en', 'title_de', 'title_es',
-      'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es',
-      'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es',
+      'slug', 'title_nl', 'title_en', 'title_de', 'title_es', 'title_fr',
+      'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es', 'seo_title_fr',
+      'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es', 'seo_description_fr',
       'og_image_url', 'og_image_path', 'parent_id', 'status', 'sort_order'
     ];
 
@@ -11039,6 +11052,15 @@ router.put('/brand-profile', adminAuth('destination_admin'), writeAccess(['platf
     res.status(500).json({ success: false, error: { code: 'BRAND_PROFILE_UPDATE_ERROR', message: error.message } });
   }
 });
+
+
+/**
+ * POST /brand-profile/bootstrap — AI-genereer brand_profile JSON voor destination
+ * Gebruikt: bestaande Knowledge Base + branding + POIs + buildBrandContextStructured.
+ * Output: gegenereerde JSON + provenance + validation. Reviewer slaat op via bestaande PUT /brand-profile.
+ * @version BLOK B (22-05-2026)
+ */
+router.post('/brand-profile/bootstrap', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), handleBrandProfileBootstrap);
 
 // --- AUDIENCE PERSONAS ---
 
