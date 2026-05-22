@@ -188,7 +188,7 @@ export async function handleBrandProfileBootstrap(req, res) {
     try { branding = typeof dest.branding === 'string' ? JSON.parse(dest.branding) : (dest.branding || {}); } catch { /* empty */ }
 
     const [pois] = await mysqlSequelize.query(
-      `SELECT name, category FROM poi
+      `SELECT name, category FROM POI
        WHERE destination_id = :destId AND status = 'published'
        ORDER BY rating DESC, review_count DESC LIMIT 30`,
       { replacements: { destId } }

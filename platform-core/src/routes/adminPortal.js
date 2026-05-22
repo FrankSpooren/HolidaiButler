@@ -188,6 +188,7 @@ import visualAnalyzer from '../services/visual/visualAnalyzer.js';
 import notificationService from '../services/notificationService.js';
 import { handleBrandProfileBootstrap } from './handlers/brandProfileBootstrap.js';
 import { handlePagesAutoFillBasis } from './handlers/pagesAutoFillBasis.js';
+import { handleBrandVisualsAggregate } from './handlers/brandVisualsAggregate.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -10013,6 +10014,15 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
  * @version BLOK B (22-05-2026)
  */
 router.post('/pages/auto-fill-basis', adminAuth('platform_admin'), handlePagesAutoFillBasis);
+/**
+ * GET /brand-visuals — Aggregeer hero/brand-images per destinatie uit 3 bronnen
+ *   ?destinationId=X (required) &source=all|brand|media|poi &limit=50
+ * Returns: { items[], total, by_source: { brand, media, poi } }
+ * @version BLOK C (22-05-2026)
+ */
+router.get('/brand-visuals', adminAuth('editor'), handleBrandVisualsAggregate);
+
+
 
 router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {

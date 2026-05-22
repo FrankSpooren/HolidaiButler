@@ -32,6 +32,7 @@ import PageQualityPanel from '../components/blocks/PageQualityPanel.jsx';
 import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
 import AutoFillBasisDialog from '../components/AutoFillBasisDialog.jsx';
+import { DestinationContext } from '../components/blocks/DestinationContext.jsx';
 import debounce from 'lodash.debounce';
 
 export default function PagesPage({ embedded = false }) {
@@ -628,6 +629,12 @@ export default function PagesPage({ embedded = false }) {
           )}
 
           {editTab === 1 && editPage && (
+            <DestinationContext.Provider value={{
+              destinationId: editPage?.destination_id,
+              destinationName: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.displayName || null,
+              supportedLanguages: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.supportedLanguages || ['en','nl','de','es'],
+              defaultLanguage: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.defaultLanguage || 'en'
+            }}>
             <Box>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={(editPage.layout?.blocks || []).map(b => b.id)} strategy={verticalListSortingStrategy}>
@@ -649,6 +656,7 @@ export default function PagesPage({ embedded = false }) {
                 {t('pages.addBlock', 'Add Block')}
               </Button>
             </Box>
+            </DestinationContext.Provider>
           )}
 
           {editTab === 2 && editPage && (
