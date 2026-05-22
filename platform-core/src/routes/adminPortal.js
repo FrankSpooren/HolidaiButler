@@ -189,6 +189,9 @@ import notificationService from '../services/notificationService.js';
 import { handleBrandProfileBootstrap } from './handlers/brandProfileBootstrap.js';
 import { handlePagesAutoFillBasis } from './handlers/pagesAutoFillBasis.js';
 import { handleBrandVisualsAggregate } from './handlers/brandVisualsAggregate.js';
+import { handleChatbotConfigs } from './handlers/chatbotConfigsHandler.js';
+import { handleWeatherPreview } from './handlers/weatherPreviewHandler.js';
+import { handleFeaturedCandidates } from './handlers/featuredCandidatesHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -10021,6 +10024,28 @@ router.post('/pages/auto-fill-basis', adminAuth('platform_admin'), handlePagesAu
  * @version BLOK C (22-05-2026)
  */
 router.get('/brand-visuals', adminAuth('editor'), handleBrandVisualsAggregate);
+
+/**
+ * GET /chatbot-configs?destinationId=X — Retourneer chatbot config voor destination
+ * Leest destinations.branding.chatbotConfig + .chatbotName. Voor ChatbotWidgetEditor.
+ * @version BLOK E3 (22-05-2026)
+ */
+router.get('/chatbot-configs', adminAuth('editor'), handleChatbotConfigs);
+
+/**
+ * GET /weather-preview?destinationId=X&locale=Y&withTip=true
+ * Open-Meteo huidige weer + optionele Mistral brand-context seizoenstip (USP).
+ * @version BLOK E2 (22-05-2026)
+ */
+router.get('/weather-preview', adminAuth('editor'), handleWeatherPreview);
+
+/**
+ * GET /content-items/featured-candidates?destinationId=X&search=Y
+ * Content-items kandidaten gerangschikt op brand-fit-score (Jaccard keyword overlap).
+ * DTO via ContentItemResource.V1 (Image Resize Proxy URLs).
+ * @version BLOK E4 (22-05-2026)
+ */
+router.get('/content-items/featured-candidates', adminAuth('editor'), handleFeaturedCandidates);
 
 
 

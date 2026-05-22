@@ -633,7 +633,9 @@ export default function PagesPage({ embedded = false }) {
               destinationId: editPage?.destination_id,
               destinationName: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.displayName || null,
               supportedLanguages: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.supportedLanguages || ['en','nl','de','es'],
-              defaultLanguage: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.defaultLanguage || 'en'
+              defaultLanguage: destinations.find(d => Number(d.id) === Number(editPage?.destination_id))?.defaultLanguage || 'en',
+              latitude: (() => { const d = destinations.find(d => Number(d.id) === Number(editPage?.destination_id)); return d?.latitude || d?.branding?.lat || null; })(),
+              longitude: (() => { const d = destinations.find(d => Number(d.id) === Number(editPage?.destination_id)); return d?.longitude || d?.branding?.lng || null; })()
             }}>
             <Box>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
