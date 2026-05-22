@@ -101,6 +101,15 @@ export default function PageQualityPanel({ pageId, onValidated }) {
         <Box sx={{ px: 2, py: 1 }}>
           {loading && <Typography variant="caption" color="text.secondary">Valideren...</Typography>}
 
+          {result?.brandContextSuggestions && result.brandContextSuggestions.length > 0 && (
+            <Alert severity="info" sx={{ py: 0.5, mb: 1 }}>
+              <AlertTitle sx={{ fontSize: '0.8rem', mb: 0.5 }}>{t('quality.brandSuggestions', 'AI Brand-context suggesties')}</AlertTitle>
+              {result.brandContextSuggestions.map((s, i) => (
+                <Typography key={i} variant="caption" sx={{ display: 'block' }}>• {s}</Typography>
+              ))}
+            </Alert>
+          )}
+
           {result && result.issues.length === 0 && !loading && (
             <Alert severity="success" sx={{ py: 0.5 }}>
               <AlertTitle sx={{ fontSize: '0.8rem', mb: 0 }}>{t('quality.noIssues', 'Geen problemen gevonden')}</AlertTitle>

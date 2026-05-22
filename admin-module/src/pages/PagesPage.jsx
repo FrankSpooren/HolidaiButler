@@ -28,6 +28,7 @@ import { useBrandingDestinations } from '../hooks/useBrandingEditor.js';
 import { pageService } from '../api/pageService.js';
 import BlockEditorCard from '../components/blocks/BlockEditorCard.jsx';
 import BlockSelectorDialog from '../components/blocks/BlockSelectorDialog.jsx';
+import TemplateGalleryDialog from '../components/blocks/TemplateGalleryDialog.jsx';
 import PageQualityPanel from '../components/blocks/PageQualityPanel.jsx';
 import PageTemplateDialog from '../components/PageTemplateDialog.jsx';
 import PageRevisionsDialog from '../components/PageRevisionsDialog.jsx';
@@ -58,6 +59,12 @@ export default function PagesPage({ embedded = false }) {
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
   const [translating, setTranslating] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
+  const handleAddTemplate = (clonedBlock) => {
+    if (!editPage) return;
+    const blocks = [...(editPage.layout?.blocks || []), clonedBlock];
+    setEditPage(p => ({ ...p, layout: { ...(p.layout || {}), blocks } }));
+  };
   const [previewViewport, setPreviewViewport] = useState('desktop');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [autoFillOpen, setAutoFillOpen] = useState(false);
@@ -261,14 +268,14 @@ export default function PagesPage({ embedded = false }) {
   const updateBlockProps = (idx, newProps) => {
     if (!editPage) return;
     const blocks = [...editPage.layout.blocks];
-    blocks[idx] = { ...blocks[idx], props: newProps };
+    blocks[idx] = { ...blocks[idx], props: newProps, _updatedAt: new Date().toISOString() };
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
   const updateBlockStyle = (idx, newStyle) => {
     if (!editPage) return;
     const blocks = [...editPage.layout.blocks];
-    blocks[idx] = { ...blocks[idx], style: newStyle };
+    blocks[idx] = { ...blocks[idx], style: newStyle, _updatedAt: new Date().toISOString() };
     setEditPage({ ...editPage, layout: { ...editPage.layout, blocks } });
   };
 
@@ -654,9 +661,14 @@ export default function PagesPage({ embedded = false }) {
                   ))}
                 </SortableContext>
               </DndContext>
-              <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setSelectorOpen(true)} sx={{ mt: 1 }}>
-                {t('pages.addBlock', 'Add Block')}
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setSelectorOpen(true)}>
+                  {t('pages.addBlock', 'Add Block')}
+                </Button>
+                <Button variant="outlined" onClick={() => setTemplateGalleryOpen(true)}>
+                  Add from Template
+                </Button>
+              </Box>
             </Box>
             </DestinationContext.Provider>
           )}
@@ -740,6 +752,12 @@ export default function PagesPage({ embedded = false }) {
       </Snackbar>
 
       {/* BLOK B — Auto-fill Basis Dialog */}
+      <TemplateGalleryDialog
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onInsert={handleAddTemplate}
+      />
+
       <AutoFillBasisDialog
         open={autoFillOpen}
         onClose={() => setAutoFillOpen(false)}

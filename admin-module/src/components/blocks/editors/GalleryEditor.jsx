@@ -1,4 +1,5 @@
 import { SelectField, ItemListField, TextField, ImageUploadField } from '../fields/index.js';
+import AltTextGeneratorButton from '../AltTextGeneratorButton.jsx';
 
 const COLUMN_OPTIONS = [
   { value: 2, label: '2 columns' },
@@ -48,6 +49,7 @@ export default function GalleryEditor({ block, onChange }) {
               <ImageUploadField label="Thumbnail" value={item.thumbnailUrl} onChange={v => updateField('thumbnailUrl', v)} />
             )}
             <TranslatableField label="Alt Text" value={item.alt} onChange={v => updateField('alt', v)} />
+            {item.url && <AltTextGeneratorButton imageUrl={item.url} currentAlt={item.alt} onGenerated={v => updateField('alt', v)} />}
             <TranslatableField label="Caption" value={item.caption} onChange={v => updateField('caption', v)} />
           </>
         )}

@@ -192,6 +192,10 @@ import { handleBrandVisualsAggregate } from './handlers/brandVisualsAggregate.js
 import { handleChatbotConfigs } from './handlers/chatbotConfigsHandler.js';
 import { handleWeatherPreview } from './handlers/weatherPreviewHandler.js';
 import { handleFeaturedCandidates } from './handlers/featuredCandidatesHandler.js';
+import { handlePageValidate } from './handlers/pageValidateHandler.js';
+import { handleGenerateAltText } from './handlers/generateAltTextHandler.js';
+import { handleEventsPreview } from './handlers/eventsPreviewHandler.js';
+import { listTemplates, createTemplate, deleteTemplate, useTemplate } from './handlers/blockTemplatesHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -10046,6 +10050,36 @@ router.get('/weather-preview', adminAuth('editor'), handleWeatherPreview);
  * @version BLOK E4 (22-05-2026)
  */
 router.get('/content-items/featured-candidates', adminAuth('editor'), handleFeaturedCandidates);
+
+/**
+ * GET /pages/:id/validate?locale=Y — SEO + accessibility + content quality + brand-suggestions
+ * @version BLOK F5 (22-05-2026)
+ */
+router.get('/pages/:id/validate', adminAuth('editor'), handlePageValidate);
+
+/**
+ * POST /images/generate-alt-text - Pixtral vision + DeepL fan-out, WCAG 2.1 AA alt-text
+ * @version BLOK F4 (22-05-2026)
+ */
+router.post('/images/generate-alt-text', adminAuth('editor'), handleGenerateAltText);
+
+/**
+ * GET /agenda/events-preview - Readonly events fetch + brand-fit-score (Scenario C compliant)
+ * @version BLOK F3 (22-05-2026)
+ */
+router.get('/agenda/events-preview', adminAuth('editor'), handleEventsPreview);
+
+/**
+ * Block Templates library (BLOK F6 — 22-05-2026)
+ * GET /page-builder/templates — list templates (incl. global + destination-specific)
+ * POST /page-builder/templates — save block as template
+ * DELETE /page-builder/templates/:id — delete template
+ * POST /page-builder/templates/:id/use — track usage
+ */
+router.get('/page-builder/templates', adminAuth('editor'), listTemplates);
+router.post('/page-builder/templates', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), createTemplate);
+router.delete('/page-builder/templates/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), deleteTemplate);
+router.post('/page-builder/templates/:id/use', adminAuth('editor'), useTemplate);
 
 
 

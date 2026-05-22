@@ -5,6 +5,7 @@ import { TranslatableField, ImageUploadField, ButtonListField, SelectField, Text
 import { useBrandingDestinations } from '../../../hooks/useBrandingEditor.js';
 import { useDestination } from '../DestinationContext.jsx';
 import apiClient from '../../../api/client.js';
+import AltTextGeneratorButton from '../AltTextGeneratorButton.jsx';
 
 const BG_TYPE_OPTIONS = [
   { value: 'image', label: 'Image' },
@@ -168,6 +169,8 @@ export default function HeroEditor({ block, onChange }) {
         <>
           <BrandVisualPicker onSelect={(url) => update('image', url)} />
           <ImageUploadField label="Background Image" value={props.image} onChange={v => update('image', v)} />
+          <TranslatableField label="Background Image - alt text" value={props.imageAlt} onChange={v => update('imageAlt', v)} helperText="WCAG 2.1 AA - beschrijf wat zichtbaar is" />
+          {props.image && <AltTextGeneratorButton imageUrl={props.image} currentAlt={props.imageAlt} onGenerated={v => update('imageAlt', v)} />}
         </>
       )}
       {props.backgroundType === 'video' && (
