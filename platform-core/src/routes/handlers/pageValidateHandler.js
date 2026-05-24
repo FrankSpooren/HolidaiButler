@@ -133,15 +133,47 @@ function analyzeAccessibility(blocks) {
   return { items };
 }
 
-async function generateBrandSuggestions(destinationId, currentScore, items, locale) {
+async function generateBrandSuggestions(destinationId, currentScore, items) {
   if (currentScore >= SEO_THRESHOLD) return [];
+  const suggestions = [];
   try {
+    const { mysqlSequelize } = await import('../../config/database.js');
+    const [[dest]] = await mysqlSequelize.query(
+      'SELECT brand_profile FROM destinations WHERE id = :id',
+      { replacements: { id: destinationId } }
+    );
+    let bp = {};
+    try { bp = typeof dest?.brand_profile === 'string' ? JSON.parse(dest.brand_profile) : (dest?.brand_profile || {}); } catch { /* empty */ }
+    const brandProfileFilled = Object.values(bp).some(v => v && (Array.isArray(v) ? v.length > 0 : true));
+
     const bcStruct = await buildBrandContextStructured(destinationId, { includeReferenceInString: false, maxKbChunks: 4 });
-    if (!bcStruct.hasInternalSources) return [];
-    const suggestions = [];
-    const seoIssues = items.filter(i => i.category === 'seo' && i.severity === 'error');
-    if (seoIssues.length > 0) {
-      suggestions.push(`Gebruik AI Brand Profile om SEO-title/description te genereren met ${bcStruct.internalSourcesCount} Knowledge Base-bronnen.`);
+    const seoIssues = items.filter(i => i.category === 'seo' && (i.severity === 'error' || i.severity === 'warning'));
+
+    if (seoIssues.length === 0) return suggestions;
+
+    if (!brandProfileFilled) {
+      suggestions.push({
+        action: 'generate_brand_profile',
+        text: 'Brand profile is nog leeg. Genereer eerst een AI Brand Profile in Branding > Merkprofiel om de destination-context op te zetten.',
+        cta_label: 'Naar Branding > Merkprofiel',
+        cta_path: '/branding',
+      });
+    } else if (bcStruct.hasInternalSources || brandProfileFilled) {
+      const sourcesCount = bcStruct.internalSourcesCount;
+      const sourcesText = sourcesCount > 0 ? ` (gegrond op ${sourcesCount} Knowledge Base bron${sourcesCount === 1 ? '' : 'nen'})` : '';
+      suggestions.push({
+        action: 'auto_fill_page_basis',
+        text: `Klik 'Auto-fill via merkprofiel' in de Basis-tab van deze pagina om SEO-velden te genereren via Mistral AI${sourcesText}.`,
+        cta_label: 'Open Auto-fill Basis',
+        cta_path: 'tab:basis',
+      });
+    } else {
+      suggestions.push({
+        action: 'add_knowledge_sources',
+        text: 'Voeg PDF/URL/text-bronnen toe aan Knowledge Base om AI auto-fill van SEO-velden mogelijk te maken.',
+        cta_label: 'Naar Knowledge Base',
+        cta_path: '/branding',
+      });
     }
     return suggestions;
   } catch (err) {
@@ -181,7 +213,7 @@ export async function handlePageValidate(req, res) {
 
     const overallScore = Math.max(0, seoAnalysis.score - (warnings * 2));
 
-    const brandContextSuggestions = await generateBrandSuggestions(page.destination_id, overallScore, allItems, locale);
+    const brandContextSuggestions = await generateBrandSuggestions(page.destination_id, overallScore, allItems);
 
     const categories = {
       seo: { score: seoAnalysis.score, issues: allItems.filter(i => i.category === 'seo').length },

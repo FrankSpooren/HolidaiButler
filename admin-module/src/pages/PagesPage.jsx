@@ -552,7 +552,13 @@ export default function PagesPage({ embedded = false }) {
           </Tabs>
 
           {/* Quality validation panel (E4.3.2) */}
-          {editPage?.id && <PageQualityPanel pageId={editPage.id} />}
+          {editPage?.id && <PageQualityPanel pageId={editPage.id} onSuggestionAction={(action, ctaPath) => {
+            if (action === 'auto_fill_page_basis') {
+              setAutoFillOpen(true);
+            } else if (action === 'generate_brand_profile' || action === 'add_knowledge_sources') {
+              window.open('/branding', '_self');
+            }
+          }} />}
 
           {editTab === 0 && editPage && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

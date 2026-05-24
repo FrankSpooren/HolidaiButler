@@ -1,29 +1,21 @@
 /**
- * Weather Preview Handler v2 — OpenWeatherMap (gecorrigeerd 22-05-2026)
+ * Weather Preview Handler v3 — OpenWeatherMap + multi-locale brand-tip i18n
  *
- * GET /api/v1/admin-portal/weather-preview?destinationId=X&locale=Y&withTip=true
+ * GET /api/v1/admin-portal/weather-preview?destinationId=X&withTip=true
  *
- * v2 correctie (na Frank's terechte feedback):
- *   - Bron: OpenWeatherMap (api.openweathermap.org/data/2.5) via bestaande
- *     OPENWEATHER_API_KEY in platform-core/.env. Consistent met huidige
- *     integraties in agents/personaliseerder, holibot/contextService,
- *     media/contentReadinessService, hb-websites/api/weather/route.ts +
- *     mobile/ProgramCard.tsx.
- *   - v1 (Open-Meteo) was incorrecte afwijking — slechts 1 file
- *     (hb-websites/src/lib/weather.ts) gebruikte Open-Meteo als uitzondering.
+ * v3 changes (2026-05-24 — Frank UX feedback):
+ *   - brand_tip wordt nu i18n-object (alle supported_languages parallel
+ *     gegenereerd) i.p.v. single-locale string. Runtime block kan locale-
+ *     specifiek renderen zonder per-locale roundtrip.
+ *   - Tip-cache per-locale behouden voor performance (5min TTL).
+ *   - Geen `locale` query-param meer noodzakelijk — gebruikt destination
+ *     supported_languages + default_language autonoom.
  *
- * Rijkere datapoints t.o.v. v1:
- *   - humidity, pressure, visibility, feels_like, sunrise/sunset
- *   - Officieel OpenWeather description + icon code (consistent met andere modules)
- *   - 5-daagse forecast via /forecast endpoint (3-uur granular, geaggregeerd
- *     naar daily min/max)
+ * Response shape:
+ *   brand_tip: { en: "...", nl: "...", de: "...", es: "...", fr: "..." } | null
+ *   (alleen keys voor supported_languages van destination)
  *
- * Cost-tracking: CostLog (MongoDB) per call — non-blocking, service='openweather'.
- * OpenWeather free tier: 1000 calls/dag. 30-min cache via Cache-Control header
- * + in-memory tip-cache.
- *
- * GDPR: OpenWeather Ltd. HQ London UK. EU data-center beschikbaar. UK adequacy
- * decision onder GDPR actief — geen DPA-blocker.
+ * @version BLOK F UX-feedback v3 (2026-05-24)
  */
 
 import { mysqlSequelize } from '../../config/database.js';
@@ -34,7 +26,8 @@ import embeddingService from '../../services/holibot/embeddingService.js';
 const TIP_CACHE = new Map();
 const TIP_CACHE_TTL_MS = 5 * 60 * 1000;
 const OWM_BASE = 'https://api.openweathermap.org/data/2.5';
-const COST_PER_CALL_EUR = 0.00006; // Free tier — nominaal voor cost-tracking pattern
+const COST_PER_CALL_EUR = 0.00006;
+const SUPPORTED_TIP_LOCALES = ['en', 'nl', 'de', 'es', 'fr'];
 
 async function logCost(destId, cost) {
   try {
@@ -53,9 +46,7 @@ async function logCost(destId, cost) {
   }
 }
 
-async function fetchOpenWeatherCurrent(lat, lng, apiKey, locale) {
-  const langMap = { nl: 'nl', en: 'en', de: 'de', es: 'es', fr: 'fr' };
-  const lang = langMap[locale] || 'en';
+async function fetchOpenWeatherCurrent(lat, lng, apiKey, lang) {
   const url = `${OWM_BASE}/weather?lat=${lat}&lon=${lng}&units=metric&lang=${lang}&appid=${apiKey}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -64,14 +55,10 @@ async function fetchOpenWeatherCurrent(lat, lng, apiKey, locale) {
     clearTimeout(timeout);
     if (!r.ok) throw new Error(`OpenWeather current HTTP ${r.status}`);
     return await r.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+  } finally { clearTimeout(timeout); }
 }
 
-async function fetchOpenWeatherForecast(lat, lng, apiKey, locale) {
-  const langMap = { nl: 'nl', en: 'en', de: 'de', es: 'es', fr: 'fr' };
-  const lang = langMap[locale] || 'en';
+async function fetchOpenWeatherForecast(lat, lng, apiKey, lang) {
   const url = `${OWM_BASE}/forecast?lat=${lat}&lon=${lng}&units=metric&lang=${lang}&appid=${apiKey}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -80,9 +67,7 @@ async function fetchOpenWeatherForecast(lat, lng, apiKey, locale) {
     clearTimeout(timeout);
     if (!r.ok) throw new Error(`OpenWeather forecast HTTP ${r.status}`);
     return await r.json();
-  } finally {
-    clearTimeout(timeout);
-  }
+  } finally { clearTimeout(timeout); }
 }
 
 function aggregateDailyForecast(forecastList) {
@@ -90,9 +75,7 @@ function aggregateDailyForecast(forecastList) {
   (forecastList || []).forEach(item => {
     const date = item.dt_txt?.slice(0, 10);
     if (!date) return;
-    if (!byDay[date]) {
-      byDay[date] = { date, temps: [], weather_codes: [], icons: [], descriptions: [] };
-    }
+    if (!byDay[date]) byDay[date] = { date, temps: [], weather_codes: [], icons: [], descriptions: [] };
     byDay[date].temps.push(item.main?.temp);
     byDay[date].weather_codes.push(item.weather?.[0]?.id);
     byDay[date].icons.push(item.weather?.[0]?.icon);
@@ -108,7 +91,7 @@ function aggregateDailyForecast(forecastList) {
   }));
 }
 
-async function generateBrandTip(destId, current, locale) {
+async function generateTipForLocale(destId, bcStruct, current, locale) {
   const tempBucket = Math.round((current.main?.temp || 0) / 5) * 5;
   const weatherMain = current.weather?.[0]?.main || 'Clear';
   const cacheKey = `${destId}:${tempBucket}:${weatherMain}:${locale}`;
@@ -116,11 +99,6 @@ async function generateBrandTip(destId, current, locale) {
   if (cached && (Date.now() - cached.at) < TIP_CACHE_TTL_MS) return cached.tip;
 
   try {
-    const bcStruct = await buildBrandContextStructured(destId, {
-      includeReferenceInString: true,
-      maxKbChunks: 4,
-    });
-
     const localeNames = { nl: 'Dutch', en: 'English', de: 'German', es: 'Spanish', fr: 'French' };
     const targetLangName = localeNames[locale] || 'English';
 
@@ -149,55 +127,68 @@ generic phrases. Output plain text only, no markdown.`;
     if (tip) TIP_CACHE.set(cacheKey, { tip, at: Date.now() });
     return tip;
   } catch (err) {
-    logger.warn('[weather-preview] tip generation failed:', err.message);
+    logger.warn(`[weather-preview] tip generation failed for ${locale}:`, err.message);
     return null;
   }
 }
 
+async function generateMultiLocaleTips(destId, current, supportedLanguages) {
+  const localesForTip = supportedLanguages.filter(l => SUPPORTED_TIP_LOCALES.includes(l));
+  if (localesForTip.length === 0) return null;
+
+  const bcStruct = await buildBrandContextStructured(destId, { includeReferenceInString: true, maxKbChunks: 4 });
+  const tipPromises = localesForTip.map(locale => generateTipForLocale(destId, bcStruct, current, locale).then(tip => ({ locale, tip })));
+  const results = await Promise.all(tipPromises);
+
+  const i18nTip = {};
+  let anyNonEmpty = false;
+  for (const { locale, tip } of results) {
+    if (tip) { i18nTip[locale] = tip; anyNonEmpty = true; }
+  }
+  return anyNonEmpty ? i18nTip : null;
+}
+
 export async function handleWeatherPreview(req, res) {
   const destId = Number(req.query.destinationId || 0);
-  const locale = String(req.query.locale || 'en').toLowerCase().slice(0, 2);
+  const previewLocale = String(req.query.locale || 'en').toLowerCase().slice(0, 2);
   const withTip = req.query.withTip === 'true' || req.query.withTip === '1';
 
-  if (!destId) {
-    return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
-  }
+  if (!destId) return res.status(400).json({ success: false, error: { code: 'MISSING_DESTINATION', message: 'destinationId required' } });
 
   const apiKey = process.env.OPENWEATHER_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ success: false, error: { code: 'MISSING_API_KEY', message: 'OPENWEATHER_API_KEY not configured' } });
-  }
+  if (!apiKey) return res.status(500).json({ success: false, error: { code: 'MISSING_API_KEY', message: 'OPENWEATHER_API_KEY not configured' } });
 
   try {
     const [[dest]] = await mysqlSequelize.query(
-      `SELECT id, name, display_name, latitude, longitude, branding, default_language
+      `SELECT id, name, display_name, latitude, longitude, branding, default_language, supported_languages
        FROM destinations WHERE id = :id`,
       { replacements: { id: destId } }
     );
-    if (!dest) {
-      return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
-    }
+    if (!dest) return res.status(404).json({ success: false, error: { code: 'DESTINATION_NOT_FOUND', message: 'Destination not found' } });
 
     let branding = {};
     try { branding = typeof dest.branding === 'string' ? JSON.parse(dest.branding) : (dest.branding || {}); } catch { /* empty */ }
     const lat = dest.latitude || branding.lat || null;
     const lng = dest.longitude || branding.lng || null;
-    if (!lat || !lng) {
-      return res.status(422).json({
-        success: false,
-        error: { code: 'MISSING_COORDINATES', message: 'No latitude/longitude available for destination. Set destinations.latitude/longitude or branding.lat/lng.' }
-      });
-    }
+    if (!lat || !lng) return res.status(422).json({ success: false, error: { code: 'MISSING_COORDINATES', message: 'No latitude/longitude available for destination.' } });
+
+    let supportedLanguages = [];
+    try { supportedLanguages = typeof dest.supported_languages === 'string' ? JSON.parse(dest.supported_languages) : (dest.supported_languages || []); } catch { /* empty */ }
+    if (supportedLanguages.length === 0) supportedLanguages = [dest.default_language || 'en'];
+
+    // Weather data in preview-locale (admin) of default_language (runtime fallback)
+    const owmLang = SUPPORTED_TIP_LOCALES.includes(previewLocale) ? previewLocale : (dest.default_language || 'en');
 
     const [current, forecast] = await Promise.all([
-      fetchOpenWeatherCurrent(Number(lat), Number(lng), apiKey, locale),
-      fetchOpenWeatherForecast(Number(lat), Number(lng), apiKey, locale).catch(err => { logger.warn('[weather-preview] forecast failed (non-blocking):', err.message); return null; }),
+      fetchOpenWeatherCurrent(Number(lat), Number(lng), apiKey, owmLang),
+      fetchOpenWeatherForecast(Number(lat), Number(lng), apiKey, owmLang).catch(err => { logger.warn('[weather-preview] forecast failed:', err.message); return null; }),
     ]);
 
     let brandTip = null;
-    if (withTip) brandTip = await generateBrandTip(destId, current, locale);
+    if (withTip) brandTip = await generateMultiLocaleTips(destId, current, supportedLanguages);
 
-    logCost(destId, COST_PER_CALL_EUR * (forecast ? 2 : 1)).catch(() => {});
+    const callCount = 1 + (forecast ? 1 : 0);
+    logCost(destId, COST_PER_CALL_EUR * callCount).catch(() => {});
 
     res.set('Cache-Control', 'public, max-age=1800, stale-while-revalidate=60');
 
@@ -207,6 +198,8 @@ export async function handleWeatherPreview(req, res) {
         destination_id: destId,
         destination_name: dest.display_name || dest.name,
         coordinates: { lat: Number(lat), lng: Number(lng) },
+        supported_languages: supportedLanguages,
+        default_language: dest.default_language || 'en',
         current: {
           temperature: Math.round(current.main?.temp ?? 0),
           feels_like: Math.round(current.main?.feels_like ?? 0),
@@ -217,7 +210,7 @@ export async function handleWeatherPreview(req, res) {
           weather_main: current.weather?.[0]?.main ?? null,
           description: current.weather?.[0]?.description ?? null,
           icon: current.weather?.[0]?.icon ?? null,
-          wind_speed: Math.round((current.wind?.speed ?? 0) * 3.6), // m/s -> km/u
+          wind_speed: Math.round((current.wind?.speed ?? 0) * 3.6),
           wind_deg: current.wind?.deg ?? null,
           clouds: current.clouds?.all ?? null,
           sunrise: current.sys?.sunrise ?? null,
@@ -225,9 +218,8 @@ export async function handleWeatherPreview(req, res) {
         },
         forecast_5d: forecast ? aggregateDailyForecast(forecast.list) : [],
         brand_tip: brandTip,
-        locale,
+        brand_tip_locales: brandTip ? Object.keys(brandTip) : [],
         source: 'openweathermap.org',
-        api_consistency: 'matches platform-core agents/personaliseerder + holibot/contextService + media/contentReadinessService',
       }
     });
   } catch (error) {

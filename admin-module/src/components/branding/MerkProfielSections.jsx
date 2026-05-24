@@ -49,6 +49,27 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
 
+  const [batchRunning, setBatchRunning] = useState(false);
+
+  const handleBatchAutoFill = async () => {
+    if (batchRunning || !destinationId) return;
+    setBatchRunning(true);
+    try {
+      const { data } = await apiClient.post('/pages/batch-auto-fill', { destinationId, onlyEmpty: true }, { timeout: 300000 });
+      if (data?.success) {
+        const succeeded = data.data?.succeeded || 0;
+        const processed = data.data?.processed || 0;
+        setSnack({ open: true, message: `Batch auto-fill voltooid: ${succeeded}/${processed} pagina's gevuld met SEO-velden.`, severity: succeeded === processed ? 'success' : 'warning' });
+      } else {
+        setSnack({ open: true, message: data?.error?.message || 'Batch auto-fill mislukt.', severity: 'error' });
+      }
+    } catch (err) {
+      setSnack({ open: true, message: err?.response?.data?.error?.message || err.message, severity: 'error' });
+    } finally {
+      setBatchRunning(false);
+    }
+  };
+
   const handleBootstrapAccept = (generated) => {
     if (!generated) return;
     setBp(prev => ({
@@ -62,7 +83,12 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
       seo_keywords: Array.isArray(generated.seo_keywords) ? generated.seo_keywords : prev.seo_keywords,
       content_goals: generated.content_goals ?? prev.content_goals
     }));
-    setSnack({ open: true, message: 'Brand profile suggesties ingevuld. Bekijk en sla op.', severity: 'success' });
+    setSnack({
+      open: true,
+      message: 'Brand profile suggesties ingevuld. Wil je nu alle pagina\'s met lege SEO-velden auto-fillen?',
+      severity: 'success',
+      action: 'batchAutoFill',
+    });
   };
 
 
@@ -800,7 +826,24 @@ export default function MerkProfielSections({ destinationId, destinationName, hi
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({ ...s, open: false }))} message={snack.message} />
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={snack.action ? 12000 : 4000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snack.severity || 'info'}
+          onClose={() => setSnack(s => ({ ...s, open: false }))}
+          action={snack.action === 'batchAutoFill' ? (
+            <Button color="inherit" size="small" disabled={batchRunning} onClick={() => { setSnack(s => ({ ...s, open: false })); handleBatchAutoFill(); }}>
+              {batchRunning ? 'Bezig...' : 'Auto-fill alle pages'}
+            </Button>
+          ) : null}
+        >
+          {snack.message}
+        </Alert>
+      </Snackbar>
 
       {/* AI Merkprofiel Dialog */}
       <BrandProfileBootstrapDialog

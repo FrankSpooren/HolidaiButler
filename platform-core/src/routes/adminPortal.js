@@ -196,6 +196,7 @@ import { handlePageValidate } from './handlers/pageValidateHandler.js';
 import { handleGenerateAltText } from './handlers/generateAltTextHandler.js';
 import { handleEventsPreview } from './handlers/eventsPreviewHandler.js';
 import { listTemplates, createTemplate, deleteTemplate, useTemplate } from './handlers/blockTemplatesHandler.js';
+import { handleBatchAutoFillPages } from './handlers/batchAutoFillHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -10080,6 +10081,13 @@ router.get('/page-builder/templates', adminAuth('editor'), listTemplates);
 router.post('/page-builder/templates', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), createTemplate);
 router.delete('/page-builder/templates/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), deleteTemplate);
 router.post('/page-builder/templates/:id/use', adminAuth('editor'), useTemplate);
+
+/**
+ * POST /pages/batch-auto-fill - Batch SEO auto-fill voor alle pages met lege SEO-velden
+ * Hergebruikt handlePagesAutoFillBasis per page sequentieel (Mistral rate-limit safe).
+ * @version BLOK F UX-feedback (2026-05-24)
+ */
+router.post('/pages/batch-auto-fill', adminAuth('platform_admin'), handleBatchAutoFillPages);
 
 
 
