@@ -219,7 +219,7 @@ git commit -m "security: refresh gitleaks baseline after triage of <count> findi
 - `trufflehog git file://. --only-verified --no-update` over volledige history — detecteert leaks die door huidige rules ontwijken
 - Bij verified finding: incident-procedure (sectie 6) — roteer, strip, document
 
-## 10. Bekende secrets-anti-patterns (geleerd uit INC-001 + INC-002 + INC-003)
+## 10. Bekende secrets-anti-patterns (geleerd uit INC-001 + INC-002 + INC-003 + INC-004)
 
 | Patroon | Waarom anti | Voorbeeld | Detectie |
 |---|---|---|---|
@@ -240,12 +240,14 @@ grep -rn --include='*.js' --include='*.ts' -E "dev-[a-z-]+-(in-production|secret
 # Per match: grep '^<ENV_VAR>=' alle .env files — verifieer dat reale credential aanwezig is
 ```
 
-Voorbeelden van bekende dev-placeholder fallbacks die aandacht vereisen:
-- `platform-core/src/services/realtimeService.js:24`: `JWT_SECRET || 'dev-secret-change-in-production'` — verifieer `JWT_SECRET` in `.env`
-- `platform-core/src/services/agents/personaliseerder/index.js:35`: `SESSION_SALT || 'hb-salt'` — verifieer SESSION_SALT in `.env`
-- `platform-core/src/services/reservation/reservationService.js:35`: `RESERVATION_QR_SECRET || 'dev-reservation-secret'` (SKIP — reservations-module on-hold per MEMORY)
+Bekende dev-placeholder fallbacks status (post-Group-A/B triage 2026-06-10):
+- ✅ `platform-core/src/services/realtimeService.js:24`: `JWT_SECRET || 'dev-secret-change-in-production'` — `JWT_SECRET` verified in `.env` (fallback inactief, anti-pattern blijft als code-smell voor toekomstige cleanup)
+- ✅ `platform-core/src/services/agents/personaliseerder/index.js:35`: ~~`SESSION_SALT || 'hb-salt'`~~ — **GERESOLVEERD INC-2026-06-10-004** (commit `e10b321`): salt geroteerd, fallback gestript, fail-loud guard + graceful hash-degradation toegevoegd
+- ✅ `platform-core/src/routes/adminPortal.js:5651-5652`: ~~SA_API_KEY/SA_USER_ID hardcoded fallback~~ — **GERESOLVEERD Group B triage** (commit `8a34531`): 3e overgeziene locatie van INC-003 leak; HEAD gestript, env-var-only met HTTP 503 request-time guard
+- ⏳ `platform-core/src/routes/adminPortal.js:15950`: `SOCIAL_TOKEN_ENCRYPTION_KEY || JWT_SECRET || 'default-key'` — **NEW INCIDENT-KANDIDAAT INC-2026-06-10-005** — AES-256-CBC OAuth-token-encryption-key met fallback-chain naar literal `'default-key'`. Severity HIGH wegens encryption-key fallback. Niet automatisch gedetecteerd door `hb-fallback-credential-pattern` regex (`'default-key'` is 11 chars, regex eist 16+). Vereist apart Frank-akkoord wegens OAuth-token re-encryption migration impact.
+- 🚫 `platform-core/src/services/reservation/reservationService.js:35`: `RESERVATION_QR_SECRET || 'dev-reservation-secret'` (SKIP — reservations-module on-hold per MEMORY.md)
 
-Bij ontbrekende env-var: behandel als incident (analoog aan INC-001/002/003 procedure).
+Bij ontbrekende env-var: behandel als incident (analoog aan INC-001/002/003/004 procedure).
 
 ### 10.1 Vendor-verificatie best-practice
 
