@@ -634,26 +634,34 @@ function getLocalizedString(val: unknown, locale: string): string {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-/** Fetch current weather from OpenWeatherMap via backend proxy or direct */
+/**
+ * Fetch current weather via internal multi-tenant proxy endpoint.
+ *
+ * 2026-06-10 security fix (Frank's F12 401 + audit): direct OWM call removed.
+ * Reasons:
+ *   - Hardcoded API key in source = leaked to client bundle (OWASP A02, GDPR Art 25/32 finding)
+ *   - Hardcoded WEATHER_COORDS = destination-specific lock (multi-tenant architecture violation)
+ * Replacement:
+ *   - Server-side `/api/v1/weather/public?slug=X` (handler v5 — costlogged + tenant-resolved
+ *     via destinations table coords + brand-tip validated via Optie D RAG)
+ *   - Cache TTL 30 min matched server-side ISR window
+ */
 interface WeatherData { condition: string; temp: number; wind: number; }
-const WEATHER_COORDS: Record<string, { lat: number; lng: number }> = {
-  calpe: { lat: 38.6447, lng: 0.0458 },
-  texel: { lat: 53.0548, lng: 4.7979 },
-};
 let _weatherCache: { data: WeatherData | null; ts: number; slug: string } | null = null;
 
 async function fetchWeather(): Promise<WeatherData | null> {
   const slug = getDestinationSlug() || 'calpe';
   if (_weatherCache && _weatherCache.slug === slug && Date.now() - _weatherCache.ts < 30 * 60 * 1000) return _weatherCache.data;
   try {
-    const coords = WEATHER_COORDS[slug] || WEATHER_COORDS.calpe;
-    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lng}&units=metric&appid=***REMOVED***`);
+    const res = await fetch(`/api/v1/weather/public?slug=${encodeURIComponent(slug)}&withTip=false`);
     if (!res.ok) return null;
-    const d = await res.json();
+    const payload = await res.json();
+    const current = payload?.data?.current;
+    if (!current) return null;
     const weather: WeatherData = {
-      condition: (d.weather?.[0]?.main || '').toLowerCase(),
-      temp: Math.round(d.main?.temp || 20),
-      wind: Math.round((d.wind?.speed || 0) * 3.6),
+      condition: (current.weather_main || '').toLowerCase(),
+      temp: Math.round(current.temperature ?? 20),
+      wind: Math.round(current.wind_speed ?? 0),
     };
     _weatherCache = { data: weather, ts: Date.now(), slug };
     return weather;
