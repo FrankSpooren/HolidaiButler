@@ -78,15 +78,20 @@ function formatDay(dateStr: string, locale: string): string {
   return date.toLocaleDateString(localeMap[locale] || 'en-US', { weekday: 'short' });
 }
 
-async function fetchPublicWeather(destinationId: number, locale: string, withTip: boolean): Promise<WeatherData | null> {
+async function fetchPublicWeather(destinationId: number, locale: string, withTip: boolean, baseUrl: string): Promise<WeatherData | null> {
+  // SSR Node fetch vereist absolute URL. baseUrl wordt geconstrueerd vanuit
+  // request-headers (own host) in de caller — werkt per-tenant zonder env-var.
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const url = `${baseUrl}/api/v1/weather/public?destinationId=${destinationId}&locale=${locale}&withTip=${withTip ? 'true' : 'false'}`;
     const res = await fetch(url, { next: { revalidate: 1800 } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[WeatherWidget] fetchPublicWeather non-ok:', res.status, url);
+      return null;
+    }
     const json = await res.json();
     return json?.data || null;
-  } catch {
+  } catch (err) {
+    console.error('[WeatherWidget] fetchPublicWeather error:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }
@@ -98,7 +103,15 @@ export default async function WeatherWidget({ layout = 'compact', showBrandTip =
   const tenant = await fetchTenantConfig(tenantSlug);
   if (!tenant?.id) return null;
 
-  const weather = await fetchPublicWeather(Number(tenant.id), locale, !!showBrandTip);
+  // Construct absolute baseUrl from request-headers — werkt per-tenant zonder
+  // env-var. Apache proxy chain kan komma-separated x-forwarded-host
+  // opleveren + protocol-prefix; strip beide.
+  const proto = (headersList.get('x-forwarded-proto') || 'https').split(',')[0].trim();
+  const rawHost = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost';
+  const host = rawHost.split(',')[0].trim().replace(/^https?:\/\//, '');
+  const baseUrl = `${proto}://${host}`;
+
+  const weather = await fetchPublicWeather(Number(tenant.id), locale, !!showBrandTip, baseUrl);
   if (!weather) return null;
 
   const isDetailed = layout === 'detailed';
