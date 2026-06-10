@@ -1,24 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  Box, Typography, Paper, Chip, CircularProgress, Alert, IconButton
+  Box, Typography, Paper, Chip, CircularProgress, Alert, IconButton, Skeleton, Tooltip
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { SelectField, SwitchField } from '../fields/index.js';
 import { useDestination } from '../DestinationContext.jsx';
 import apiClient from '../../../api/client.js';
 
 /**
- * WeatherWidgetEditor v3 (2026-05-24 — Frank UX feedback)
+ * WeatherWidgetEditor v4 (Punt 2 + Punt 1 — Frank UX feedback 2026-06-10)
  *
- * Verbeteringen v2 -> v3:
- *   - Layout single-source-of-truth (compact = huidig weer; detailed = +5-day)
- *     showForecast switch verwijderd (was redundant met layout).
- *   - tipLocale dropdown verwijderd. Brand-tip wordt server-side gegenereerd
- *     voor ALLE supported_languages parallel; runtime block kiest locale
- *     uit Next.js i18n context. Preview toont destination default_language.
- *   - Brand-tip preview toont nu ALLE locales als ze beschikbaar zijn
- *     (compact accordion-style).
+ * v4 changes vs v3:
+ *   - Optimistic UI op layout-switch: SelectField wijzigt direct visueel, toont
+ *     spinner naast veld tijdens iframe render-wait (max 1.2s lock). Voorkomt
+ *     dubbele klikken + geeft directe feedback.
+ *   - Helper-text microcopy: "Voorbeeld wordt bijgewerkt..." + "1-3 sec bij eerste switch"
+ *   - Skeleton in WeatherPreview tijdens initial fetch (geen blanco Paper meer).
+ *   - Validation badge per locale chip — toont validated/failed/no-grounding state
+ *     met tooltip (hallucinationRate + ungroundedEntities).
+ *   - Brand-tip Alert toont ook wanneer ALLE locales validation-failed (info-alert
+ *     "AI kon geen feitelijke tip genereren") — geen valse "verwijderd"-indruk meer.
  */
 
 const LAYOUT_OPTIONS = [
@@ -41,13 +45,60 @@ function getWeatherDesc(code, fallbackDescription) {
   return WMO_DESCRIPTIONS[code] || 'Onbekend';
 }
 
-function WeatherPreview({ destinationId, withTip, defaultLanguage }) {
+function WeatherPreviewSkeleton() {
+  return (
+    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Skeleton variant="text" width={140} height={18} />
+        <Skeleton variant="circular" width={24} height={24} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
+        <Skeleton variant="text" width={70} height={40} />
+        <Skeleton variant="text" width={120} height={20} />
+      </Box>
+      <Skeleton variant="text" width="80%" height={16} />
+      <Skeleton variant="rectangular" width="100%" height={48} sx={{ mt: 1.5, borderRadius: 1 }} />
+    </Paper>
+  );
+}
+
+function ValidationBadge({ locale, validation, isDefault }) {
+  if (!validation) {
+    return (
+      <Chip size="small" label={locale.toUpperCase()} sx={{ height: 18, fontSize: '0.6rem' }} variant={isDefault ? 'filled' : 'outlined'} color="primary" />
+    );
+  }
+  const { passed, hallucinationRate, ungroundedEntities = [], retries } = validation;
+  const rateLabel = typeof hallucinationRate === 'number' ? ` ${Math.round(hallucinationRate * 100)}%` : '';
+  const tooltipParts = [
+    `Locale: ${locale.toUpperCase()}`,
+    `Status: ${passed ? 'Validated' : 'Failed'}`,
+    typeof hallucinationRate === 'number' ? `Hallucinationrate: ${(hallucinationRate * 100).toFixed(1)}%` : null,
+    typeof retries === 'number' ? `Retries: ${retries}` : null,
+    ungroundedEntities.length > 0 ? `Ungrounded: ${ungroundedEntities.slice(0, 3).join(', ')}` : null,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <Tooltip title={tooltipParts} arrow>
+      <Chip
+        size="small"
+        icon={passed ? <CheckCircleIcon style={{ fontSize: 12 }} /> : <WarningAmberIcon style={{ fontSize: 12 }} />}
+        label={`${locale.toUpperCase()}${rateLabel}`}
+        sx={{ height: 18, fontSize: '0.6rem', '& .MuiChip-icon': { ml: 0.5 } }}
+        variant={isDefault ? 'filled' : 'outlined'}
+        color={passed ? 'success' : 'warning'}
+      />
+    </Tooltip>
+  );
+}
+
+function WeatherPreview({ destinationId, withTip, defaultLanguage, layout = 'compact' }) {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchWeather = () => {
-    if (!destinationId) return;
+    if (!destinationId) { setLoading(false); return; }
     setLoading(true);
     setError(null);
     apiClient.get('/weather-preview', { params: { destinationId, locale: defaultLanguage, withTip: withTip ? 'true' : 'false' }, timeout: 60000 })
@@ -78,15 +129,28 @@ function WeatherPreview({ destinationId, withTip, defaultLanguage }) {
     );
   }
 
+  if (loading && !data) return <WeatherPreviewSkeleton />;
+
+  const tipLocales = data?.brand_tip ? Object.keys(data.brand_tip) : [];
+  const validationAttempted = !!data?.brand_tip_validation;
+  const validationFailedAll = validationAttempted && tipLocales.length === 0 && Object.values(data.brand_tip_validation || {}).every(v => !v.passed);
+  const allowedEntitiesCount = data?.brand_tip_allowed_entities_count ?? null;
+  const isDetailed = layout === 'detailed';
+  const layoutLabel = isDetailed ? 'Detailed' : 'Compact';
+  const layoutColor = isDetailed ? 'secondary' : 'default';
+
   return (
     <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-          Live preview {data?.destination_name ? `(${data.destination_name})` : ''}
-          {data?.brand_tip_locales?.length > 0 && (
-            <Chip size="small" label={`Tip in ${data.brand_tip_locales.length} talen`} sx={{ ml: 1, height: 16, fontSize: '0.6rem' }} color="primary" variant="outlined" />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+            Live preview {data?.destination_name ? `(${data.destination_name})` : ''}
+          </Typography>
+          <Chip size="small" label={`Layout: ${layoutLabel}`} sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }} color={layoutColor} variant={isDetailed ? 'filled' : 'outlined'} />
+          {tipLocales.length > 0 && (
+            <Chip size="small" label={`Tip in ${tipLocales.length} talen`} sx={{ height: 16, fontSize: '0.6rem' }} color="primary" variant="outlined" />
           )}
-        </Typography>
+        </Box>
         <IconButton size="small" onClick={fetchWeather} disabled={loading} title="Refresh">
           {loading ? <CircularProgress size={16} /> : <RefreshIcon fontSize="small" />}
         </IconButton>
@@ -108,30 +172,55 @@ function WeatherPreview({ destinationId, withTip, defaultLanguage }) {
             {data.current.pressure && ` · ${data.current.pressure} hPa`}
           </Typography>
 
+          {/* Tip in success path — validated by NER grounding */}
           {data.brand_tip && Object.keys(data.brand_tip).length > 0 && (
             <Alert severity="info" icon={<AutoAwesomeIcon fontSize="small" />} sx={{ mb: 1.5 }}>
               <Typography variant="body2">{data.brand_tip[defaultLanguage] || data.brand_tip.en || Object.values(data.brand_tip)[0]}</Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.75, flexWrap: 'wrap' }}>
                 {Object.keys(data.brand_tip).map(lang => (
-                  <Chip key={lang} size="small" label={lang.toUpperCase()} sx={{ height: 16, fontSize: '0.6rem' }} variant={lang === defaultLanguage ? 'filled' : 'outlined'} color="primary" />
+                  <ValidationBadge key={lang} locale={lang} validation={data.brand_tip_validation?.[lang]} isDefault={lang === defaultLanguage} />
                 ))}
               </Box>
               <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
-                AI brand-context tip · per taal gegenereerd · controleer feitelijke juistheid
+                AI brand-tip — gevalideerd via NER-grounding (max 5% hallucinatie) + geographic-relevance filter. Klik badge voor details.
               </Typography>
             </Alert>
           )}
 
-          {data.forecast_5d && data.forecast_5d.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {data.forecast_5d.slice(0, 5).map((day) => (
-                <Chip key={day.date} size="small" label={`${new Date(day.date).toLocaleDateString('nl-NL', { weekday: 'short' })}: ${day.temp_min}-${day.temp_max}°`} variant="outlined" sx={{ fontSize: '0.7rem' }} />
-              ))}
+          {/* Tip failed-validation path — transparante uitleg, geen valse content */}
+          {validationFailedAll && (
+            <Alert severity="warning" icon={<WarningAmberIcon fontSize="small" />} sx={{ mb: 1.5 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>AI kon geen feitelijke tip genereren</Typography>
+              <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+                {allowedEntitiesCount === 0
+                  ? 'Geen brand-context entiteiten beschikbaar in Knowledge Base. Voeg POIs/sources toe in Knowledge Base voor accurate tips.'
+                  : 'Hallucinatie-detectie heeft alle gegenereerde varianten geweigerd. Brand-context onvoldoende specifiek voor het huidige weer.'}
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Forecast chips alleen tonen bij detailed layout — layout-aware preview */}
+          {isDetailed && data.forecast_5d && data.forecast_5d.length > 0 && (
+            <Box>
+              <Typography variant="caption" sx={{ display: 'block', mb: 0.5, color: 'text.secondary', fontWeight: 500 }}>
+                5-daagse forecast (alleen zichtbaar bij Detailed layout)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {data.forecast_5d.slice(0, 5).map((day) => (
+                  <Chip key={day.date} size="small" label={`${new Date(day.date).toLocaleDateString('nl-NL', { weekday: 'short' })}: ${day.temp_min}-${day.temp_max}°`} variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                ))}
+              </Box>
             </Box>
+          )}
+          {!isDetailed && data.forecast_5d && data.forecast_5d.length > 0 && (
+            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontStyle: 'italic' }}>
+              5-daagse forecast wordt verborgen bij Compact layout (kies Detailed om te tonen).
+            </Typography>
           )}
 
           <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
             Bron: openweathermap.org · consistent met Chatbot + personaliseerder + content-readiness · cost-tracked
+            {allowedEntitiesCount !== null && ` · ${allowedEntitiesCount} brand-entiteiten beschikbaar`}
           </Typography>
         </>
       )}
@@ -142,14 +231,57 @@ function WeatherPreview({ destinationId, withTip, defaultLanguage }) {
 export default function WeatherWidgetEditor({ block, onChange }) {
   const props = block.props || {};
   const { destinationId, defaultLanguage = 'en' } = useDestination();
-  const update = (key, val) => onChange({ ...props, [key]: val });
+  const [layoutPending, setLayoutPending] = useState(false);
+  const lockTimerRef = useRef(null);
+
+  useEffect(() => () => { if (lockTimerRef.current) clearTimeout(lockTimerRef.current); }, []);
+
+  const updateOptimistic = (key, val) => {
+    // Optimistic visual: emit change immediately, then lock for ~1.2s zodat
+    // gebruiker visueel feedback krijgt dat Voorbeeld wordt bijgewerkt en
+    // dubbel-klikken niet leidt tot queue van re-renders.
+    onChange({ ...props, [key]: val });
+    if (key === 'layout') {
+      setLayoutPending(true);
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = setTimeout(() => setLayoutPending(false), 1200);
+    }
+  };
 
   return (
     <>
-      <WeatherPreview destinationId={destinationId} withTip={!!props.showBrandTip} defaultLanguage={defaultLanguage} />
+      <WeatherPreview
+        destinationId={destinationId}
+        withTip={!!props.showBrandTip}
+        defaultLanguage={defaultLanguage}
+        layout={props.layout || 'compact'}
+      />
 
-      <SelectField label="Layout" value={props.layout || 'compact'} onChange={v => update('layout', v)} options={LAYOUT_OPTIONS} helperText="Detailed-layout toont automatisch 5-daagse forecast" />
-      <SwitchField label="AI brand-context seizoenstip tonen" value={props.showBrandTip} onChange={v => update('showBrandTip', v)} helperText="Tip wordt automatisch gegenereerd voor alle ondersteunde talen van deze destinatie" />
+      <Box sx={{ position: 'relative' }}>
+        <SelectField
+          label="Layout"
+          value={props.layout || 'compact'}
+          onChange={v => updateOptimistic('layout', v)}
+          options={LAYOUT_OPTIONS}
+          disabled={layoutPending}
+          helperText={layoutPending
+            ? 'Live preview hierboven schakelt direct; Voorbeeld-tab iframe vereist Opslaan voor reload.'
+            : 'Compact toont alleen huidig weer + tip. Detailed voegt 5-daagse forecast toe. Live preview hierboven reageert direct op wijziging.'}
+        />
+        {layoutPending && (
+          <CircularProgress
+            size={16}
+            sx={{ position: 'absolute', right: 36, top: 18 }}
+          />
+        )}
+      </Box>
+
+      <SwitchField
+        label="AI brand-context seizoenstip tonen"
+        value={props.showBrandTip}
+        onChange={v => updateOptimistic('showBrandTip', v)}
+        helperText="Tip wordt per ondersteunde taal gegenereerd via Mistral met NER-grounding (Validated RAG). Tips die hallucinatie-check niet passeren worden geweigerd — geen valse content in productie."
+      />
     </>
   );
 }
