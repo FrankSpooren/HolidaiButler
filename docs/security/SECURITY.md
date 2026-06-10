@@ -219,14 +219,41 @@ git commit -m "security: refresh gitleaks baseline after triage of <count> findi
 - `trufflehog git file://. --only-verified --no-update` over volledige history — detecteert leaks die door huidige rules ontwijken
 - Bij verified finding: incident-procedure (sectie 6) — roteer, strip, document
 
-## 10. Bekende secrets-anti-patterns (geleerd uit INC-001 + INC-002)
+## 10. Bekende secrets-anti-patterns (geleerd uit INC-001 + INC-002 + INC-003)
 
 | Patroon | Waarom anti | Voorbeeld | Detectie |
 |---|---|---|---|
-| `process.env.X \|\| 'literal'` fallback | Literal acts als productie-fallback wanneer env-var ontbreekt; effectief permanent gelekt | `const KEY = process.env.API_KEY \|\| 'sk-...';` | gitleaks rule `hb-fallback-credential-pattern` (toegevoegd post-INC-002) |
+| `process.env.X \|\| 'literal'` fallback (**herhaald in 3 incidents**: INC-001 OWM client-bundle, INC-002 SISTRIX server-side, INC-003 SimpleAnalytics server-side ×2) | Literal acts als productie-fallback wanneer env-var ontbreekt; effectief permanent gelekt + onverwijderbaar uit history | `const KEY = process.env.API_KEY \|\| 'sk-...';` | **gitleaks rule `hb-fallback-credential-pattern` (geïmplementeerd post-INC-003)** — regex `process\.env\.[A-Z_]+\s*\|\|\s*['"][a-zA-Z0-9_\-]{16,}['"]` |
 | Hardcoded API-key in Client Component (`'use client'`) | Bundle wordt naar browser gepushed — leaked naar alle bezoekers | `appid=abc123` in TSX | gitleaks rule `hb-openweathermap-api-key` etc. + SECURITY.md Patroon-C anti-pattern |
 | Hardcoded credentials in JSDoc-comment | Even sneeuwbal-effect: gelijk gelekt als regel-12-literal | `* API Key: D2bX5y...` in `*.js` doc-comment | gitleaks default `generic-api-key` rule |
 | Destination-specifieke hardcoded constants in multi-tenant code | Multi-tenant architectuur overtreden + impliciete fallback voor afwezige tenants | `const WEATHER_COORDS = { calpe: ..., texel: ... }` | Geen automated rule; review-checklist + `SECURITY.md §4 Patroon B` |
+| Code-duplication van credential-gebruik (zelfde key in 2+ files) | DRY-schending; bij rotation moet je elke kopie vinden; vergroot kans op missed-cleanup. **Voorbeeld INC-003**: SA_API_KEY hardcoded in zowel `websiteTrafficCollector.js` als `reisleider/index.js` | `const SA_KEY = process.env.SA_KEY \|\| '...';` in 2 files | Review-checklist: shared helper-module verplicht bij multi-file credential-gebruik (bv. `platform-core/src/lib/<vendor>.js`) |
+| Vendor-jurisdictie niet expliciet geverifieerd bij integratie-keuze | EU-data-USP-schending kan in non-EU/non-adequate-third-country-doorgifte | (Gefingeerd:) integratie met UK/US/non-adequate-vendor zonder Schrems-II analyse | Architectuur-besluit-checklist: vendor HQ + data-residency expliciet documenteren in incident-doc § 1 (zoals INC-003 SimpleAnalytics = Tilburg NL) |
+
+### 10.2 Dev-placeholder fallbacks — separate review-list
+
+Sommige fallback-strings zien er uit als "duidelijk dev-only" (bv. `dev-secret-change-in-production`, `your-super-secret-key-min-32-chars`). De `hb-fallback-credential-pattern` allowlist filtert deze om CI-noise te voorkomen, MAAR het anti-pattern blijft een potentiële incident-bron: als de echte env-var ontbreekt op een server, wordt de dev-placeholder een werkende productie-credential (precies wat in INC-001/002/003 gebeurde).
+
+**Periodieke audit (kwartaal)**: handmatige grep over `dev-.*-(in-production|secret|fallback)` patronen + verifieer dat bijbehorende env-var in alle `.env` files is gedefinieerd:
+```bash
+grep -rn --include='*.js' --include='*.ts' -E "dev-[a-z-]+-(in-production|secret|fallback)" platform-core/src admin-module/src hb-websites/src
+# Per match: grep '^<ENV_VAR>=' alle .env files — verifieer dat reale credential aanwezig is
+```
+
+Voorbeelden van bekende dev-placeholder fallbacks die aandacht vereisen:
+- `platform-core/src/services/realtimeService.js:24`: `JWT_SECRET || 'dev-secret-change-in-production'` — verifieer `JWT_SECRET` in `.env`
+- `platform-core/src/services/agents/personaliseerder/index.js:35`: `SESSION_SALT || 'hb-salt'` — verifieer SESSION_SALT in `.env`
+- `platform-core/src/services/reservation/reservationService.js:35`: `RESERVATION_QR_SECRET || 'dev-reservation-secret'` (SKIP — reservations-module on-hold per MEMORY)
+
+Bij ontbrekende env-var: behandel als incident (analoog aan INC-001/002/003 procedure).
+
+### 10.1 Vendor-verificatie best-practice
+
+Bij elke nieuwe externe-API-integratie:
+1. **URL-string-inspectie** vóór vendor-labeling (afkortingen kunnen misleiden — `SA_*` kan SimpleAnalytics OF SimilarWeb OF SearchAtlas zijn; bij Claude-assisted code-review GEEN aanname op basis van prefix)
+2. **Vendor HQ + data-residency** documenteren in JSDoc op de file die credentials gebruikt
+3. **Compliance-check** tegen GDPR + EU AI Act + HB's EU-data-USP — preferentie voor EU-soevereine providers
+4. **Status-check**: actief account-eigenaarschap binnen HB-team bevestigen vóór code-introductie (voorkomt ghost-credentials)
 
 ## 11. Wijzigingen aan dit document
 

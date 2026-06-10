@@ -106,6 +106,12 @@ description = "PEM-encoded private key"
 regex = '''-----BEGIN ((RSA|EC|DSA|OPENSSH|PRIVATE) )?PRIVATE KEY( BLOCK)?-----'''
 tags = ["private-key"]
 
+[[rules]]
+id = "hb-fallback-credential-pattern"
+description = "Anti-pattern: process.env.X || 'literal' — literal acts as production fallback (INC-001, INC-002, INC-003 repeat offender)"
+regex = '''process\.env\.[A-Z_]+\s*\|\|\s*['"][a-zA-Z0-9_\-]{16,}['"]'''
+tags = ["antipattern", "fallback-credential"]
+
 # ─────────────────────────────────────────────────────────────────────
 # Allowlist — false positives en legitieme placeholders
 # ─────────────────────────────────────────────────────────────────────
@@ -172,6 +178,18 @@ regexes = [
   '''<username>:<password>''',
   '''USERNAME:PASSWORD''',
   '''<DB_USER>:<DB_PASS>''',
+  # hb-fallback-credential-pattern false-positive elimination:
+  # URLs, model-names, service-names, env-state-strings are not secrets but match
+  # the structural pattern process.env.X || 'value-with-20+-chars'
+  '''://''',                                                # URL fragments (http://, https://, mongodb://)
+  '''localhost''',                                          # local dev URLs
+  '''mistral-[a-z0-9-]+''',                                 # Mistral model names (mistral-small-latest, mistral-medium-latest, mistral-vision-latest)
+  '''pixtral-[a-z0-9-]+''',                                 # Pixtral model names (pixtral-12b-2409)
+  '''claude-[a-z0-9-]+''',                                  # Anthropic model names
+  '''gpt-[a-z0-9-]+''',                                     # OpenAI model names
+  '''hb-[a-z-]+''',                                         # HB service names (hb-platform-core, hb-temporal-worker, etc.)
+  '''(development|production|staging|unknown|default|none)''',  # Env-state strings
+  '''dev-[a-z-]+-(in-production|secret|fallback)''',        # Developer placeholder secrets (still flagged via separate review-list — see SECURITY.md §10.2)
   # GitHub Actions secret references (template expressions, not literal values)
   '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
   # Test fixtures (synthetic)

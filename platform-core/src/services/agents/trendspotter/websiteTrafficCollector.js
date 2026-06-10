@@ -3,14 +3,24 @@
  * Wekelijks (zondag 03:45): haalt top pagina's + events op via SimpleAnalytics API
  * en slaat ze op als trending_data met source='website_traffic' of source='user_event'.
  *
- * @version 2.0.0 — Rewrite: Apache logs → SimpleAnalytics API
+ * Credentials: process.env.SA_API_KEY + process.env.SA_USER_ID (required, no fallback)
+ * Provider: SimpleAnalytics B.V., Tilburg NL — EU GDPR-compliant (privacy-first, no PII)
+ * Rotated 2026-06-10 per INC-2026-06-10-003 (was hardcoded fallback)
+ * Policy: docs/security/SECURITY.md §4 — Patroon A (backend secret-gebruik)
+ *
+ * @version 2.1.0 — INC-2026-06-10-003 remediation
  */
 
 import { mysqlSequelize } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
 
-const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
-const SA_USER_ID = process.env.SA_USER_ID || 'sa_user_id_45cbd1c2-58bb-44e3-ac9c-94797095b640';
+const SA_API_KEY = process.env.SA_API_KEY;
+const SA_USER_ID = process.env.SA_USER_ID;
+
+if (!SA_API_KEY || !SA_USER_ID) {
+  // Fail-loud at module-load — refuse to operate with missing credentials
+  logger.error('[websiteTrafficCollector] SA_API_KEY or SA_USER_ID env-var missing. SimpleAnalytics calls will fail. Configure in platform-core/.env.');
+}
 
 const DEST_DOMAINS = {
   1: 'calpetrip.com',
