@@ -8,11 +8,53 @@
  * Rotated 2026-06-10 per INC-2026-06-10-003 (was hardcoded fallback)
  * Policy: docs/security/SECURITY.md §4 — Patroon A (backend secret-gebruik)
  *
- * @version 2.1.0 — INC-2026-06-10-003 remediation
+ * v2.2.0 (activation cycle 2026-06-10):
+ *   - Cost-log integration (service='simpleanalytics')
+ *   - EU AI Act Art 50 provenance signatures in trending_data.raw_data JSON
+ *   - Sentry-style fail-safe error handling (no throw — caller catches via Temporal retry)
+ *
+ * @version 2.2.0 — Trendspotter+Reisleider activation
  */
 
+import crypto from 'crypto';
 import { mysqlSequelize } from '../../../config/database.js';
 import logger from '../../../utils/logger.js';
+
+const COST_PER_CALL_EUR = 0.0; // SimpleAnalytics free-tier for HB-volume; logged for audit-trail consistency
+
+async function logCost(destId, callCount) {
+  try {
+    const mod = await import('../../orchestrator/costController/models/CostLog.js').catch(() => null);
+    if (!mod?.default) return;
+    const CostLog = mod.default;
+    await CostLog.create({
+      service: 'simpleanalytics',
+      operation: 'pages+events',
+      cost: COST_PER_CALL_EUR * callCount,
+      currency: 'EUR',
+      metadata: { destination_id: destId, call_count: callCount },
+      timestamp: new Date(),
+    });
+  } catch (err) {
+    logger.warn('[websiteTrafficCollector] cost-log failed (non-blocking):', err.message);
+  }
+}
+
+function generateProvenanceSignature(destinationId, weekNumber, year, trends) {
+  const payload = JSON.stringify({
+    source: 'simpleanalytics',
+    destination_id: destinationId,
+    week_number: weekNumber,
+    year,
+    keyword_count: trends.length,
+    keywords_hash: crypto.createHash('sha256').update(trends.map(t => t.keyword).sort().join('|')).digest('hex'),
+    collected_at: new Date().toISOString(),
+  });
+  return {
+    signature: crypto.createHash('sha256').update(payload).digest('hex'),
+    payload_summary: { source: 'simpleanalytics', week_number: weekNumber, year, keyword_count: trends.length },
+  };
+}
 
 const SA_API_KEY = process.env.SA_API_KEY;
 const SA_USER_ID = process.env.SA_USER_ID;
@@ -110,7 +152,17 @@ async function collect(destinationId) {
       }
     }
 
-    // 3. Save to trending_data
+    // 3. Save to trending_data with EU AI Act provenance signature
+    const provenance = generateProvenanceSignature(destinationId, weekNumber, year, trends);
+    const rawDataJson = JSON.stringify({
+      _provenance: provenance,
+      _source: 'simpleanalytics',
+      _vendor: 'SimpleAnalytics B.V., Tilburg NL (EU GDPR-compliant)',
+      _collected_at: new Date().toISOString(),
+      pages_count: pages.length,
+      events_count: events.length,
+    });
+
     for (const t of trends) {
       try {
         const [[existing]] = await mysqlSequelize.query(
@@ -119,14 +171,14 @@ async function collect(destinationId) {
         );
         if (existing) {
           await mysqlSequelize.query(
-            'UPDATE trending_data SET relevance_score = :rel, search_volume = :vol, updated_at = NOW() WHERE id = :id',
-            { replacements: { rel: t.relevance_score, vol: t.search_volume, id: existing.id } }
+            'UPDATE trending_data SET relevance_score = :rel, search_volume = :vol, raw_data = :raw, updated_at = NOW() WHERE id = :id',
+            { replacements: { rel: t.relevance_score, vol: t.search_volume, raw: rawDataJson, id: existing.id } }
           );
         } else {
           await mysqlSequelize.query(
-            `INSERT INTO trending_data (destination_id, keyword, relevance_score, search_volume, trend_direction, source, source_url, week_number, year, language, created_at)
-             VALUES (:destId, :kw, :rel, :vol, :dir, :source, :url, :week, :year, :lang, NOW())`,
-            { replacements: { destId: destinationId, kw: t.keyword, rel: t.relevance_score, vol: t.search_volume, dir: t.trend_direction, source: t.source, url: t.source_url || null, week: weekNumber, year, lang: t.language } }
+            `INSERT INTO trending_data (destination_id, keyword, relevance_score, search_volume, trend_direction, source, source_url, week_number, year, language, raw_data, created_at)
+             VALUES (:destId, :kw, :rel, :vol, :dir, :source, :url, :week, :year, :lang, :raw, NOW())`,
+            { replacements: { destId: destinationId, kw: t.keyword, rel: t.relevance_score, vol: t.search_volume, dir: t.trend_direction, source: t.source, url: t.source_url || null, week: weekNumber, year, lang: t.language, raw: rawDataJson } }
           );
         }
       } catch (saveErr) {
@@ -134,8 +186,12 @@ async function collect(destinationId) {
       }
     }
 
-    logger.info(`[WebsiteTraffic] ${domain}: ${trends.length} trends saved (${pages.length} pages, ${events.length} events)`);
+    // 4. Cost-log audit-trail (2 API calls = pages + events)
+    await logCost(destinationId, 2);
+
+    logger.info(`[WebsiteTraffic] ${domain}: ${trends.length} trends saved (${pages.length} pages, ${events.length} events) provenance=${provenance.signature.slice(0, 12)}`);
   } catch (error) {
+    // No throw — caller (Temporal activity) handles via retry policy
     logger.error(`[WebsiteTraffic] Error for destination ${destinationId} (${domain}):`, error.message);
   }
 

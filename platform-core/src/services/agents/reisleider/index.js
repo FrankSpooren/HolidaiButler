@@ -58,6 +58,7 @@ class ReisleiderAgent extends BaseAgent {
     // 4. Simple Analytics data (website traffic)
     // Credentials: process.env.SA_API_KEY + SA_USER_ID (required, no fallback per SECURITY.md §4)
     // Rotated 2026-06-10 per INC-2026-06-10-003
+    // Cost-log: 1 SA-call per destination invocation (free-tier, logged for audit-trail)
     let saData = { pageviews: 0, visitors: 0, top_pages: [] };
     try {
       const SA_API_KEY = process.env.SA_API_KEY;
@@ -80,6 +81,20 @@ class ReisleiderAgent extends BaseAgent {
             visitors: saJson.visitors || 0,
             top_pages: (saJson.pages || []).slice(0, 5).map(p => ({ path: p.value, views: p.pageviews }))
           };
+          // Audit-trail cost-log (non-blocking)
+          try {
+            const mod = await import('../../orchestrator/costController/models/CostLog.js').catch(() => null);
+            if (mod?.default) {
+              await mod.default.create({
+                service: 'simpleanalytics',
+                operation: 'reisleider-context-aggregate',
+                cost: 0.0,
+                currency: 'EUR',
+                metadata: { destination_id: destinationId, domain, call_count: 1 },
+                timestamp: new Date(),
+              });
+            }
+          } catch (clErr) { /* non-blocking */ }
         }
       }
     } catch (err) {
