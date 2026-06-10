@@ -1,3 +1,4 @@
+// POOL-DEFENSIVE-V1: defensive pool + retry config applied 2026-05-20
 /**
  * Database Configuration
  * Manages connections to both MySQL (Hetzner) and MongoDB
@@ -87,15 +88,28 @@ export const mysqlSequelize = new Sequelize(
     port: dbConfig.port,
     dialect: 'mysql',
     dialectOptions: {
+      connectTimeout: 5000,
       charset: 'utf8mb4',
       dateStrings: true,
       timezone: DB_TIMEZONE,
+      ssl: process.env.DB_SSL === 'false' ? undefined : {
+        ca: fs.readFileSync('/etc/ssl/certs/hetzner-mariadb-ca.pem'),
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2',
+      },
     },
     pool: {
-      max: parseInt(process.env.DB_POOL_MAX || '20', 10),
-      min: parseInt(process.env.DB_POOL_MIN || '5', 10),
-      acquire: 30000,
-      idle: 10000,
+      max: parseInt(process.env.DB_POOL_MAX || '3', 10),
+      min: parseInt(process.env.DB_POOL_MIN || '1', 10),
+      acquire: 15000,
+      idle: 5000,
+      evict: 5000,
+    },
+    retry: {
+      match: [/ETIMEDOUT/, /ECONNRESET/, /ECONNREFUSED/, /SequelizeConnectionError/, /Error: connect/],
+      max: 2,
+      backoffBase: 1000,
+      backoffExponent: 2,
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     timezone: DB_TIMEZONE,
@@ -122,16 +136,29 @@ export const readReplicaSequelize = _replicaHost
         port: parseInt(process.env.REPLICA_DB_PORT || String(dbConfig.port), 10),
         dialect: 'mysql',
         dialectOptions: {
+      connectTimeout: 5000,
           charset: 'utf8mb4',
           dateStrings: true,
           timezone: DB_TIMEZONE,
+          ssl: process.env.DB_SSL === 'false' ? undefined : {
+            ca: fs.readFileSync('/etc/ssl/certs/hetzner-mariadb-ca.pem'),
+            rejectUnauthorized: true,
+            minVersion: 'TLSv1.2',
+          },
         },
         pool: {
           max: parseInt(process.env.REPLICA_DB_POOL_MAX || '10', 10),
           min: parseInt(process.env.REPLICA_DB_POOL_MIN || '2', 10),
-          acquire: 30000,
-          idle: 10000,
+          acquire: 15000,
+          idle: 5000,
+      evict: 5000,
         },
+    retry: {
+      match: [/ETIMEDOUT/, /ECONNRESET/, /ECONNREFUSED/, /SequelizeConnectionError/, /Error: connect/],
+      max: 2,
+      backoffBase: 1000,
+      backoffExponent: 2,
+    },
         logging: false,
         timezone: DB_TIMEZONE,
       }

@@ -17,7 +17,7 @@
     "financial": "Financieel",
     "intermediary": "Intermediair",
     "branding": "Branding",
-    "merkProfiel": "Merk Profiel",
+    "merkProfiel": "Merkprofiel",
     "pages": "Pagina's",
     "navigation": "Navigatie",
     "media": "Mediabibliotheek",
@@ -69,7 +69,7 @@
       "calendarDesc": "Plan en publiceer content over alle kanalen vanuit één overzicht, inclusief batch-functie en speciale campagne-tool.",
       "translateTitle": "Meertaligheid",
       "translateDesc": "Vertaal in ongeëvenaarde nauwkeurigheid naar 100+ talen met één klik.",
-      "brandTitle": "Merk Profiel & Tone of Voice",
+      "brandTitle": "Merkprofiel & Tone of Voice",
       "brandDesc": "Uw merkidentiteit, doelgroepen en knowledge base als fundament voor elke AI-generatie.",
       "analyticsTitle": "Analytics",
       "analyticsDesc": "Statistieken per content item en kanaal t.b.v. automatisch verbeteren van content."
@@ -119,7 +119,7 @@
         },
         "personal": {
           "title": "Hyper-Gepersonaliseerd",
-          "desc": "Merk Profiel, Knowledge Base, Audience Personas, Tone of Voice. Content die klinkt als jouw merk."
+          "desc": "Merkprofiel, Knowledge Base, Audience Personas, Tone of Voice. Content die klinkt als jouw merk."
         },
         "calendar": {
           "title": "Slimme Kalender",
@@ -147,7 +147,7 @@
           "selfLearning": "Zelflerende score calibratie",
           "oneClickCampaign": "1-Click Campagne (6 assets)",
           "calendarAutoFill": "AI Kalender Auto-Fill",
-          "brandKb": "Merk Profiel + Knowledge Base",
+          "brandKb": "Merkprofiel + Knowledge Base",
           "personas": "Audience Personas + doelgroep-selectie",
           "trending": "Multi-source trending analyse",
           "blogSeo": "Blog + SEO (TipTap WYSIWYG)",
@@ -1887,13 +1887,13 @@
       "notImprovedScoreHigh": "Niet verbeterd: Score reeds ≥{{threshold}}",
       "notImprovedAiUnable": "Niet verbeterd: AI kon score niet verhogen — handmatige bewerking aanbevolen",
       "notImprovedFallback": "Niet verbeterd: {{reason}}",
-      "noInternalSources": "Geen merk-bronnen beschikbaar. Voor kwaliteitsverbetering: voeg Merk Profiel documentatie en/of URL toe.",
-      "hallucinationDetected": "Mogelijke hallucinatie gedetecteerd: {{rate}}% van entiteiten niet gevonden in Merk Profiel",
+      "noInternalSources": "Geen merk-bronnen beschikbaar. Voor kwaliteitsverbetering: voeg Merkprofiel documentatie en/of URL toe.",
+      "hallucinationDetected": "Mogelijke hallucinatie gedetecteerd: {{rate}}% van entiteiten niet gevonden in Merkprofiel",
       "provenanceLabel": "EU AI Act provenance: {{sig}}…"
     }
   },
   "brandProfile": {
-    "page_title": "Merk Profiel",
+    "page_title": "Merkprofiel",
     "sections": {
       "company": "Bedrijfsprofiel",
       "mission": "Missie, Visie & Waarden",

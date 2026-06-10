@@ -76,6 +76,11 @@ import { CSS } from '@dnd-kit/utilities';
 import { getBlockMeta } from './blockEditorRegistry.js';
 import BlockStyleEditor from './BlockStyleEditor.jsx';
 import { useTranslation } from 'react-i18next';
+import LocaleCoverageBadge from './LocaleCoverageBadge.jsx';
+import FreshnessBadge from './FreshnessBadge.jsx';
+import A11yAuditBadge from './A11yAuditBadge.jsx';
+import BulkTranslateButton from './BulkTranslateButton.jsx';
+import SaveTemplateButton from './SaveTemplateButton.jsx';
 
 const VISIBILITY_OPTIONS = [
   { value: 'all', label: 'visibility.all' },
@@ -136,7 +141,11 @@ export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDu
           {meta?.label || block.type.replace('_', ' ')}
         </Typography>
         <VisibilityBadge visibility={block.visibility} />
+        <LocaleCoverageBadge props={block.props} />
+        <FreshnessBadge blockType={block.type} updatedAt={block._updatedAt} />
+        <A11yAuditBadge block={block} />
         <Chip label={`#${index + 1}`} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+        <SaveTemplateButton block={block} />
         <IconButton size="small" onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate">
           <ContentCopyIcon fontSize="small" />
         </IconButton>
@@ -171,9 +180,12 @@ export default function BlockEditorCard({ block, index, onUpdate, onRemove, onDu
             </Select>
           </Box>
           {Editor ? (
-            <Suspense fallback={<Box sx={{ py: 2, textAlign: 'center' }}><CircularProgress size={24} /></Box>}>
-              <Editor block={block} onChange={newProps => onUpdate(newProps)} />
-            </Suspense>
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}><BulkTranslateButton block={block} onUpdate={onUpdate} /></Box>
+              <Suspense fallback={<Box sx={{ py: 2, textAlign: 'center' }}><CircularProgress size={24} /></Box>}>
+                <Editor block={block} onChange={newProps => onUpdate(newProps)} />
+              </Suspense>
+            </>
           ) : (
             <Typography variant="body2" color="text.secondary">No editor available for block type "{block.type}"</Typography>
           )}

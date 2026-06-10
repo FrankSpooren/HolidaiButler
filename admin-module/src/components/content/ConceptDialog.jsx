@@ -1353,7 +1353,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                                   size="small"
                                   color="warning"
                                   variant="outlined"
-                                  title={`${e.category}: niet gevonden in Merk Profiel KB`}
+                                  title={`${e.category}: niet gevonden in Merkprofiel KB`}
                                 />
                               ))}
                             </Box>
@@ -1589,7 +1589,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                                   size="small"
                                   color="warning"
                                   variant="outlined"
-                                  title={`${e.category}: niet gevonden in Merk Profiel KB`}
+                                  title={`${e.category}: niet gevonden in Merkprofiel KB`}
                                 />
                               ))}
                             </Box>

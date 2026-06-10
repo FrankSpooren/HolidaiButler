@@ -19,7 +19,7 @@
 import embeddingService from './holibot/embeddingService.js';
 import logger from '../utils/logger.js';
 
-const DEFAULT_HALLUCINATION_THRESHOLD = 0.10;   // max 10% ungrounded entities
+const DEFAULT_HALLUCINATION_THRESHOLD = 0.05;   // max 5% ungrounded entities (Frank 2026-06-10: oudere doelgroep — strenger dan voorheen 0.10)
 const DEFAULT_SENTENCE_SIM_THRESHOLD = 0.50;    // cosine sim below = ungrounded
 const NER_MODEL = 'mistral-small-latest';        // cheaper for NER
 const MAX_SENTENCES_TO_VALIDATE = 20;            // performance cap
@@ -233,7 +233,7 @@ export async function validatePerSentence(text, sources, threshold = DEFAULT_SEN
  * @param {Array} sources - brand_knowledge sources
  * @param {Object} [options]
  * @param {string} [options.locale='en']
- * @param {number} [options.hallucinationThreshold=0.10]
+ * @param {number} [options.hallucinationThreshold=0.05]
  * @param {number} [options.sentenceSimThreshold=0.50]
  * @param {boolean} [options.skipPerSentence=false] - skip Layer 3+ (saves embedding calls)
  * @returns {Promise<{passed, hallucinationRate, ungroundedEntities, perSentence, reasons}>}

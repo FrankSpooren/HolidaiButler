@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const SOURCE_OPTIONS = [
   { value: 'manual_waypoints', label: 'Manual waypoints' },
@@ -22,7 +22,7 @@ export default function ItineraryEditor({ data, onChange }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Itinerary / Route</Typography>
-      <TextField label="Title" value={data.title || ''} onChange={v => u('title', v)} />
+      <TranslatableField label="Title" value={data.title} onChange={v => u('title', v)} />
       <SelectField label="Source" value={data.source || 'manual_waypoints'} options={SOURCE_OPTIONS} onChange={v => u('source', v)} />
       <SelectField label="Transport mode" value={data.mode || 'foot'} options={MODE_OPTIONS} onChange={v => u('mode', v)} />
       <SelectField label="Variant" value={data.variant || 'timeline'} options={VARIANT_OPTIONS} onChange={v => u('variant', v)} />

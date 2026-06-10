@@ -1,4 +1,5 @@
 import { TranslatableField, NumberField, ItemListField, TextField, ImageUploadField } from '../fields/index.js';
+import AltTextGeneratorButton from '../AltTextGeneratorButton.jsx';
 
 export default function PartnersEditor({ block, onChange }) {
   const props = block.props || {};
@@ -16,7 +17,8 @@ export default function PartnersEditor({ block, onChange }) {
         renderItem={(item, _idx, updateField) => (
           <>
             <ImageUploadField label="Logo" value={item.src} onChange={v => updateField('src', v)} />
-            <TextField label="Alt text" value={item.alt} onChange={v => updateField('alt', v)} />
+            <TranslatableField label="Alt text" value={item.alt} onChange={v => updateField('alt', v)} />
+            {item.logo && <AltTextGeneratorButton imageUrl={item.logo} currentAlt={item.alt} onGenerated={v => updateField('alt', v)} />}
             <TextField label="Link URL" value={item.href} onChange={v => updateField('href', v)} />
           </>
         )}

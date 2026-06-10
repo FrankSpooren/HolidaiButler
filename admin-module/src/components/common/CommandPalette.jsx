@@ -77,7 +77,7 @@ const ALL_COMMANDS = [
   { id: 'nav-kalender', label: 'Kalender', icon: CalendarMonth, path: '/content-studio', tabIndex: 3, section: 'Navigatie', shortcut: 'G K', keywords: 'calendar planning schedule' },
   { id: 'nav-analyse', label: 'Analyse', icon: BarChart, path: '/content-studio', tabIndex: 4, section: 'Navigatie', shortcut: 'G A', keywords: 'analytics prestaties performance' },
   { id: 'nav-media', label: 'Mediabibliotheek', icon: PhotoLibrary, path: '/media', section: 'Navigatie', shortcut: 'G M', keywords: 'media library afbeeldingen fotos videos' },
-  { id: 'nav-branding', label: 'Merk Profiel', icon: Palette, path: '/branding', section: 'Navigatie', shortcut: 'G S', keywords: 'branding profiel tone of voice' },
+  { id: 'nav-branding', label: 'Merkprofiel', icon: Palette, path: '/branding', section: 'Navigatie', shortcut: 'G S', keywords: 'branding profiel tone of voice' },
   { id: 'nav-pois', label: "POI's", icon: Place, path: '/pois', section: 'Navigatie', keywords: 'points of interest locaties plekken' },
   { id: 'nav-reviews', label: 'Reviews', icon: RateReview, path: '/reviews', section: 'Navigatie', keywords: 'beoordelingen ratings' },
   { id: 'nav-pages', label: "Pagina's & Navigatie", icon: Description, path: '/pages', section: 'Navigatie', keywords: 'website pages navigatie' },

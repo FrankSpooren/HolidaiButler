@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const VIEW_OPTIONS = [
   { value: 'dayGridMonth', label: 'Month view' },
@@ -17,7 +17,7 @@ export default function CalendarViewEditor({ data, onChange }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Calendar View</Typography>
-      <TextField label="Title" value={data.title || ''} onChange={v => u('title', v)} />
+      <TranslatableField label="Title" value={data.title} onChange={v => u('title', v)} />
       <SelectField label="Default view" value={data.view || 'dayGridMonth'} options={VIEW_OPTIONS} onChange={v => u('view', v)} />
       <SelectField label="Week starts on" value={data.startDay ?? 1} options={START_DAY_OPTIONS} onChange={v => u('startDay', parseInt(v))} />
       <SwitchField label="Show week numbers" checked={data.showWeekNumbers || false} onChange={v => u('showWeekNumbers', v)} />

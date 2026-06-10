@@ -1,5 +1,5 @@
 import { Box, Typography, Divider } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const LAYOUT_OPTIONS = [
   { value: 'auto', label: 'Auto (responsive)' },
@@ -38,9 +38,9 @@ export default function FilterBarEditor({ data, onChange }) {
         Filter Bar Configuration
       </Typography>
 
-      <TextField
+      <TranslatableField
         label="Title (optional)"
-        value={data.title || ''}
+        value={data.title}
         onChange={(val) => updateField('title', val)}
         helperText="Shown above the filter chips"
       />

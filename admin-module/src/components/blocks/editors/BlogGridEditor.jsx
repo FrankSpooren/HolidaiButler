@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NumberField, SelectField } from '../fields/index.js';
+import { NumberField, SelectField, TranslatableField } from '../fields/index.js';
 import {
   TextField, Typography, Box, Checkbox, List, ListItem, ListItemButton,
   ListItemIcon, ListItemText, Chip, CircularProgress, Alert, Divider,
@@ -68,7 +68,7 @@ export default function BlogGridEditor({ block, onChange }) {
       </Typography>
 
       <Box sx={{ mt: 1 }}>
-        <TextField label="Titel boven de grid" value={props.title || ''} onChange={e => update('title', e.target.value)}
+        <TranslatableField label="Titel boven de grid" value={props.title} onChange={v => update('title', v)}
           fullWidth size="small" placeholder="bijv. Laatste blogs" />
       </Box>
 

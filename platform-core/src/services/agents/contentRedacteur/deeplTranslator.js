@@ -25,10 +25,21 @@ const LANG_MAP = {
 /**
  * Formality preference per destination language
  */
+/**
+ * Cultural formality defaults (BLOK D 22-05-2026):
+ *   - NL/DE/FR krijgen informal toon ('less') — warm en toegankelijk voor
+ *     tourism content (vs zakelijk-formele toon).
+ *   - ES blijft default (DeepL formality voor Spaans is minder uitgesproken).
+ *   - EN heeft geen formality parameter in DeepL.
+ *
+ * Per-destination FORMALITY_CONFIG override is voor uitzonderingen
+ * (bv. WarreWijzer kiest formele Franse toon voor zakelijk B2B-publiek).
+ */
+const DEFAULT_FORMALITY = { de: 'less', nl: 'less', fr: 'less', es: 'default' };
+
 const FORMALITY_CONFIG = {
-  1: { de: 'less', nl: 'default', es: 'default', fr: 'default' }, // Calpe: informal German
-  2: { de: 'less', nl: 'default', es: 'default', fr: 'default' }, // Texel: informal German
-  4: { de: 'default', nl: 'default', fr: 'more', es: 'default' }, // WarreWijzer: formal French
+  // Destination-specific overrides — alleen waar afwijkend van DEFAULT_FORMALITY
+  4: { fr: 'more' }, // WarreWijzer: formele Franse toon (B2B-oriented)
 };
 
 /**
@@ -69,7 +80,7 @@ export async function translateWithDeepL(text, targetLang, options = {}) {
 
   // Determine formality
   const destId = options.destinationId || 1;
-  const formalityConfig = FORMALITY_CONFIG[destId] || {};
+  const formalityConfig = { ...DEFAULT_FORMALITY, ...(FORMALITY_CONFIG[destId] || {}) };
   const formality = options.formality || formalityConfig[targetLang] || 'default';
 
   const params = new URLSearchParams();

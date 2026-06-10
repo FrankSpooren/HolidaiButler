@@ -1,7 +1,7 @@
 # CLAUDE.md - HolidaiButler Project Context
 
-> **Versie**: 5.6.2
-> **Laatst bijgewerkt**: 18 mei 2026
+> **Versie**: 5.9.0
+> **Laatst bijgewerkt**: 20 mei 2026
 > **Eigenaar**: Frank Spooren
 > **Project**: HolidaiButler - AI-Powered Tourism Platform
 
@@ -54,6 +54,161 @@ HolidaiButler is een enterprise-level AI-powered tourism platform dat internatio
 
 ---
 
+
+## 🛡️ Hetzner SSL Incident & Recovery (v5.9.0) — COMPLEET 20 mei 2026
+
+> <!-- HETZNER-SSL-RECOVERY-V5.9.0 -->
+> **42 uur productie-outage** (18-05 14:24 → 20-05 09:01 UTC) uiteindelijk hersteld
+> met enterprise-grade SSL CA-pinning + defensive pool config + mysql2 versie-consistency.
+> Vijf samenwerkende oorzaken — geen enkele op zichzelf voldoende.
+
+### Wat is verbeterd ten opzichte van pre-incident
+
+**SSL hardening (alle 3 actieve DB-config files)**:
+- CA-pinned TLS via Hetzner's officiële CA-cert: `/etc/ssl/certs/hetzner-mariadb-ca.pem` (valid t/m 2032-06-04)
+- Config-pattern: `ssl: process.env.DB_SSL === 'false' ? undefined : { ca: fs.readFileSync(...), rejectUnauthorized: true, minVersion: 'TLSv1.2' }`
+- TLSv1.3 + AES-256-GCM cipher enforced (geverifieerd via `SHOW SESSION STATUS`)
+- Geconfigureerd in: `platform-core/src/config/database.js` (master+replica), `agenda-module/src/config/database.js`, `ticketing-module/config/database.js`
+
+**Defensive Sequelize pool-config (alle 3 modules)**:
+- `pool.max: 3` (was 20) — voorkomt fail2ban-trigger bij Hetzner-hiccup reconnect-burst
+- `pool.min: 1` (was 5), `pool.acquire: 15s` (was 30s), `pool.idle: 5s` (was 10s)
+- `pool.evict: 5s` *(nieuw)* — active sweep voor dode connecties
+- `dialectOptions.connectTimeout: 5s` *(nieuw)* — sneller falen i.p.v. lange hang
+- Top-level `retry: { match: [/ETIMEDOUT/, /ECONNRESET/, /ECONNREFUSED/, /SequelizeConnectionError/], max: 2, backoffBase: 1000, backoffExponent: 2 }`
+
+**mysql2 versie-consistency**:
+- Uniform op **3.15.3** voor platform-core + agenda + ticketing (was: 3.15.3 / 3.16.0 / 3.16.0)
+- mysql2 3.16.0 heeft een regressie waarbij `ssl.ca` configuration leidt tot TCP-niveau ETIMEDOUT
+- Frozen tot mysql2 maintainers patch (te monitoren via dependabot)
+
+**Agenda module hersteld**:
+- `agenda_events` tabel gecreëerd via `Event.sync()` — DDL gedocumenteerd in `docs/migrations/2026-05-20-create-agenda-events-table.sql`
+- ETL: **843 legacy `agenda` rijen** gemigreerd naar `agenda_events` (UUID + JSON multilingual schema, 0 transform errors)
+- `Event.js` afterFind hook parses 21 JSON-velden (mysql2 3.15.3 returnt JSON-kolommen als string i.p.v. parsed object — Sequelize JSON-datatype-handler werkt niet auto met deze driver-versie)
+
+**Orchestrator fix**:
+- `visualTrendDiscovery.js` import-pad gecorrigeerd in `workers.js` (3 occurrences van `../services/visual/` → `../visual/`)
+
+**admin-module verwijderd (Scenario A — FASE B Sessie 1 pre-werk)**:
+- `git rm -r admin-module/backend/` (42 files) — alle 12 mount paths gemigreerd naar `/api/v1/admin-portal/*` (323 endpoints in platform-core adminPortal.js)
+- `pm2 delete holidaibutler-admin-api` + `pm2 save`
+- Backup: `/root/backups/2026-05-18-node22-session1/admin-module-backend.tar.gz` (12MB)
+- 3 wees-tabellen in DB blijven onaangeraakt (events, PlatformConfig, POI_ImportExportHistory)
+
+**Node 22 migratie pre-werk (FASE B Sessie 1)**:
+- nvm 0.40.1 + Node 22.22.3 + Node 20.19.6 op `/root/.nvm/`
+- `nvm alias default system` (PATH-default blijft `/usr/bin/node`, PM2 daemon onaangeraakt)
+- `ecosystem.config.cjs` bootstrap (`.cjs` vanwege ESM root, Aanpak B per-wave snippet)
+- PII-scrub SQL klaar in `docs/migrations/node22-session2-pii-scrub.sql` (270 regels, 25 tabellen)
+- Sessie 2 plan: `docs/migrations/node22-session2-plan.md` (D5 DB-isolatie)
+
+### Anti-pattern guards uitgebreid (verplicht voor alle sessies)
+
+1. **No-secrets-in-chat protocol**: backup-scripts, `.env`, credentials-files NOOIT met onbeperkte `cat` — altijd via grep-filter of redact. Backup-scripts zijn classic secrets-hotspot.
+2. **Volgorde-discipline bij credential-changes**: stop services VÓÓR pwd-rotatie, niet erna. Voorkomt failed-auth-bursts → fail2ban-trigger.
+3. **SSL-policy-changes vereisen vooraf code-validatie**: bij `REQUIRE SSL` enabling eerst applicatie-config controleren of `CLIENT_SSL` capability flag wordt gezet (mysql2 doet dat NIET automatisch bij `ssl: undefined`).
+4. **Versie-consistency monitoring**: alle modules zelfde mysql2/sequelize major+minor — regressie-risico bij divergerende versies.
+5. **Eén-attempt-per-cycle bij auth-tests**: NOOIT retry-storm bij failed auth — Hetzner-style auto-defense triggert direct, IP wordt host-level geblokkeerd.
+6. **JSON-parse expectations valideren**: mysql2 driver-versie 3.15.x levert JSON-kolommen als string aan Sequelize — afterFind hooks of getter-methoden vereist.
+
+### Open spawn-tasks (chip-tray follow-up)
+
+- ETL fase 2: data-migratie patroon voor toekomstige legacy → events conversies
+- Production-user `pxoziy_1` REQUIRE SSL op user-level (Hetzner enforced server-side, defensive verbetering)
+- ~~Credentials uit `/root` scripts~~ ✅ AFGEROND 2026-05-22 (spawn-task 4, zie CLAUDE_HISTORY.md sectie SPAWN-TASK-4-CRED-HARDENING-2026-05-22)
+- Dead `adminModule` HTTP-client cleanup (`platform-core/src/integrations/adminModule.js`)
+- `mysql2` versie-monitoring (regressie-detectie via dependabot)
+- agenda legacy tabel ARCHIVE (`RENAME TABLE agenda TO agenda_archive_2026_05_20` — alleen na Frank's go)
+
+### Documentatie + scripts
+
+- `docs/migrations/node22-incident-post-mortem.md` (150 regels) — volledige timeline + root cause + preventie
+- `docs/migrations/2026-05-20-create-agenda-events-table.sql` — DDL voor agenda_events tabel
+- `docs/migrations/NODE-22-MIGRATION-PLAN.md` (461 regels) — FASE B planning document
+- `docs/migrations/node22-session2-plan.md` (265 regels) — Sessie 2 uitvoer-plan (staging snapshot + PII-scrub + D5 DB-isolatie)
+- `docs/migrations/node22-session2-pii-scrub.sql` (270 regels, 25 tabellen) — GDPR Art. 32 PII-scrub voor staging-DB
+- `docs/migrations/node22-session1-admin-module-investigation.md` (105 regels) — Scenario A onderbouwing
+- `/root/scripts/node22-recovery-restart.sh` — gestandaardiseerd recovery-protocol (8 stappen, max 1 auth-attempt)
+- `/root/scripts/patch-pool-defensive.py` — idempotent pool-config patch
+- `agenda-module/scripts/migrate-legacy-agenda-to-events.js` — ETL met `--dry-run` optie
+
+### FASE B Sessie 2 — 14-dagen incident-soak (beslissing 2026-05-21)
+
+> <!-- NODE22-S2-SOAK-14D-2026-05-21 -->
+> **Beslissing**: na GO/NO-GO evaluatie 2026-05-21 — 14d soak gekozen (gradient
+> tussen 0d en 30d). Start S2-A verschoven naar **2026-06-04** (week 23).
+> Target prod-cutover 30-06-2026 blijft haalbaar. AWS jan-2027 buffer 7 maanden.
+
+**Onderbouwing**: 4 onbewezen aannames uit v5.9.0-recovery vereisen meet-window:
+defensive pool config onder vol load-cyclus (7-14d), Hetzner CA-pinning over
+maintenance-cyclus (14-30d), mysql2 3.15.3 freeze vs latente CVEs, defensive
+connectTimeout vs Hetzner-hiccup-patroon. 14d dekt ~60% van 30d-restrisico
+mits mitigatie-spawn-tasks afgerond.
+
+**Mitigatie-spawn-tasks tijdens soak** (volgorde op risico-reductie per uur effort):
+
+1. Working-tree cleanup — 19 `.bak` files + leeg artifact `R7,]hVcq2Qkvtt` weghalen, incl. shred van `agenda-module/.env.pre-pwd-sync.bak` (dead credentials residue)
+2. `hcloud` CLI install op productie-VPS (eenmalig, eis voor S2-A)
+3. mysql2 versie-monitoring inrichten (dependabot of npm-check-updates cron)
+4. Hardcoded credentials uit `/root/daily_mysql_backup.sh` + 10 Python utils
+5. Dead `adminModule` HTTP-client cleanup (`platform-core/src/integrations/adminModule.js`)
+6. PII-scrub SQL droogloop tegen prod-schema (syntax + kolom-existence, zonder uitvoer)
+
+**Frank-acties parallel**: Hetzner priority-contract evaluatie · `HETZNER_API_TOKEN`
+voorbereiden (scope server+image+ssh-key) · DNS staging.api.holidaibutler.com
+A-record voorbereiden (TTL 300s) · `REQUIRE SSL` op user `pxoziy_1` activeren.
+
+**Harde grenzen tijdens soak**: geen S2-A/B/C/D/E/F/G/H uitvoer, geen
+agenda-module wijzigingen (Scenario C status quo), geen SemVer-major bumps,
+geen productie-PM2-wijzigingen anders dan strikt noodzakelijk.
+
+---
+
+## 🕰️ Uitgestelde Architectuur-Beslissingen — beoordelen Q3 2026
+
+> <!-- DEFERRED-DECISIONS-V1 -->
+> **Doel van deze sectie**: bewust uitgestelde architectuur-keuzes zichtbaar maken
+> zodat ze niet wegglijden in het achterhoofd en bij elke nieuwe sessie helder is
+> dat een definitieve richting nog te kiezen is.
+
+### Agenda-module vs platform-core agenda-route (Scenario C — status quo, beslissing Q3 2026)
+
+**Vastgelegd**: 2026-05-21
+
+**Situatie**: er bestaan twee parallelle agenda-implementaties:
+
+| Wat | Endpoint | Data-bron | Status |
+|---|---|---|---|
+| **PRODUCTIE** | `/api/v1/agenda/events` op `api.holidaibutler.com` (via Apache) | `agenda` + `agenda_dates` tabellen (43 + 7 kolommen, VARCHAR-per-taal) | ✅ Live, bedient calpetrip.com |
+| **EXPERIMENTEEL** | `/api/agenda/events` op `localhost:5003` (NIET via Apache geroute) | `agenda_events` tabel (JSON multilingual, UUID PK) | ⚠ Draait, geen consumer |
+
+**Achtergrond**: een MongoDB → MySQL refactor (agenda-module met modern schema, CRUD-API, JSON multilingual) is **half uitgevoerd**: model + service + PM2-process aanwezig, maar frontend niet omgeleid + scraper niet omgeschakeld. Daarbovenop: laatste scraper-run = 17-03-2026 (`agenda` tabel data is 2 maanden statisch).
+
+**Bewuste keuze (Frank, 2026-05-21)**: Scenario C — status quo behouden, beslissing uitstellen tot Q3 2026.
+
+**Bindende afspraken tot beslissing**:
+
+1. **Geen nieuwe features** op `agenda_events` tabel of op agenda-module endpoints. Voorkomt verdere bifurcatie.
+2. **Geen nieuwe features** op `agenda` + `agenda_dates` tabellen anders dan strikt noodzakelijke productie-fixes. Voorkomt dat refactor onmogelijk wordt.
+3. **agenda_events** bevat 843 events (ETL pass 1 van 20-05-2026), is **niet** een productie-data-laag — beschouw als refactor-target met snapshot-data.
+4. **agenda-module PM2-service** blijft draaien als "ready voor toekomstige cutover" — niet kosten-efficiënt maar acceptabel voor refactor-optionaliteit.
+
+**Te besluiten in Q3 2026 (strategische sessie)**:
+
+- **Scenario A**: refactor afmaken. Frontend omleiden naar agenda-module endpoint, scraper revivaliseren of admin-CRUD-flow opzetten, multi-tenancy in `agenda_events.destination_id` toevoegen, iCal-export porten, 5 interne consumers omleiden (Holibot, search, content top-25, AI content, orchestrator). Effort: 2-3 hele sessies. Pro: enterprise-conform schema-evolutie, schaalt naar 50 destinations.
+- **Scenario B**: refactor terugdraaien. `pm2 delete holidaibutler-agenda` + `git rm agenda-module/` + `DROP TABLE agenda_events`. Behoud `agenda` + `agenda_dates` als enige data-laag (zoals admin-module Scenario A). Effort: 1u. Pro: minder operationele complexiteit.
+
+**Pre-conditie voor beslissing**: helderheid over event-acquisitie-strategie:
+- Is HolidaiButler actief evenementen aan het scrapen / aggregeren?
+- Komen events van automated scrapers of destination-admin CRUD?
+- Verwachte volume bij 50-destination scale?
+
+Zonder antwoord op deze vragen is elke tabel-keuze een gok.
+
+**Documentatie-anker**: zie `docs/migrations/agenda-architecture-analysis-2026-05-21.md` (TODO indien dieper documentatie gewenst). Huidige toelichting in CLAUDE_HISTORY.md sessie-entries 20-21 mei 2026.
+
+---
 ## 🩹 BUTE Publish Resolution (v5.3.1 – v5.4.0) — COMPLEET 16 mei 2026
 
 > **Strategic context**: BUTE fietsfair-post (item 248 FB + 249 IG, scheduled

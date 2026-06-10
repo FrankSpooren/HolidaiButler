@@ -241,9 +241,9 @@ export default function BlockSelectorDialog({ open, onClose, onSelect, currentBl
 
                           {/* Badges */}
                           <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
-                            {featureFlag && available && (
-                              <Chip label="E2" size="small" sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#eff6ff', color: '#3b82f6' }} />
-                            )}
+                            {/* E6 (BLOK E 22-05-2026): featureFlag visual marker verwijderd
+                                 per Frank's instructie — interne dev-marker had geen user-waarde.
+                                 Filter-logic (regel ~70-113) blijft intact via destinations.featureFlags lookup. */}
                             {hasWarning && (
                               <Chip
                                 icon={<WarningAmberIcon sx={{ fontSize: '12px !important' }} />}

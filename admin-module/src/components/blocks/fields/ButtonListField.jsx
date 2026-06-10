@@ -1,4 +1,21 @@
 import { useState } from 'react';
+import TranslatableField from './TranslatableField.jsx';
+import { useDestination } from '../DestinationContext.jsx';
+
+// Localized preview helper (consistent met hb-websites lib/i18n.ts).
+function getLocalized(value, locale, fallback = '') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return fallback;
+  const requested = value[locale];
+  if (requested && String(requested).trim().length > 0) return String(requested);
+  for (const lang of ['en', 'nl', 'de', 'es', 'fr']) {
+    if (lang === locale) continue;
+    const v = value[lang];
+    if (v && String(v).trim().length > 0) return String(v);
+  }
+  return fallback;
+}
 import { Box, TextField, IconButton, Button, Select, MenuItem, FormControl, InputLabel, Collapse, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -46,6 +63,8 @@ const ACTION_MESSAGES = {
 
 export default function ButtonListField({ label, value, onChange, disabled, sx }) {
   const buttons = Array.isArray(value) ? value : [];
+  const destCtx = useDestination();
+  const previewLocale = destCtx?.defaultLanguage || 'en';
   const [expandedStyle, setExpandedStyle] = useState({});
 
   const toggleStyle = (idx) => setExpandedStyle(s => ({ ...s, [idx]: !s[idx] }));
@@ -76,7 +95,7 @@ export default function ButtonListField({ label, value, onChange, disabled, sx }
   };
 
   const addButton = () => {
-    onChange([...buttons, { label: '', href: '', variant: 'primary' }]);
+    onChange([...buttons, { label: { en: '', nl: '', de: '', es: '', fr: '' }, href: '', variant: 'primary' }]);
   };
 
   const removeButton = (idx) => {
@@ -95,7 +114,7 @@ export default function ButtonListField({ label, value, onChange, disabled, sx }
         return (
           <Box key={idx} sx={{ mb: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <TextField size="small" label="Label" value={btn.label || ''} onChange={e => updateButton(idx, 'label', e.target.value)} disabled={disabled} sx={{ flex: 1, minWidth: 120 }} />
+              <Box sx={{ flex: 1, minWidth: 120 }}><TranslatableField label="Label" value={btn.label} onChange={v => updateButton(idx, 'label', v)} /></Box>
               {btn.variant === 'chatbot' ? (
                 <FormControl size="small" sx={{ minWidth: 160 }}>
                   <InputLabel>Action</InputLabel>
@@ -195,7 +214,7 @@ export default function ButtonListField({ label, value, onChange, disabled, sx }
                       borderRadius: bs.borderRadius === 'full' ? '9999px' : bs.borderRadius === 'lg' ? '16px' : bs.borderRadius === 'md' ? '8px' : bs.borderRadius === 'sm' ? '4px' : bs.borderRadius === 'none' ? '0' : '8px',
                     }}
                   >
-                    {btn.label || 'Button'}
+                    {getLocalized(btn.label, previewLocale, 'Button')}
                   </Box>
                 </Box>
               </Box>

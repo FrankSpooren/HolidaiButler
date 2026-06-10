@@ -56,17 +56,23 @@ class ReisleiderAgent extends BaseAgent {
     `, { replacements: { destId: destinationId }, type: QueryTypes.SELECT });
 
     // 4. Simple Analytics data (website traffic)
+    // Credentials: process.env.SA_API_KEY + SA_USER_ID (required, no fallback per SECURITY.md §4)
+    // Rotated 2026-06-10 per INC-2026-06-10-003
+    // Cost-log: 1 SA-call per destination invocation (free-tier, logged for audit-trail)
     let saData = { pageviews: 0, visitors: 0, top_pages: [] };
     try {
-      const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
-      const domains = { 1: 'holidaibutler.com', 2: 'texelmaps.nl' };
+      const SA_API_KEY = process.env.SA_API_KEY;
+      const SA_USER_ID = process.env.SA_USER_ID;
+      // Domain-mapping: Calpe portal slug is calpetrip.com (NOT holidaibutler.com — that's B2B corporate);
+      // texelmaps.nl for Texel. Consistent with websiteTrafficCollector.js DEST_DOMAINS.
+      const domains = { 1: 'calpetrip.com', 2: 'texelmaps.nl' };
       const domain = domains[destinationId];
-      if (domain) {
+      if (domain && SA_API_KEY && SA_USER_ID) {
         const end = new Date().toISOString().substring(0, 10);
         const start = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().substring(0, 10);
         const saRes = await fetch(
           `https://simpleanalytics.com/${domain}.json?version=6&fields=pageviews,visitors,pages&start=${start}&end=${end}`,
-          { headers: { 'Api-Key': SA_API_KEY }, signal: AbortSignal.timeout(10000) }
+          { headers: { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID }, signal: AbortSignal.timeout(10000) }
         );
         if (saRes.ok) {
           const saJson = await saRes.json();
@@ -75,6 +81,20 @@ class ReisleiderAgent extends BaseAgent {
             visitors: saJson.visitors || 0,
             top_pages: (saJson.pages || []).slice(0, 5).map(p => ({ path: p.value, views: p.pageviews }))
           };
+          // Audit-trail cost-log (non-blocking)
+          try {
+            const mod = await import('../../orchestrator/costController/models/CostLog.js').catch(() => null);
+            if (mod?.default) {
+              await mod.default.create({
+                service: 'simpleanalytics',
+                operation: 'reisleider-context-aggregate',
+                cost: 0.0,
+                currency: 'EUR',
+                metadata: { destination_id: destinationId, domain, call_count: 1 },
+                timestamp: new Date(),
+              });
+            }
+          } catch (clErr) { /* non-blocking */ }
         }
       }
     } catch (err) {

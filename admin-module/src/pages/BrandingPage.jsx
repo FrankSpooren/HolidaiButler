@@ -165,7 +165,7 @@ export default function BrandingPage() {
     : allDests.filter(d => userAllowed.includes(d.code));
   const activeDest = destinations[activeTab];
 
-  // v4.95 deep-link: /branding?dest=<code>&kb=<id> opent Merk Profiel dialog
+  // v4.95 deep-link: /branding?dest=<code>&kb=<id> opent Merkprofiel dialog
   // met de juiste destination geselecteerd en knowledge-source gehighlight.
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkKb = searchParams.get('kb');
@@ -178,7 +178,7 @@ export default function BrandingPage() {
       const idx = destinations.findIndex(d => d.code === deepLinkDest || d.id === Number(deepLinkDest));
       if (idx >= 0 && idx !== activeTab) setActiveTab(idx);
     }
-    // Open Merk Profiel dialog als ?kb param aanwezig is
+    // Open Merkprofiel dialog als ?kb param aanwezig is
     if (deepLinkKb && activeGroup !== 'merkProfiel') {
       setActiveGroup('merkProfiel');
     }
@@ -449,12 +449,12 @@ export default function BrandingPage() {
       {/* === 4 GROEP KAARTEN (2x2 grid, boven de vouw) === */}
       {activeDest && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          {/* Kaart 1: Merk Profiel */}
+          {/* Kaart 1: Merkprofiel */}
           <Grid item xs={12} md={6}>
             <Card sx={{ cursor: 'pointer', border: '2px solid transparent', '&:hover': { borderColor: '#7FA594' }, transition: 'border-color 0.2s', bgcolor: 'rgba(127, 165, 148, 0.06)' }} onClick={() => setActiveGroup('merkProfiel')}>
               <CardContent sx={{ textAlign: 'center', py: 3 }}>
                 <Box sx={{ width: 48, height: 48, borderRadius: '50%', bgcolor: '#7FA594', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', mx: 'auto', mb: 1.5, fontSize: 24 }}>📋</Box>
-                <Typography variant="h6" fontWeight={700}>{t('brandProfile.page_title', 'Merk Profiel')}</Typography>
+                <Typography variant="h6" fontWeight={700}>{t('brandProfile.page_title', 'Merkprofiel')}</Typography>
                 <Typography variant="body2" color="text.secondary">{t('branding.group.merkProfielDesc', 'Bedrijfsprofiel, missie, doelgroepen, tone of voice, knowledge base')}</Typography>
               </CardContent>
             </Card>
@@ -501,7 +501,7 @@ export default function BrandingPage() {
       {/* === MERK PROFIEL DIALOG === */}
       <Dialog open={activeGroup === 'merkProfiel'} onClose={() => setActiveGroup(null)} maxWidth="lg" fullWidth>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'rgba(127, 165, 148, 0.08)' }}>
-          <Typography variant="h6" fontWeight={700}>📋 {t('brandProfile.page_title', 'Merk Profiel')}</Typography>
+          <Typography variant="h6" fontWeight={700}>📋 {t('brandProfile.page_title', 'Merkprofiel')}</Typography>
           <IconButton onClick={() => setActiveGroup(null)}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
@@ -659,7 +659,7 @@ export default function BrandingPage() {
             </Grid>
           </BrandingAccordion>
 
-          {/* TONE OF VOICE verplaatst naar Merk Profiel secties hierboven */}
+          {/* TONE OF VOICE verplaatst naar Merkprofiel secties hierboven */}
           {false && <BrandingAccordion
             id="toneOfVoice"
             title={t('branding.toneOfVoice.title', 'Tone of Voice')}

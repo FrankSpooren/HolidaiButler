@@ -35,11 +35,11 @@ export default function CardGroupEditor({ block, onChange }) {
         createItem={() => ({ title: '', description: '', image: '', href: '', badge: '', price: '' })}
         renderItem={(item, _idx, updateField) => (
           <>
-            <TextField label="Title" value={item.title} onChange={v => updateField('title', v)} required />
-            <TextField label="Description" value={item.description} onChange={v => updateField('description', v)} multiline rows={2} />
+            <TranslatableField label="Title" value={item.title} onChange={v => updateField('title', v)} required />
+            <TranslatableField label="Description" value={item.description} onChange={v => updateField('description', v)} multiline rows={2} />
             <ImageUploadField label="Image" value={item.image} onChange={v => updateField('image', v)} />
             <TextField label="Link URL" value={item.href} onChange={v => updateField('href', v)} />
-            <TextField label="Badge" value={item.badge} onChange={v => updateField('badge', v)} placeholder="Nieuw, Aanbieding, ..." />
+            <TranslatableField label="Badge" value={item.badge} onChange={v => updateField('badge', v)} helperText="Nieuw, Aanbieding, ..." />
             {variant === 'offer' && (
               <>
                 <TextField label="Prijs" value={item.price} onChange={v => updateField('price', v)} placeholder="29.95" />
