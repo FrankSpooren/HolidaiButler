@@ -154,6 +154,11 @@ regexes = [
   # Placeholder patterns in .env.example or docs
   '''your_[a-z_]+_(key|token|secret|here)''',
   '''<your[_-][a-z]+[_-](key|token|secret)>''',
+  '''YOUR_[A-Z_]+''',                                       # uppercase placeholders (YOUR_TOKEN, YOUR_API_KEY)
+  '''your-[a-z-]+-(token|key|secret|password)''',           # kebab-case dummies (your-secret-key)
+  '''your-secret-key''',                                    # common literal placeholder
+  '''your-secret-key-change-in-production''',               # canonical docs placeholder
+  '''your-super-secret-key-min-[0-9]+-chars''',             # instructive docs placeholder
   '''REPLACE_(WITH|ME)''',
   '''\$\{[A-Z_]+\}''',
   '''xxx+''',
