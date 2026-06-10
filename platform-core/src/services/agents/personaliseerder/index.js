@@ -4,6 +4,15 @@ import { mysqlSequelize } from '../../../config/database.js';
 import { QueryTypes } from 'sequelize';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import logger from '../../../utils/logger.js';
+
+// Module-load fail-loud guard for SESSION_SALT (INC-2026-06-10-004 remediation)
+// Rotated 2026-06-10; was hardcoded fallback 'hb-salt' acting as production secret
+// Policy: docs/security/SECURITY.md §4 — Patroon A
+const SESSION_SALT = process.env.SESSION_SALT;
+if (!SESSION_SALT) {
+  logger.error('[personaliseerder] SESSION_SALT env-var missing. Session-hash anonymisation will degrade to deterministic-without-salt. Configure SESSION_SALT in platform-core/.env (32-byte random hex via `openssl rand -hex 32`).');
+}
 
 // GDPR-compliant recommendation log (90d TTL)
 const RecLogSchema = new mongoose.Schema({
@@ -31,8 +40,10 @@ class PersonaliseerderAgent extends BaseAgent {
   /** On-demand: called by chatbot or API */
   async recommend({ destinationId, sessionId, context = {}, limit = 5 }) {
     const startTime = Date.now();
+    // Note: SESSION_SALT may be empty if env-var missing — fail-loud-but-not-fast at module-load.
+    // Hash still computed (deterministic-without-salt fallback) to keep agent operational; warned-once.
     const sessionHash = crypto.createHash('sha256')
-      .update((sessionId || 'anon') + (process.env.SESSION_SALT || 'hb-salt'))
+      .update((sessionId || 'anon') + (SESSION_SALT || ''))
       .digest('hex').substring(0, 32);
 
     const enriched = await this._enrichContext(context);
