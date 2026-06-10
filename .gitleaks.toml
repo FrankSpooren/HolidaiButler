@@ -126,6 +126,15 @@ paths = [
   '''(.*?)package-lock\.json''',
   '''(.*?)yarn\.lock''',
   '''(.*?)pnpm-lock\.yaml''',
+  # Legacy archive (read-only, pre-INC-2026-06-10-001 docs).
+  # All historical credentials inside are revoked/expired (trufflehog verified=0).
+  # New code MUST NOT be added to this path — see docs/security/SECURITY.md §10.
+  '''(.*?)original-source/.*''',
+  '''(.*?)Original docs/.*''',
+  # Damage-assessment + remediation scripts (one-off fase_r* helpers — read-only history)
+  '''(.*?)fase_r[0-9].*\.py$''',
+  # Historical chat-log archives (read-only)
+  '''(.*?)CLAUDE_HISTORY\.md$''',
 ]
 
 regexes = [
