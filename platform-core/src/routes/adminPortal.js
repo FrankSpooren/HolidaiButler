@@ -5648,8 +5648,13 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
       try { const c = await redis.get(cacheKey); if (c) return res.json(JSON.parse(c)); } catch { /* miss */ }
     }
 
-    const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
-    const SA_USER_ID = process.env.SA_USER_ID || 'sa_user_id_45cbd1c2-58bb-44e3-ac9c-94797095b640';
+    // SA credentials per docs/security/SECURITY.md §4 Patroon A — no fallback.
+    // Rotated 2026-06-10 per INC-2026-06-10-003 (cleanup completed in this file via Group B triage).
+    const SA_API_KEY = process.env.SA_API_KEY;
+    const SA_USER_ID = process.env.SA_USER_ID;
+    if (!SA_API_KEY || !SA_USER_ID) {
+      return res.status(503).json({ success: false, error: { code: 'SA_NOT_CONFIGURED', message: 'SimpleAnalytics integration not configured (SA_API_KEY/SA_USER_ID env-vars missing).' } });
+    }
     const saHeaders = { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID };
     const endDate = new Date().toISOString().split('T')[0];
     const startDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
