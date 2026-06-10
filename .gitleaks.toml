@@ -114,7 +114,7 @@ tags = ["private-key"]
 description = "Allowlisted files, paths, and patterns"
 
 paths = [
-  '''(.*?)(\.env\.example|\.env\.template|\.env\.sample)''',
+  '''(.*?)(\.env\.example|\.env\.template|\.env\.sample|\.env\.production\.template|\.env\.production\.example)''',
   '''(.*?)docs/security/.*''',
   '''(.*?)\.gitleaks\.toml''',
   '''(.*?)node_modules/.*''',
@@ -135,6 +135,19 @@ paths = [
   '''(.*?)fase_r[0-9].*\.py$''',
   # Historical chat-log archives (read-only)
   '''(.*?)CLAUDE_HISTORY\.md$''',
+  # Env templates/scripts (dummy creds for onboarding — actual secrets in PM2 / .env / GitHub Secrets)
+  '''(.*?)env-example\.sh$''',
+  '''(.*?)env_deployment\.sh$''',
+  '''(.*?)docker-compose\.txt$''',
+  # Test fixtures (synthetic data, not real credentials)
+  '''(.*?)__tests__/.*\.(test|spec)\.(js|ts|jsx|tsx)$''',
+  '''(.*?)\.(test|spec)\.(js|ts|jsx|tsx)$''',
+  # GitHub Actions workflows — credentials are ${{ secrets.X }} references, not literal values
+  '''(.*?)\.github/workflows/.*\.ya?ml$''',
+  # Notion/project description templates (contain dummy connection strings for documentation)
+  '''(.*?)holidaibutler-project\.ts$''',
+  # One-off data-fix scripts (executed once, immutable)
+  '''(.*?)steekproef_fix_.*\.py$''',
 ]
 
 regexes = [
@@ -147,9 +160,19 @@ regexes = [
   '''dummy''',
   '''example''',
   '''CHANGEME''',
+  # Common dummy/template credential patterns in connection strings + docs
+  '''username:password''',
+  '''user:pass''',
+  '''<user>:<pass>''',
+  '''<username>:<password>''',
+  '''USERNAME:PASSWORD''',
+  '''<DB_USER>:<DB_PASS>''',
+  # GitHub Actions secret references (template expressions, not literal values)
+  '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
   # Test fixtures (synthetic)
   '''sk-test-[a-zA-Z0-9]+''',
   '''test_secret_[a-zA-Z0-9]+''',
+  '''idempotency-key.*:\s*['"][a-zA-Z0-9_-]+['"]''',
 ]
 
 stopwords = [
