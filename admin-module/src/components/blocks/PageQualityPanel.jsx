@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Chip, Alert, AlertTitle, IconButton, Collapse, CircularProgress } from '@mui/material';
+import { Box, Typography, Chip, Alert, AlertTitle, IconButton, Collapse, CircularProgress, Button } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -30,7 +30,7 @@ const CATEGORY_LABELS = {
   performance: 'Performance',
 };
 
-export default function PageQualityPanel({ pageId, onValidated }) {
+export default function PageQualityPanel({ pageId, onValidated, onSuggestionAction }) {
   const { t } = useTranslation();
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ export default function PageQualityPanel({ pageId, onValidated }) {
     if (!pageId) return;
     setLoading(true);
     try {
-      const { data } = await client.get(`/admin-portal/pages/${pageId}/validate`);
+      const { data } = await client.get(`/pages/${pageId}/validate`);
       setResult(data);
       if (onValidated) onValidated(data);
     } catch {
@@ -100,6 +100,25 @@ export default function PageQualityPanel({ pageId, onValidated }) {
       <Collapse in={expanded}>
         <Box sx={{ px: 2, py: 1 }}>
           {loading && <Typography variant="caption" color="text.secondary">Valideren...</Typography>}
+
+          {result?.brandContextSuggestions && result.brandContextSuggestions.length > 0 && (
+            <Alert severity="info" sx={{ py: 0.5, mb: 1 }}>
+              <AlertTitle sx={{ fontSize: '0.8rem', mb: 0.5 }}>{t('quality.brandSuggestions', 'AI Brand-context suggesties')}</AlertTitle>
+              {result.brandContextSuggestions.map((s, i) => {
+                const sugObj = typeof s === 'string' ? { text: s, cta_label: null, cta_path: null, action: null } : s;
+                return (
+                  <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Typography variant="caption" sx={{ flex: 1, display: 'block' }}>• {sugObj.text}</Typography>
+                    {sugObj.cta_label && onSuggestionAction && (
+                      <Button size="small" variant="outlined" sx={{ minWidth: 0, py: 0, fontSize: '0.65rem' }} onClick={() => onSuggestionAction(sugObj.action, sugObj.cta_path)}>
+                        {sugObj.cta_label}
+                      </Button>
+                    )}
+                  </Box>
+                );
+              })}
+            </Alert>
+          )}
 
           {result && result.issues.length === 0 && !loading && (
             <Alert severity="success" sx={{ py: 0.5 }}>

@@ -9433,3 +9433,429 @@ Sessie commits: `e66dc8d` + `94643ea` + `7c368c4` + `a0ece38` + `5295589`
 - `platform-core/src/routes/adminPortal.js` (cache invalidation + approve notification + publish-now failed notification)
 - `platform-core/src/services/agents/publisher/index.js` (publish_success + publish_failed notifications)
 - `platform-core/src/services/orchestrator/workers.js` (ai_complete notification)
+
+
+## Sessie 18-20-05-2026: Hetzner SSL Incident & Recovery (v5.9.0)
+
+> <!-- HETZNER-SSL-RECOVERY-V5.9.0 -->
+
+### Incident overzicht
+
+**42 uur productie-outage** (18-05 14:24 → 20-05 09:01 UTC). Vijf samenwerkende oorzaken, drie opeenvolgende Hetzner IP-blockades, drie support-rondes, één telefonische escalatie. Uiteindelijke root cause: mysql2-driver zet `CLIENT_SSL` capability-flag niet automatisch bij `ssl: undefined`, terwijl Hetzner DB-user op `REQUIRE SSL` stond.
+
+### Tijdlijn (UTC)
+
+| Datum-tijd | Wat | Door |
+|---|---|---|
+| 18-05 ~13:00 | FASE B Sessie 1 start (Node 22 pre-werk) | Frank + AI |
+| 18-05 ~14:15 | Backup-script inspectie toont productie-pwd in chat | AI-fout |
+| 18-05 14:20-14:24 | Pwd-rotatie konsoleH + REQUIRE SSL activatie | Frank |
+| 18-05 14:24 | Hetzner IP-block cyclus 1 — productie down | Hetzner auto-defense |
+| 18-05 15:24 | Auto-unblock (60min cooldown) → restart attempt → block cyclus 2 | — |
+| 18-05 16:47 | Auto-unblock cyclus 2 | — |
+| 18-05 17:00 | Eerste Hetzner support-ticket | Frank |
+| 18-05 → 19-05 | 3 tickets, 24u geen Hetzner-respons | — |
+| 19-05 13:00 | HeidiSQL thuis-IP test → confirms pwd-fout-hypothese | Frank |
+| 19-05 ~15:30 | Telefonische escalatie naar Hetzner technical | Frank |
+| 20-05 ~07:00 | Hetzner email: "attempting unencrypted connection met REQUIRE SSL" — **echte root cause** | Hetzner |
+| 20-05 08:00 | CA-cert download + SSL CA-pinning patch | AI |
+| 20-05 08:06 | Eerste recovery — alle endpoints HTTP 200 | AI |
+| 20-05 ~08:20 | TLS read ECONNRESET → mysql2 pool retry-storm → block cyclus 3 | — |
+| 20-05 ~09:00 | Hetzner IP-unban opnieuw | Hetzner |
+| 20-05 09:01 | Defensive pool config + mysql2 3.15.3 consistency + final restart | AI |
+| 20-05 09:01+ | Volledig hersteld, alle smoke-tests groen | — |
+| 20-05 09:30+ | Spawn-task uitvoer: visualTrendDiscovery fix + agenda_events table + ETL 843 events + JSON-parse hook | AI |
+
+### Root cause (5 samenwerkende oorzaken)
+
+1. **AI-fout (primaire trigger)**: `cat /root/daily_mysql_backup.sh` toonde hardcoded pwd in chat.
+2. **Ontbrekende volgorde-discipline**: pwd-rotatie zonder eerst PM2-services te stoppen → failed-auth-burst → fail2ban.
+3. **mysql2 CLIENT_SSL flag**: `ssl: undefined` zet de capability-flag niet → server (REQUIRE SSL on) weigert auth.
+4. **Hetzner UI miscommunicatie**: eerste twee support-rondes wezen verkeerd (netwerk-block, pwd-sync), pas derde response bracht echte oorzaak.
+5. **mysql2 3.16.0 regressie**: agenda + ticketing draaiden op 3.16.0 met SSL-handling-bug → ETIMEDOUT op TCP-niveau zelfs met correcte SSL CA-config.
+
+### Commits + branches
+
+| Branch | Commit | Doel |
+|---|---|---|
+| `dev` | `6989521` | Sessie 1 pre-werk (nvm + ecosystem.config.cjs + audit + PII-draft) |
+| `dev` | `05f1849` | Scenario A — admin-module/backend verwijderd |
+| `dev` | `0035dfc` | Sessie 2 plan-document |
+| `feature/orchestrator-import-fix-2026-05-20` | `b55eb9d` | visualTrendDiscovery import-pad fix (3 occurrences) |
+| `feature/agenda-events-table-2026-05-20` | `04097f9` | DDL doc voor agenda_events tabel (Event.sync result) |
+| `feature/agenda-events-table-2026-05-20` | `7404520` | ETL legacy agenda → events + Event.js afterFind JSON-parse hook |
+
+### Wat is hersteld + state
+
+| Service | Status post-recovery |
+|---|---|
+| `holidaibutler-api` | ✅ Online, SSL CA-pinned, defensive pool |
+| `hb-temporal-worker` | ✅ Online, idem |
+| `holidaibutler-agenda` | ✅ Online, 843 events live, JSON-parse hook actief |
+| `holidaibutler-ticketing` | ✅ Online, mysql2 downgraded 3.16.0 → 3.15.3 |
+| `hb-websites` + 6 MCP servers | ✅ Niet aangeraakt tijdens incident |
+| `holidaibutler-reservations` | ❌ Errored — pre-existing FASE C scope |
+
+### Verificaties post-recovery (allemaal groen)
+
+- `/health` HTTP 200, mysql+mongodb connected
+- `/api/v1/pois` returnt echte data (was 500 tijdens incident)
+- `/api/v1/admin-portal/auth/login` POST → 401 INVALID_CREDENTIALS (correct, niet 500)
+- calpetrip.com homepage HTTP 200
+- admin.holidaibutler.com HTTP 200
+- Restart-counts stabiel sinds finale start (geen crashes, geen retry-storms)
+- TLSv1.3 / AES-256-GCM cipher actief op alle DB-verbindingen
+- 843 events in `agenda_events` met JSON multilingual correct gelezen via Sequelize
+
+### Bestanden gewijzigd in deze sessie
+
+**Server-side (productie)**:
+- `platform-core/src/config/database.js` (SSL CA-pinning + defensive pool master+replica)
+- `agenda-module/src/config/database.js` (idem + dialectOptions block toegevoegd)
+- `agenda-module/src/models/Event.js` (afterFind hook voor 21 JSON velden)
+- `agenda-module/scripts/migrate-legacy-agenda-to-events.js` (NIEUW, ETL script)
+- `agenda-module/.env` (DB_PASSWORD synced naar platform-core .env)
+- `agenda-module/package.json` (mysql2 ^3.6.5 → 3.15.3 pin)
+- `ticketing-module/config/database.js` (SSL CA-pinning + defensive pool, 3 environments)
+- `ticketing-module/package.json` (mysql2 → 3.15.3)
+- `platform-core/src/services/orchestrator/workers.js` (3× visualTrendDiscovery import-pad fix)
+
+**Server-side (verwijderd Scenario A)**:
+- `admin-module/backend/` complete tree (`git rm -r`, 42 files)
+
+**Server-side (nieuw)**:
+- `/etc/ssl/certs/hetzner-mariadb-ca.pem` (Hetzner CA-cert)
+- `ecosystem.config.cjs` (bootstrap voor Node 22 wave-cutover)
+- `docs/migrations/NODE-22-MIGRATION-PLAN.md` (461 regels)
+- `docs/migrations/node22-session1-admin-module-investigation.md` (105 regels)
+- `docs/migrations/node22-session2-plan.md` (265 regels)
+- `docs/migrations/node22-session2-pii-scrub.sql` (270 regels)
+- `docs/migrations/node22-incident-post-mortem.md` (150 regels)
+- `docs/migrations/2026-05-20-create-agenda-events-table.sql` (DDL)
+- `/root/scripts/node22-recovery-restart.sh`
+- `/root/scripts/patch-pool-defensive.py`
+- `/root/backups/2026-05-18-node22-session1/` (admin-module backup + dump.pm2 baseline)
+- `/root/backups/2026-05-20-agenda-pre-etl/agenda-data.json` (843 rijen JSON backup)
+
+### Spawn-tasks aangemaakt (chip-tray)
+
+- ETL agenda → agenda_events (uitgevoerd in deze sessie)
+- Restore agenda_events DB table (uitgevoerd in deze sessie)
+- Fix Orchestrator visualTrendDiscovery import path (uitgevoerd in deze sessie)
+- Add CA-pinned SSL to mysql2 config (uitgevoerd in deze sessie)
+- Remove dead adminModule HTTP client (openstaand)
+- Enforce REQUIRE SSL on prod DB user (openstaand)
+- Harden mysql credentials in /root scripts (openstaand)
+- Fix agenda module mysql2 ETIMEDOUT (gefixt door downgrade 3.16.0 → 3.15.3)
+
+### Volgende stappen
+
+- PR + merge van `feature/orchestrator-import-fix-2026-05-20` en `feature/agenda-events-table-2026-05-20` naar `dev`
+- Commit ongecommite recovery-changes op `dev`
+- FASE B Sessie 2 (Node 22 migratie — staging snapshot + PII-scrub) plannen, niet eerder dan na 30d incident-soak (= ~20-06-2026)
+- mysql2 3.16.0+ versie monitoring tot regressie gepatcht is
+
+---
+
+## Sessie 2026-05-21: FASE B Sessie 2 — GO/NO-GO + 14d soak besloten
+
+> <!-- NODE22-S2-SOAK-14D-2026-05-21 -->
+
+### Context
+
+Verwacht: start FASE B Sessie 2 (Node 22 staging snapshot + PII-scrub + D5 DB-isolatie + handover Sessie 3). Werkelijk: pre-condities-check toonde **pre-conditie 1 (30d incident-soak) hard rood** — vandaag is dag 1 ná v5.9.0 cutover, niet dag 30. Frank koos na impact-analyse voor **14d gradient-pad** in plaats van 0d (= start vandaag) of 30d (= start 20-06).
+
+### Pre-condities status (vastgesteld 2026-05-21 15:14 UTC)
+
+| # | Pre-conditie | Status |
+|---|---|---|
+| 1 | Datum ≥ 2026-06-20 (30d incident-soak) | 🔴 vandaag = dag 1 |
+| 2 | Productie stable | 🟢 11/12 services online, health 200 |
+| 3 | Geen retry-storms (50 err-lines) | 🟢 0 ETIMEDOUT/ECONNRESET/access-denied |
+| 4 | TCP naar prod-DB werkt | 🟢 OPEN |
+| 5 | D5 STAGING_DB_* (7 vars) | 🟢 alle aanwezig in platform-core/.env |
+| 6 | Hetzner CA-cert | 🟢 /etc/ssl/certs/hetzner-mariadb-ca.pem, 2472 bytes |
+| 7 | `hcloud` CLI | 🔴 NOT INSTALLED |
+| 8 | HETZNER_API_TOKEN (geroteerd) | ⏸ Frank input |
+| 9 | DNS staging-subdomain | ⏸ Frank input |
+
+### Frank's beslissing (na impact-analyse)
+
+**Gekozen pad**: 14d soak — start S2-A op **2026-06-04** (do, week 23).
+
+Restrisico ~40% van 30d-pad; gemitigeerd via 6 spawn-tasks tijdens soak (zie CLAUDE.md subsectie "FASE B Sessie 2 — 14-dagen incident-soak").
+
+### Spawn-task 1 + 2 deze sessie
+
+- **Spawn-task 1** (working-tree cleanup): UITGEVOERD 2026-05-21 ~15:33 UTC. Scope verfijnd op `*.pre-*.bak` (= incident/parallel-recente residu, niet alle .bak). 12 files via `find -delete` (depths 1-5), 1 dead-credentials file (`agenda-module/.env.pre-pwd-sync.bak`) via `shred -u -n 3` (3-pass overwrite + rename + unlink), 1 leeg artifact `R7,]hVcq2Qkvtt` (0 bytes, mtime 18-05 13:37 UTC = klassieke shell-paste-typo midden in Sessie 1) via `rm`. Eindstand: `find -name '*.pre-*.bak'` = 0, `git status --short` leeg, working tree schoon vóór toekomstige S2-A snapshot.
+- **Spawn-task 2** (`hcloud` CLI install): UITGEVOERD 2026-05-21 ~15:33 UTC. `apt-get install -y hcloud-cli` → `1.39.0-2ubuntu0.24.04.3` uit Hetzner Ubuntu Noble mirror (server is Ubuntu 24.04, niet Debian zoals initieel aangenomen). `hcloud --help` + `hcloud context list` functional verified. Token-context wordt door Frank via stdin-prompt aangemaakt vlak vóór S2-A — niet vandaag, geen secrets in chat.
+
+### Spawn-task uitvoer-uitkomst (2026-05-21 commit B)
+
+> <!-- NODE22-SPAWN-1-2-EXECUTED-2026-05-21 -->
+
+**Cleanup-resultaat** (spawn-task 1):
+
+| Bestand | Methode | Reden |
+|---|---|---|
+| `agenda-module/.env.pre-pwd-sync.bak` | `shred -u -n 3` | Dead credentials residue (rotated 18-05) — DoD: 3-pass overwrite |
+| `CLAUDE.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `CLAUDE.md.pre-deferred-decisions.bak` | `find -delete` | Parallel-sessie residu (vandaag 15:07) |
+| `CLAUDE_HISTORY.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `docs/strategy/HolidaiButler_Master_Strategie.md.pre-v5.9.0.bak` | `find -delete` | v5.9.0 incident residu |
+| `agenda-module/src/config/database.js.pre-ca-pinning.bak` | `find -delete` | SSL CA-pinning patch residu |
+| `agenda-module/src/config/database.js.pre-pool-fix.bak` | `find -delete` | Defensive pool patch residu |
+| `agenda-module/src/models/Event.js.pre-jsonparse.bak` | `find -delete` | JSON-parse hook patch residu |
+| `platform-core/src/config/database.js.pre-ca-pinning.bak` | `find -delete` | Idem |
+| `platform-core/src/config/database.js.pre-pool-fix.bak` | `find -delete` | Idem |
+| `platform-core/src/services/orchestrator/workers.js.pre-import-fix.bak` | `find -delete` (depth 5) | visualTrendDiscovery import-fix residu |
+| `ticketing-module/config/database.js.pre-ca-pinning.bak` | `find -delete` | Idem |
+| `ticketing-module/config/database.js.pre-pool-fix.bak` | `find -delete` | Idem |
+| `R7,]hVcq2Qkvtt` | `rm` | Onbekend leeg artifact (0 bytes, klassieke shell-paste-typo) |
+
+Totaal: **14 verwijderd** (13 incident/parallel-recente `.pre-*.bak` + 1 mystery). Git history bewaart alle pre-incident states (rollback via `git log`).
+
+**Buiten scope spawn-task 1** (gemeld voor latere housekeeping-sessie):
+- `customer-portal/frontend/backup-logos-20241216/*.bak` (4 files, dec-2024 logo-backups, pre-existing)
+- `.github/workflows/archived/deploy-test-monolithic.yml.bak` (april 2026, pre-existing)
+- `CLAUDE.md.bak` (12-04-2026, pre-existing — geen `pre-*` infix)
+- `platform-core/src/routes/adminPortal.js.bak` (06-05-2026, pre-existing)
+- `admin-module/.env*` (4 files, weeskinderen na Scenario A admin-module/backend verwijdering)
+
+**hcloud-resultaat** (spawn-task 2):
+
+- Package: `hcloud-cli 1.39.0-2ubuntu0.24.04.3` (Hetzner Ubuntu Noble mirror)
+- Functional smoke: `hcloud --help` returnt usage-output, `hcloud context list` returnt lege tabel (klaar voor context-create vlak vóór S2-A)
+- Geen reboot vereist ondanks apt-meldingen over kernel-update (separate maintenance window, geen impact op huidig sessie)
+- Versie 1.39 dekt alle S2-A/S2-B/S2-G blokken (server create-image, server create, image list, server describe, server delete, image delete)
+
+**Token-flow voor S2-A** (te uitvoeren vlak vóór 2026-06-04):
+
+```
+# Frank via SSH-stdin, niet via chat:
+ssh holidaibutler-prod 'hcloud context create node22-migration-staging'
+# (Frank plakt token bij interactieve prompt, geen output in chat)
+hcloud context list   # verifieer ACTIVE=node22-migration-staging
+```
+
+**Pre-flight S2-A status na deze sessie**:
+
+| Pre-conditie | Status | Verandering deze sessie |
+|---|---|---|
+| 1. Datum ≥ 2026-06-04 (14d gradient) | 🔴 dag 1 van 14 | n.v.t. (wachten) |
+| 2-6 | 🟢 onveranderd | n.v.t. |
+| 7. hcloud CLI | 🟢 nu **GROEN** | Spawn-task 2 |
+| 8-9 (Frank actions) | ⏸ | Open |
+
+Aanvullend: working tree schoon (`git status --short` leeg) — snapshot-hygiene OK voor toekomstige S2-A.
+
+### Open follow-ups (post-sessie, in soak-periode)
+
+- Spawn-task 3-6 (mysql2 monitoring, `/root` credentials, dead adminModule client, PII-scrub droogloop)
+- Frank-acties parallel: Hetzner priority-contract, API-token, DNS, REQUIRE SSL pxoziy_1
+- Aanvullende housekeeping: `admin-module/.env*` (4 files) weeskinderen na Scenario A — NIET in spawn-task 1 scope, separate sessie
+
+### Volgende S2-A pre-flight (vroegst 2026-06-04)
+
+Herhaal complete pre-condities-checklist. Verifieer: ≥14d sinds v5.9.0, alle spawn-tasks gesloten, HETZNER_API_TOKEN gereed, DNS A-record gereed.
+
+
+---
+
+## Sessie 2026-05-22: Spawn-task 4 — /root credentials hardening + 4-daagse backup-gap recovery
+
+> <!-- SPAWN-TASK-4-CRED-HARDENING-2026-05-22 -->
+> Cred-hardening van /root/*.{sh,py} elimineerde primaire AI-trigger uit v5.9.0
+> + ontdekte 4-daagse backup-gap als gevolg van post-recovery sweep-gat
+> (pwd-rotation 19-05 09:47 UTC zonder sync naar /root/.my.cnf).
+> Pattern nu: platform-core/.env = single source of truth, gesynced naar
+> /root/secrets.env + /root/.my.cnf via /root/scripts/sync-credentials.py.
+
+### Context
+
+Spawn-task 4 ingericht als preventieve mitigatie tijdens 14d soak (S2-A start
+2026-06-04). Doel: elimineer primaire AI-trigger uit v5.9.0 (hardcoded
+credentials in /root/daily_mysql_backup.sh waar `cat` door AI het wachtwoord
+lekte).
+
+### Pre-condities status (2026-05-22 13:00 UTC)
+
+| # | Check | Status |
+|---|---|---|
+| 1 | Datum 22-05 binnen soak (start 04-06) — taak independent | 🟢 |
+| 2 | PM2: 11/12 services online (reservations errored = FASE C scope) | 🟢 |
+| 3 | Geen retry-storms in err-logs (0 ETIMEDOUT/ECONNRESET/access denied) | 🟢 |
+| 4 | Working tree schoon | 🟢 |
+| 5 | HEAD = 24a9907 (post-Sessie 22-05 PII-scrub fix) | 🟢 |
+| 6 | Branch = dev | 🟢 |
+
+### Inventarisatie
+
+118 scripts in /root/ (109 .py + 9 .sh). Eerste classifier-output:
+- HARDCODED: 31 files
+- HARDCODED+ENV_VAR: 2 files
+- ENV_VAR: 7 files
+- NONE: 78 files
+
+Cron-getriggerd:
+- `/root/daily_mysql_backup.sh` (dagelijks 02:00 UTC) — HARDCODED ⚠
+- `/root/weekly_disk_cleanup.sh` (zo 04:00) — ENV_VAR ✅
+
+### AI-trigger herhaald — geleerd in echte tijd
+
+Tijdens inventarisatie deed AI `grep -nE "-p[\"\\\$]"` op daily_mysql_backup.sh.
+Het pattern matchte ook letterlijk `-p'<value>'` met hardcoded password.
+Het wachtwoord lekte opnieuw in chat — exact dezelfde fout als v5.9.0 primaire
+trigger. Frank koos:
+- Optie B: geen rotation (achteraf bleek het gelekte wachtwoord sowieso ungeldig — out-of-sync)
+- Doorgaan met hardening om vector dicht te zetten
+
+### Pattern: platform-core/.env als single source of truth
+
+`/var/www/api.holidaibutler.com/platform-core/.env` (runtime-app config) is
+geadopteerd als single source of truth. Gesynced via
+`/root/scripts/sync-credentials.py` naar:
+- `/root/secrets.env` (chmod 600, sh-source-formaat, 10 keys: 5 DB + 5 API)
+- `/root/.my.cnf` (chmod 600, mysql config, 4 DB keys voor handmatige sessies)
+
+Voor Python scripts: `/root/scripts/load_secrets.py` is stdlib-only loader
+die secrets.env in os.environ injecteert. Permission-check ingebouwd: raises
+PermissionError als file niet chmod 600.
+
+### Diagnostic flow & root cause backup-gap
+
+Eerste handmatige test van geüpdate daily_mysql_backup.sh gaf "Access denied".
+Diagnose-script vergeleek SHA-256-hashes (12-char prefix, non-reversible):
+- platform-core/.env DB_PASSWORD: hash `0b666f2730c6`
+- /root/.my.cnf password:         hash `eb27bd2058fe` ← UIT-SYNC
+- /root/secrets.env DBPW:         hash `eb27bd2058fe` (kopie van .my.cnf)
+
+**Root cause 4-daagse backup gap**:
+- Pwd-rotation tijdens v5.9.0 recovery: 2026-05-19 09:47 UTC (platform-core/.env mtime)
+- /root/.my.cnf laatste update: 2026-02-02 17:14 UTC (4 maanden oud, pre-rotation)
+- Backup-script gebruikte hardcoded `-p'<oude-pwd>'` → na rotation: silent auth-fail
+- Stderr → /dev/null + geen MAILTO + geen size-validatie = 4 dagen blind
+- 19-22 mei nachtelijke runs: cron WEL gedraaid (syslog bevestigt), mysqldump
+  output 0 bytes → 20-byte lege gzip-headers in /root/backups/
+- Last-known-good backup: 2026-05-18 02:00 (80MB)
+
+### SSL-integratiefout in mijn ontwerp
+
+Initieel ontwerp van refactor was niet SSL-aware. CLAUDE.md sectie 58-200 +
+post-mortem documenteerden dat `REQUIRE SSL pxoziy_1` open-actie was; Frank
+had die geactiveerd. Mijn refactor faalde 2 keer met "Access denied" tot ik
+realiseerde mysqldump CLI moet `--ssl-mode=VERIFY_CA --ssl-ca=/etc/...` toevoegen.
+Frank wees terecht op herhaling van v5.9.0 integratie-fout-patroon: lokale
+tactiek zonder volledige systeem-integratie. MySQL 8.0.45 client (niet MariaDB)
+gebruikt `--ssl-mode=VERIFY_CA`, niet `--ssl-verify-server-cert`.
+
+### Voltooide acties
+
+1. **Tooling** (in /root/scripts/, chmod 700 behalve load_secrets.py chmod 600):
+   - `inventory-credentials.py` — safe-by-design audit (3-layer redaction:
+     regex + line-detect + Layer-3 safety mask)
+   - `sync-credentials.py` — platform-core/.env → secrets.env + .my.cnf
+   - `load_secrets.py` — stdlib loader (chmod 600 enforced, raises op insecure perms)
+   - `diag-creds.py` + `diag-creds-2.py` — hash-vergelijking diagnose
+   - `refactor-mass-py.py` — hash-gated mass-refactor (DB + API keys)
+   - `refactor-daily-mysql-backup.py` + `refactor-check-markdown.py` — idempotent
+   - `safe-inspect.py` — Layer-3-masked line inspection met aggressive redaction
+
+2. **daily_mysql_backup.sh** (volledige rewrite):
+   - source /root/secrets.env (single source)
+   - mysqldump met `--no-defaults --ssl-mode=VERIFY_CA --ssl-ca=/etc/ssl/certs/hetzner-mariadb-ca.pem`
+     (CA-pinned, byte-identiek aan platform-core/src/config/database.js)
+   - MYSQL_PWD env-var (geen `-p` in process-list)
+   - Post-backup validatie: stat -c %s, faal bij <1MB
+   - Audit log naar /var/log/holidaibutler/backup.log
+   - Syslog tag `daily_mysql_backup` voor success+fail
+   - Handmatige run 13:44 UTC: 82MB (84.991.421 bytes) — backup-continuïteit hersteld
+
+3. **check_markdown.sh**: hardcoded MYSQL_PWD vervangen door `$DBPW` via secrets.env
+
+4. **Mass-refactor Python** (hash-gated, idempotent):
+   - Pass 1 (DB creds): 38 files refactored, 184 operaties
+   - Pass 2 (API keys: MISTRAL_API_KEY, APIFY_API_TOKEN, CHROMADB_API_KEY,
+     DEEPL_API_KEY, OPENAI_API_KEY): 16 files extra, 18 operaties
+   - Bootstrap injection (`sys.path.insert + from load_secrets import load_secrets + load_secrets()`)
+     waar nieuw
+
+5. **Rollback-anchors** (alle chmod 700):
+   - /root/backups/2026-05-22-cred-hardening/ — daily_mysql_backup.sh,
+     check_markdown.sh, .my.cnf (pre-fix snapshots)
+   - /root/backups/2026-05-22-cred-hardening/python-scripts/ — 38 .py backups
+   - crontab-pre-fix.txt
+
+### Residual + classifier-issues
+
+Na 2 refactor-passes nog 16 HARDCODED + 13 HARDCODED+ENV_VAR in classifier-output.
+Safe-inspect analyse bevestigt deze zijn voor het overgrote merendeel **false
+positives**:
+- Markdown tabel-rijen in update_strategic_docs.py
+- JS-code strings in Python refactor-scripts (router.post, scheduledQueue.add)
+- Comments/docstrings met "key"/"secret"/"token" als gewoon woord
+- `MYSQL_PWD="$DBPW"` in nieuwe scripts (var-reference, niet hardcoded —
+  classifier limitation)
+
+**Echte residue** (~3-4 files, niet-kritiek):
+- `apify_backfill.py` L37: APIFY_TOKEN value hash mismatch met huidige
+  APIFY_API_TOKEN (mogelijk legacy token, manueel reviewen)
+- `s3_migrate.sh`: classifier HARDCODED maar geen Layer-3 hits, handmatige
+  review nodig (mogelijk AWS-credentials in andere vorm)
+- 1-2 test scripts met stale dev-tokens (laag risico)
+
+### Lessons learned
+
+1. **AI-fout herhalingspatroon**: zelfde primaire trigger als v5.9.0 binnen
+   4 dagen herhaald (cat-leak via grep met value-positie pattern). Anti-pattern-
+   guard "no-secrets-in-chat protocol" werd geadopteerd in inventarisatie-tool
+   maar NIET in initiele diagnose-greps. Defense-in-depth tooling moet gelden
+   voor ALLE pad-stappen, niet alleen de "happy path".
+
+2. **Integratie-fout patroon**: SSL-context niet meegenomen in pattern-design
+   ondanks dat CLAUDE.md + post-mortem expliciete REQUIRE SSL anti-pattern noemden.
+   Voor elk script dat met productie-DB praat, eerst valideer: "is REQUIRE SSL
+   actief?" + "matched scriptconfig de runtime-app SSL-config byte-identiek?".
+
+3. **Single source of truth voor credentials**: platform-core/.env is leading.
+   Alle andere bronnen (.my.cnf, secrets.env, ad-hoc scripts) moeten daaruit
+   gesynced worden — niet daarvan afgeleid bestaan. sync-credentials.py is
+   herhaalbaar (run na elke pwd-rotation).
+
+4. **Silent-failure pattern in cron**: `2>/dev/null` + geen MAILTO + geen
+   size-validatie = 4 dagen blind. Elke cron-job moet (a) stderr naar log-file,
+   (b) post-action validatie (output-size/exit-code check), (c) logger-call naar
+   syslog voor success+fail. Geen "fire-and-forget" backups.
+
+5. **Post-recovery sweep gap**: v5.9.0 recovery-protocol focuste op productie-app
+   stabiliteit. Geen sweep over /root scripts die ook DB-credentials gebruiken.
+   Post-incident protocol MOET een phase bevatten "identify ALL scripts/services
+   that authenticate against rotated credential and verify each".
+
+6. **Hash-gated refactor als enterprise pattern**: door SHA-256 hash-vergelijking
+   van credential-values tegen bekende (huidig + pre-rotation) credentials,
+   voorkomt mass-refactor false positives op niet-credential string-literals.
+   Conservatieve approach (skip on mismatch) is veiliger dan over-eager replacement.
+
+### Spawn-task uitvoer-uitkomst
+
+| Spawn-task | Status |
+|---|---|
+| 1: working-tree cleanup | ✅ 2026-05-21 |
+| 2: hcloud CLI install | ✅ 2026-05-21 |
+| 3: mysql2 versie-monitoring | ✅ 2026-05-22 (parallel session, commit 0111107) |
+| 4: /root credentials hardening | ✅ 2026-05-22 (deze sessie) |
+| 5: dead adminModule HTTP-client cleanup | ✅ 2026-05-22 (parallel, commit 3dab031) |
+| 6: PII-scrub droogloop | ✅ 2026-05-22 (parallel, commit 24a9907) |
+| 7: GESCHRAPT (admin-module actief Vite) | n/a |
+
+Alle 6 soak-mitigatie spawn-tasks afgerond. Klaar voor S2-A op 2026-06-04.
+
+### Open follow-ups (geen blockers voor S2-A)
+
+- `apify_backfill.py` APIFY_TOKEN — review value-source, mogelijk legacy
+- `s3_migrate.sh` — handmatig review classifier-flag (mogelijk false positive of AWS-cred)
+- 1-2 test/dev scripts met stale tokens — laag risico
+- Classifier-verfijning: AST-based detection zou false positives elimineren
+  (nice-to-have, niet noodzakelijk voor security)
+- Cron-job MAILTO=frank voor errors (separate spawn-task indien gewenst)

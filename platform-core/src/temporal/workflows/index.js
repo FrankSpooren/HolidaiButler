@@ -7,3 +7,6 @@ export { seasonalContentSaga } from './seasonalContentSaga.js';
 export { destinationOnboardingSaga } from './destinationOnboardingSaga.js';
 export { crisisResponseSaga } from './crisisResponseSaga.js';
 export { weeklyLearningCycleSaga } from './weeklyLearningCycleSaga.js';
+// Trendspotter+Reisleider activation — 2026-06-10
+export { trendspotterWeeklyWorkflow } from './trendspotterWeeklyWorkflow.js';
+export { reisleiderContextWorkflow } from './reisleiderContextWorkflow.js';

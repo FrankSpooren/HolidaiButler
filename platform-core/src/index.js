@@ -46,6 +46,7 @@ import chatRoutes from './routes/chat.js';
 import holibotRoutes from './routes/holibot.js';
 import onboardingRoutes from './routes/onboarding.js';
 import agendaRoutes from './routes/agenda.js';
+import weatherRoutes from './routes/weather.js';
 import consentRoutes from './routes/consent.js';
 import imageRefreshRoutes from './routes/imageRefresh.js';
 import imageResizeRoutes from './routes/imageResize.js';
@@ -278,6 +279,7 @@ app.use("/api/v1/poi-images", poiImagesRoutes);
 app.use("/api/v1/monitoring", monitoringRoutes);
 app.use('/api/v1/pois', publicPOIRoutes); // Public POI endpoints (no auth)
 app.use('/api/v1/chat', chatRoutes); // HoliBot Chat API
+app.use('/api/v1/weather', weatherRoutes); // Public weather + brand-tip (BLOK F v3)
 app.use('/api/v1/holibot', holibotRoutes); // HoliBot Widget API
 app.use('/api/v1/onboarding', onboardingRoutes); // User Onboarding Flow
 app.use('/api/v1/agenda', agendaRoutes); // Agenda - Events & Calendar

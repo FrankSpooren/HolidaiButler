@@ -7,6 +7,7 @@ const CtaEditor = lazy(() => import('./editors/CtaEditor.jsx'));
 const BannerEditor = lazy(() => import('./editors/BannerEditor.jsx'));
 const FaqEditor = lazy(() => import('./editors/FaqEditor.jsx'));
 const PartnersEditor = lazy(() => import('./editors/PartnersEditor.jsx'));
+const FooterEditor = lazy(() => import('./editors/FooterEditor.jsx'));
 const DownloadsEditor = lazy(() => import('./editors/DownloadsEditor.jsx'));
 const PoiGridEditor = lazy(() => import('./editors/PoiGridEditor.jsx'));
 const EventCalendarEditor = lazy(() => import('./editors/EventCalendarEditor.jsx'));
@@ -252,6 +253,14 @@ const blockEditorRegistry = {
     description: 'YouTube, Vimeo, or self-hosted video',
     category: 'Media & Proof',
     thumbnail: thumb("video"),
+  },
+  footer: {
+    editor: FooterEditor,
+    icon: 'Source',
+    label: 'Footer',
+    description: 'Site footer met merkprofiel auto-fill',
+    category: 'layout',
+    thumbnail: thumb('footer'),
   },
   partners: {
     editor: PartnersEditor,

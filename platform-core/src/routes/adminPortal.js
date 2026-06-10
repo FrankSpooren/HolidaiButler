@@ -186,6 +186,17 @@ import createCollectionRouter, { createPublicCollectionRouter } from "./mediaCol
 import visualTrendDiscovery from '../services/visual/visualTrendDiscovery.js';
 import visualAnalyzer from '../services/visual/visualAnalyzer.js';
 import notificationService from '../services/notificationService.js';
+import { handleBrandProfileBootstrap } from './handlers/brandProfileBootstrap.js';
+import { handlePagesAutoFillBasis } from './handlers/pagesAutoFillBasis.js';
+import { handleBrandVisualsAggregate } from './handlers/brandVisualsAggregate.js';
+import { handleChatbotConfigs } from './handlers/chatbotConfigsHandler.js';
+import { handleWeatherPreview } from './handlers/weatherPreviewHandler.js';
+import { handleFeaturedCandidates } from './handlers/featuredCandidatesHandler.js';
+import { handlePageValidate } from './handlers/pageValidateHandler.js';
+import { handleGenerateAltText } from './handlers/generateAltTextHandler.js';
+import { handleEventsPreview } from './handlers/eventsPreviewHandler.js';
+import { listTemplates, createTemplate, deleteTemplate, useTemplate } from './handlers/blockTemplatesHandler.js';
+import { handleBatchAutoFillPages } from './handlers/batchAutoFillHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
 import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
@@ -5637,8 +5648,13 @@ router.get('/analytics/website', adminAuth('reviewer'), destinationScope, async 
       try { const c = await redis.get(cacheKey); if (c) return res.json(JSON.parse(c)); } catch { /* miss */ }
     }
 
-    const SA_API_KEY = process.env.SA_API_KEY || 'sa_api_key_tdOPtEz1nQqzPJIXbmS9PYB12KwcwGi4KQI2';
-    const SA_USER_ID = process.env.SA_USER_ID || 'sa_user_id_45cbd1c2-58bb-44e3-ac9c-94797095b640';
+    // SA credentials per docs/security/SECURITY.md §4 Patroon A — no fallback.
+    // Rotated 2026-06-10 per INC-2026-06-10-003 (cleanup completed in this file via Group B triage).
+    const SA_API_KEY = process.env.SA_API_KEY;
+    const SA_USER_ID = process.env.SA_USER_ID;
+    if (!SA_API_KEY || !SA_USER_ID) {
+      return res.status(503).json({ success: false, error: { code: 'SA_NOT_CONFIGURED', message: 'SimpleAnalytics integration not configured (SA_API_KEY/SA_USER_ID env-vars missing).' } });
+    }
     const saHeaders = { 'Api-Key': SA_API_KEY, 'User-Id': SA_USER_ID };
     const endDate = new Date().toISOString().split('T')[0];
     const startDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
@@ -10002,6 +10018,84 @@ router.get('/financial/audit-log', adminAuth('reviewer'), destinationScope, comm
 /**
  * GET /pages — List pages per destination
  */
+
+/**
+ * POST /pages/auto-fill-basis — AI-genereer Tab-Basis veld-suggesties voor pagina
+ * Gebruikt: brand_profile + Knowledge Base + branding + buildBrandContextStructured + DeepL.
+ * Output: slug + title/seo_title/seo_description per supported_languages + provenance.
+ * Vereist: niet-leeg brand_profile (anders 422 met hint naar /brand-profile/bootstrap).
+ * @version BLOK B (22-05-2026)
+ */
+router.post('/pages/auto-fill-basis', adminAuth('platform_admin'), handlePagesAutoFillBasis);
+/**
+ * GET /brand-visuals — Aggregeer hero/brand-images per destinatie uit 3 bronnen
+ *   ?destinationId=X (required) &source=all|brand|media|poi &limit=50
+ * Returns: { items[], total, by_source: { brand, media, poi } }
+ * @version BLOK C (22-05-2026)
+ */
+router.get('/brand-visuals', adminAuth('editor'), handleBrandVisualsAggregate);
+
+/**
+ * GET /chatbot-configs?destinationId=X — Retourneer chatbot config voor destination
+ * Leest destinations.branding.chatbotConfig + .chatbotName. Voor ChatbotWidgetEditor.
+ * @version BLOK E3 (22-05-2026)
+ */
+router.get('/chatbot-configs', adminAuth('editor'), handleChatbotConfigs);
+
+/**
+ * GET /weather-preview?destinationId=X&locale=Y&withTip=true
+ * Open-Meteo huidige weer + optionele Mistral brand-context seizoenstip (USP).
+ * @version BLOK E2 (22-05-2026)
+ */
+router.get('/weather-preview', adminAuth('editor'), handleWeatherPreview);
+
+/**
+ * GET /content-items/featured-candidates?destinationId=X&search=Y
+ * Content-items kandidaten gerangschikt op brand-fit-score (Jaccard keyword overlap).
+ * DTO via ContentItemResource.V1 (Image Resize Proxy URLs).
+ * @version BLOK E4 (22-05-2026)
+ */
+router.get('/content-items/featured-candidates', adminAuth('editor'), handleFeaturedCandidates);
+
+/**
+ * GET /pages/:id/validate?locale=Y — SEO + accessibility + content quality + brand-suggestions
+ * @version BLOK F5 (22-05-2026)
+ */
+router.get('/pages/:id/validate', adminAuth('editor'), handlePageValidate);
+
+/**
+ * POST /images/generate-alt-text - Pixtral vision + DeepL fan-out, WCAG 2.1 AA alt-text
+ * @version BLOK F4 (22-05-2026)
+ */
+router.post('/images/generate-alt-text', adminAuth('editor'), handleGenerateAltText);
+
+/**
+ * GET /agenda/events-preview - Readonly events fetch + brand-fit-score (Scenario C compliant)
+ * @version BLOK F3 (22-05-2026)
+ */
+router.get('/agenda/events-preview', adminAuth('editor'), handleEventsPreview);
+
+/**
+ * Block Templates library (BLOK F6 — 22-05-2026)
+ * GET /page-builder/templates — list templates (incl. global + destination-specific)
+ * POST /page-builder/templates — save block as template
+ * DELETE /page-builder/templates/:id — delete template
+ * POST /page-builder/templates/:id/use — track usage
+ */
+router.get('/page-builder/templates', adminAuth('editor'), listTemplates);
+router.post('/page-builder/templates', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), createTemplate);
+router.delete('/page-builder/templates/:id', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), deleteTemplate);
+router.post('/page-builder/templates/:id/use', adminAuth('editor'), useTemplate);
+
+/**
+ * POST /pages/batch-auto-fill - Batch SEO auto-fill voor alle pages met lege SEO-velden
+ * Hergebruikt handlePagesAutoFillBasis per page sequentieel (Mistral rate-limit safe).
+ * @version BLOK F UX-feedback (2026-05-24)
+ */
+router.post('/pages/batch-auto-fill', adminAuth('platform_admin'), handleBatchAutoFillPages);
+
+
+
 router.get('/pages', adminAuth('reviewer'), destinationScope, async (req, res) => {
   try {
     const destinationId = resolveDestinationId(req.query.destinationId || req.query.destination || req.headers['x-destination-id']);
@@ -10068,7 +10162,7 @@ router.get('/pages/:id', adminAuth('reviewer'), destinationScope, async (req, re
  */
 router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
   try {
-    const { destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, parent_id } = req.body;
+    const { destination_id, slug, title_nl, title_en, title_de, title_es, title_fr, status, layout, parent_id } = req.body;
 
     if (!destination_id || !slug || !title_en) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'destination_id, slug and title_en are required' } });
@@ -10092,8 +10186,8 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
     const layoutJson = layout ? JSON.stringify(layout) : JSON.stringify({ blocks: [] });
 
     await mysqlSequelize.query(
-      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, status, layout, sort_order, parent_id)
-       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :status, :layout, :sortOrder, :parentId)`,
+      `INSERT INTO pages (destination_id, slug, title_nl, title_en, title_de, title_es, title_fr, status, layout, sort_order, parent_id)
+       VALUES (:destId, :slug, :titleNl, :titleEn, :titleDe, :titleEs, :titleFr, :status, :layout, :sortOrder, :parentId)`,
       {
         replacements: {
           destId: destination_id,
@@ -10102,6 +10196,7 @@ router.post('/pages', adminAuth('platform_admin'), async (req, res) => {
           titleEn: title_en,
           titleDe: title_de || null,
           titleEs: title_es || null,
+          titleFr: title_fr || null,
           status: status || 'draft',
           layout: layoutJson,
           sortOrder: (maxSort?.max_sort ?? -1) + 1,
@@ -10149,9 +10244,9 @@ router.put('/pages/:id', adminAuth('platform_admin'), async (req, res) => {
     }
 
     const allowedFields = [
-      'slug', 'title_nl', 'title_en', 'title_de', 'title_es',
-      'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es',
-      'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es',
+      'slug', 'title_nl', 'title_en', 'title_de', 'title_es', 'title_fr',
+      'seo_title_nl', 'seo_title_en', 'seo_title_de', 'seo_title_es', 'seo_title_fr',
+      'seo_description_nl', 'seo_description_en', 'seo_description_de', 'seo_description_es', 'seo_description_fr',
       'og_image_url', 'og_image_path', 'parent_id', 'status', 'sort_order'
     ];
 
@@ -11040,6 +11135,15 @@ router.put('/brand-profile', adminAuth('destination_admin'), writeAccess(['platf
   }
 });
 
+
+/**
+ * POST /brand-profile/bootstrap — AI-genereer brand_profile JSON voor destination
+ * Gebruikt: bestaande Knowledge Base + branding + POIs + buildBrandContextStructured.
+ * Output: gegenereerde JSON + provenance + validation. Reviewer slaat op via bestaande PUT /brand-profile.
+ * @version BLOK B (22-05-2026)
+ */
+router.post('/brand-profile/bootstrap', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), handleBrandProfileBootstrap);
+
 // --- AUDIENCE PERSONAS ---
 
 /**
@@ -11236,7 +11340,7 @@ const knowledgeStorage = multer.diskStorage({
 });
 const knowledgeUpload = multer({
   storage: knowledgeStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
   fileFilter: (_req, file, cb) => {
     const allowed = [
       'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -11254,7 +11358,7 @@ const knowledgeUpload = multer({
 router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), writeAccess(['platform_admin', 'destination_admin']), (req, res) => {
   knowledgeUpload.single('file')(req, res, async (err) => {
     if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 40MB)' : err.message;
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'Bestand te groot (max 20MB)' : err.message;
       return res.status(400).json({ success: false, error: { code: 'UPLOAD_ERROR', message } });
     }
     if (!req.file) {
@@ -11269,11 +11373,19 @@ router.post('/brand-profile/knowledge/upload', adminAuth('destination_admin'), w
 
       // Parse based on file type
       if (ext === '.pdf') {
-        const pdfParse = (await import('pdf-parse')).default;
+        // pdf-parse v2 API: PDFParse class met getText() / getInfo() methods
+        const { PDFParse } = await import('pdf-parse');
         const pdfBuffer = fs.readFileSync(filePath);
-        const pdfData = await pdfParse(pdfBuffer);
-        text = pdfData.text || '';
-        logger.info(`[BrandKnowledge] Parsed PDF: ${pdfData.numpages} pages, ${text.length} chars`);
+        const parser = new PDFParse({ data: pdfBuffer });
+        try {
+          const textResult = await parser.getText();
+          text = textResult?.text || '';
+          let numpages = 0;
+          try { const info = await parser.getInfo(); numpages = info?.numPages || info?.numpages || 0; } catch { /* info optional */ }
+          logger.info(`[BrandKnowledge] Parsed PDF (v2 API): ${numpages} pages, ${text.length} chars`);
+        } finally {
+          try { await parser.destroy(); } catch { /* cleanup */ }
+        }
       } else if (ext === '.docx' || ext === '.doc') {
         const mammoth = await import('mammoth');
         const result = await mammoth.extractRawText({ path: filePath });

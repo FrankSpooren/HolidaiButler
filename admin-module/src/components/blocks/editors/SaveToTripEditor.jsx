@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import { SelectField, TextField, SwitchField } from '../fields/index.js';
+import { SelectField, TextField, SwitchField, TranslatableField } from '../fields/index.js';
 
 const VARIANT_OPTIONS = [
   { value: 'view_my_plan', label: 'Full plan view (with remove + share)' },
@@ -15,8 +15,8 @@ export default function SaveToTripEditor({ data, onChange }) {
       <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.05em' }}>Save to Trip</Typography>
       <SelectField label="Variant" value={data.variant || 'view_my_plan'} options={VARIANT_OPTIONS} onChange={v => u('variant', v)} />
       <SwitchField label="Show item count" checked={data.showCount !== false} onChange={v => u('showCount', v)} />
-      <TextField label="CTA label (add_button only)" value={data.ctaLabel || ''} onChange={v => u('ctaLabel', v)} />
-      <TextField label="Empty state message" value={data.emptyStateMessage || ''} onChange={v => u('emptyStateMessage', v)} multiline />
+      <TranslatableField label="CTA label (add_button only)" value={data.ctaLabel} onChange={v => u('ctaLabel', v)} />
+      <TranslatableField label="Empty state message" value={data.emptyStateMessage} onChange={v => u('emptyStateMessage', v)} multiline rows={2} />
       <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
         Stores items in browser localStorage (anonymous, no account needed).
         Max 50 items. Cross-block sync via window events.

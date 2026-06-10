@@ -196,7 +196,7 @@ function LanguageSelector() {
 const MODULE_OPTIONS = [
   { key: 'hasContentStudio', label: 'Content Studio' },
   { key: 'hasMediaLibrary', label: 'Media Library' },
-  { key: 'hasBranding', label: 'Branding / Merk Profiel' },
+  { key: 'hasBranding', label: 'Branding / Merkprofiel' },
   { key: 'hasPOI', label: 'POI Database' },
   { key: 'hasEvents', label: 'Evenementen' },
   { key: 'hasChatbot', label: 'AI Chatbot' },

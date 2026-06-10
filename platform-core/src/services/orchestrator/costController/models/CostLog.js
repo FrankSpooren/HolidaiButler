@@ -4,7 +4,7 @@ const costLogSchema = new mongoose.Schema({
   service: {
     type: String,
     required: true,
-    enum: ['claude', 'mistral', 'apify', 'mailerlite', 'hetzner', 'other']
+    enum: ['claude', 'mistral', 'apify', 'mailerlite', 'hetzner', 'openweather', 'deepl', 'simpleanalytics', 'sistrix', 'other']
   },
   operation: {
     type: String,

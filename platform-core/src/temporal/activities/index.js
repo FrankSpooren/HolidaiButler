@@ -12,6 +12,10 @@ import {
   deleteDraft, cancelSchedule
 } from './contentActivities.js';
 
+import {
+  runTrendspotterForDestination, runReisleiderForDestination,
+  getActiveDestinationIdsForSA
+} from './agentActivities.js';
 
 import * as sagaActivities from './sagaActivities.js';
 
@@ -25,6 +29,9 @@ export default {
   generateDraft, validateSEO, translateContent,
   generateImages, schedulePublish, trackPublication,
   deleteDraft, cancelSchedule,
+  // Agents (Trendspotter+Reisleider activation — 2026-06-10)
+  runTrendspotterForDestination, runReisleiderForDestination,
+  getActiveDestinationIdsForSA,
   // Saga activities (19.E)
   ...sagaActivities
 };

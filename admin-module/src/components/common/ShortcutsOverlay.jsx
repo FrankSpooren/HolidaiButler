@@ -18,7 +18,7 @@ const SHORTCUT_SECTIONS = [
       { keys: ['G', 'K'], label: 'Ga naar Kalender' },
       { keys: ['G', 'A'], label: 'Ga naar Analyse' },
       { keys: ['G', 'M'], label: 'Ga naar Media' },
-      { keys: ['G', 'S'], label: 'Ga naar Merk Profiel' },
+      { keys: ['G', 'S'], label: 'Ga naar Merkprofiel' },
     ],
   },
   {

@@ -268,7 +268,8 @@ export interface NewsletterProps {
 
 export interface WeatherWidgetProps {
   layout?: 'compact' | 'detailed';
-  showForecast?: boolean;
+  showForecast?: boolean; // deprecated - layout=='detailed' implies forecast
+  showBrandTip?: boolean;
 }
 
 export interface BannerProps {

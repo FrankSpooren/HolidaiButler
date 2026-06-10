@@ -23,9 +23,9 @@ export default function DownloadsEditor({ block, onChange }) {
         createItem={() => ({ name: '', url: '', description: '', fileType: 'pdf', fileSize: '' })}
         renderItem={(item, _idx, updateField) => (
           <>
-            <TextField label="Name" value={item.name} onChange={v => updateField('name', v)} required />
+            <TranslatableField label="Name" value={item.name} onChange={v => updateField('name', v)} required />
             <TextField label="Download URL" value={item.url} onChange={v => updateField('url', v)} required />
-            <TextField label="Description" value={item.description} onChange={v => updateField('description', v)} />
+            <TranslatableField label="Description" value={item.description} onChange={v => updateField('description', v)} />
             <SelectField label="File Type" value={item.fileType || 'pdf'} onChange={v => updateField('fileType', v)} options={FILE_TYPE_OPTIONS} />
             <TextField label="File Size" value={item.fileSize} onChange={v => updateField('fileSize', v)} helperText="e.g. 2.4 MB" />
           </>
