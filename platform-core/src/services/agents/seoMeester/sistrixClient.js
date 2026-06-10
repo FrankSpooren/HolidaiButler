@@ -2,14 +2,23 @@
  * SISTRIX API Client — SEO visibility index, keyword rankings, competitor data
  * Credit-based API — calls are minimized via weekly BullMQ scheduling.
  *
- * API Key: D2bX5yPqbAIG9q3z8dwdbLvH9ZeQgWFq (Bonn, DE — EU-compliant)
- * @version 1.0.0
+ * Credentials: process.env.SISTRIX_API_KEY (required, no fallback)
+ * Provider: SISTRIX GmbH, Bonn DE — EU GDPR-compliant
+ * Rotated 2026-06-10 per INC-2026-06-10-002 (was hardcoded fallback)
+ * Policy: docs/security/SECURITY.md §4 — Patroon A (backend secret-gebruik)
+ *
+ * @version 1.1.0
  */
 
 import logger from '../../../utils/logger.js';
 
 const SISTRIX_API_BASE = 'https://api.sistrix.com';
-const SISTRIX_API_KEY = process.env.SISTRIX_API_KEY || 'D2bX5yPqbAIG9q3z8dwdbLvH9ZeQgWFq';
+const SISTRIX_API_KEY = process.env.SISTRIX_API_KEY;
+
+if (!SISTRIX_API_KEY) {
+  // Fail-loud at module-load — refuse to start with missing credential
+  logger.error('[sistrixClient] SISTRIX_API_KEY env-var missing. SISTRIX calls will fail. Configure in platform-core/.env.');
+}
 
 const DOMAIN_MAP = {
   1: 'holidaibutler.com',     // Calpe

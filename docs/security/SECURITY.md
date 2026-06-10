@@ -171,24 +171,62 @@ Voorbeeld-rapport: `docs/security/incidents/2026-06-10-owm-key-leak.md`
 | CIS Controls v8 — 3.11 | Encrypted Sensitive Data at Rest | `.env` files met restrictieve file-permissions (`chmod 600`) |
 | CIS Controls v8 — 18.1 | Penetration Testing | Periodieke history-scan (sectie 5.3) |
 
-## 10. Baseline-strategie voor legacy findings
+## 9. Baseline-strategie voor legacy findings
 
-Bij introductie van gitleaks (2026-06-10) zijn 133 historische findings gevonden in legacy directories (voornamelijk `original-source/04-Development/*/docs/*` testing-guides en oudere `.md` documentatie). Aanpak:
+### 10.1 Initiële baseline (2026-06-10)
 
-| Aspect | Behandeling |
-|---|---|
-| **Snapshot** | `.gitleaks.baseline.json` in repo-root bevat de 133 baseline-findings (SHA1 fingerprints + file:line refs) |
-| **CI workflow** | `secret-scan.yml` gebruikt deze baseline → flagt alleen NIEUWE findings sinds snapshot |
-| **Pre-commit** | Lokale scan kijkt alleen naar `git diff --staged` — historische findings raken commits niet |
-| **trufflehog verified scan** | Heeft 0 verified findings opgeleverd: alle historische keys zijn ongeldig (revoked/expired). Geen kritieke actie nodig. |
-| **Triage** | Aparte vervolg-actie (zie `docs/security/incidents/2026-06-10-owm-key-leak.md` §8 punt 5 + spawn-task) — categoriseer per findings-rule, vervang met dummy-placeholders in docs, of `# nosec` annotatie indien legitiem voorbeeld. |
+Bij introductie van gitleaks (2026-06-10) zijn 133 historische findings gevonden in legacy directories. Trufflehog verified-scan: 0 verified findings — alle historische keys zijn revoked/expired.
 
-**Toevoegen aan baseline (na bewuste triage)**: na opschoning van een vondst, regenereer baseline:
+### 10.2 Triage-resultaat (2026-06-10, dezelfde dag)
+
+Via 4 commits over ~30 minuten verlaagd van 133 → **3 (97.7% reductie)** zonder destructieve git-history-rewrite:
+
+| Stap | Commit | Categorie | Δ | Cumulatief |
+|---|---|---|---|---|
+| A | `881d2ea` | Legacy archive allowlist (`original-source/`, `Original docs/`, `fase_r*.py`, `CLAUDE_HISTORY.md`) | -90 | 43 |
+| C+D | `949a7db` | Templates + workflows + test fixtures allowlist (env-templates, `.github/workflows/*.yml`, `__tests__/*.test.*`, dummy-credential regexes, GitHub Actions secret-expressions) | -16 | 27 |
+| B | (zie `git log --grep "group B"`) | Docs-placeholder rule-tuning (`Bearer YOUR_TOKEN`, `your-secret-key-*`, `JWT_SECRET="your-..."`) | -24 | 3 |
+| Tijdens triage ontdekt: INC-2026-06-10-002 SISTRIX-key hardcoded fallback | (zie `git log --grep "INC-2026-06-10-002"`) | Source-code fix (separate incident) | n.v.t. | 3 |
+
+### 10.3 Permanente baseline (3 findings)
+
+Drie findings zijn niet zonder destructieve `git filter-repo` history-rewrite verwijderbaar; remediation-rationale conform INC-001 §7 (Optie B history-rewrite afgewezen):
+
+| File | Commit | Reden permanent |
+|---|---|---|
+| `platform-core/src/services/agents/seoMeester/sistrixClient.js` | `93db8e81` (oude commit) | INC-2026-06-10-002 — key is geroteerd + HEAD is gestript; old commit blijft in history |
+| `kubernetes_production.txt` | `e8716a59` | File is verwijderd uit working-tree; alleen in oude commit |
+| `kubernetes_production.txt` | `814f9560` | File is verwijderd uit working-tree; alleen in oude commit |
+
+**Files SKIP per project-MEMORY** (ticketing-module on-hold, NIET aanraken — geen onderdeel van permanent baseline omdat alle eerder gevonden findings via Group A/C/D allowlist verdwenen):
+- `ticketing-module/WALLET_SETUP_GUIDE.md` (4 — al door legacy-archive-allowlist gedekt via subdirectory-context)
+- `TICKETING_MODULE_ENTERPRISE_AUDIT_REPORT.md` (2 — file deleted from HEAD, history-only)
+
+### 10.4 Onderhoudsprotocol
+
+**Bij nieuwe sanering** (toekomstige findings die via allowlist of strip kunnen worden weggewerkt):
 ```bash
 gitleaks detect --config .gitleaks.toml --report-format json --report-path .gitleaks.baseline.json
 git add .gitleaks.baseline.json
 git commit -m "security: refresh gitleaks baseline after triage of <count> findings"
 ```
+
+**Bij nieuwe permanente finding** (history-only, niet via working-tree fixable):
+- Documenteer in deze tabel (10.3) met file + commit + reden
+- Geen actie nodig — baseline draagt het auto-mee
+
+**Periodieke audit** (eens per kwartaal):
+- `trufflehog git file://. --only-verified --no-update` over volledige history — detecteert leaks die door huidige rules ontwijken
+- Bij verified finding: incident-procedure (sectie 6) — roteer, strip, document
+
+## 10. Bekende secrets-anti-patterns (geleerd uit INC-001 + INC-002)
+
+| Patroon | Waarom anti | Voorbeeld | Detectie |
+|---|---|---|---|
+| `process.env.X \|\| 'literal'` fallback | Literal acts als productie-fallback wanneer env-var ontbreekt; effectief permanent gelekt | `const KEY = process.env.API_KEY \|\| 'sk-...';` | gitleaks rule `hb-fallback-credential-pattern` (toegevoegd post-INC-002) |
+| Hardcoded API-key in Client Component (`'use client'`) | Bundle wordt naar browser gepushed — leaked naar alle bezoekers | `appid=abc123` in TSX | gitleaks rule `hb-openweathermap-api-key` etc. + SECURITY.md Patroon-C anti-pattern |
+| Hardcoded credentials in JSDoc-comment | Even sneeuwbal-effect: gelijk gelekt als regel-12-literal | `* API Key: D2bX5y...` in `*.js` doc-comment | gitleaks default `generic-api-key` rule |
+| Destination-specifieke hardcoded constants in multi-tenant code | Multi-tenant architectuur overtreden + impliciete fallback voor afwezige tenants | `const WEATHER_COORDS = { calpe: ..., texel: ... }` | Geen automated rule; review-checklist + `SECURITY.md §4 Patroon B` |
 
 ## 11. Wijzigingen aan dit document
 
