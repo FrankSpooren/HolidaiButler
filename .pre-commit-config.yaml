@@ -1,0 +1,53 @@
+# Pre-commit hooks for HolidaiButler monorepo
+# https://pre-commit.com
+#
+# Installation per developer (one-time after clone):
+#   pip install --user pre-commit
+#   pre-commit install
+#
+# Then on every `git commit`, staged files are scanned automatically.
+# Manual run over all files:
+#   pre-commit run --all-files
+#
+# Version: 1.0 — 2026-06-10 (initial, post INC-2026-06-10-001)
+
+repos:
+  # ───────────────────────────────────────────────────────────
+  # Secret scanning (PRIMARY)
+  # ───────────────────────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: gitleaks (detect secrets)
+        description: Detect hardcoded credentials via .gitleaks.toml ruleset
+        # Uses .gitleaks.toml in repo root for rules + allowlist
+
+  # ───────────────────────────────────────────────────────────
+  # Generic hygiene
+  # ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$|package-lock\.json$|yarn\.lock$'
+      - id: end-of-file-fixer
+        exclude: 'package-lock\.json$|yarn\.lock$'
+      - id: check-yaml
+      - id: check-json
+        exclude: '(\.eslintrc|tsconfig.*|jsconfig.*)\.json$'  # JSON-with-comments
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+# ───────────────────────────────────────────────────────────
+# Configuration
+# ───────────────────────────────────────────────────────────
+default_stages: [pre-commit]
+default_language_version:
+  python: python3
+fail_fast: false  # run all hooks even if one fails — show full picture
+minimum_pre_commit_version: '3.0.0'

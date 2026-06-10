@@ -1,0 +1,153 @@
+# gitleaks configuration for HolidaiButler monorepo
+# https://github.com/gitleaks/gitleaks
+#
+# Combines gitleaks built-in default ruleset with HolidaiButler-specific patterns
+# for credentials used in this platform.
+#
+# Version: 1.0 — 2026-06-10 (initial, post INC-2026-06-10-001)
+
+# Use gitleaks' built-in default rules (covers AWS, GCP, Azure, GitHub PATs,
+# Stripe, OpenAI, Slack tokens, generic API keys, private keys, etc.)
+[extend]
+useDefault = true
+
+# ─────────────────────────────────────────────────────────────────────
+# HolidaiButler-specific rules
+# ─────────────────────────────────────────────────────────────────────
+
+[[rules]]
+id = "hb-openweathermap-api-key"
+description = "OpenWeatherMap API key (32-char lowercase hex string in URL/code)"
+regex = '''(?i)(openweathermap[^"']{0,30}|api\.openweathermap\.org[^"']{0,200})[?&]?appid\s*=\s*['"]?([a-f0-9]{32})['"]?'''
+secretGroup = 2
+tags = ["openweathermap", "api-key"]
+
+[[rules]]
+id = "hb-mistral-api-key"
+description = "Mistral AI API key"
+regex = '''(?i)mistral[_-]?(api[_-]?)?key\s*[=:]\s*['"]([a-zA-Z0-9]{32,})['"]'''
+secretGroup = 2
+tags = ["mistral", "api-key"]
+
+[[rules]]
+id = "hb-deepl-api-key"
+description = "DeepL API key (Pro or Free format)"
+regex = '''(?i)deepl[_-]?(api[_-]?)?key\s*[=:]\s*['"]([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}(:fx)?)['"]'''
+secretGroup = 2
+tags = ["deepl", "api-key"]
+
+[[rules]]
+id = "hb-anthropic-api-key"
+description = "Anthropic Claude API key"
+regex = '''sk-ant-(api|sid|adm)\d{2}-[a-zA-Z0-9_-]{80,}'''
+tags = ["anthropic", "api-key"]
+
+[[rules]]
+id = "hb-pixtral-api-key"
+description = "Pixtral API key (Mistral-vision)"
+regex = '''(?i)pixtral[_-]?(api[_-]?)?key\s*[=:]\s*['"]([a-zA-Z0-9]{32,})['"]'''
+secretGroup = 2
+tags = ["pixtral", "api-key"]
+
+[[rules]]
+id = "hb-apify-token"
+description = "Apify Actor/User token"
+regex = '''(?i)apify[_-]?(token|api[_-]?key)\s*[=:]\s*['"]apify_api_[a-zA-Z0-9]{24,}['"]'''
+tags = ["apify", "token"]
+
+[[rules]]
+id = "hb-mailerlite-api-key"
+description = "MailerLite API key"
+regex = '''(?i)mailerlite[_-]?(api[_-]?)?key\s*[=:]\s*['"]([a-zA-Z0-9]{32,})['"]'''
+secretGroup = 2
+tags = ["mailerlite", "api-key"]
+
+[[rules]]
+id = "hb-hetzner-api-token"
+description = "Hetzner Cloud API token"
+regex = '''(?i)hetzner[_-]?(cloud[_-]?)?(api[_-]?)?token\s*[=:]\s*['"]([a-zA-Z0-9]{32,})['"]'''
+secretGroup = 3
+tags = ["hetzner", "token"]
+
+[[rules]]
+id = "hb-sentry-dsn"
+description = "Sentry DSN"
+regex = '''https://[a-f0-9]{32,}@[a-z0-9.-]+\.(sentry\.io|ingest\.sentry\.io)/[0-9]+'''
+tags = ["sentry", "dsn"]
+
+[[rules]]
+id = "hb-meta-system-user-token"
+description = "Meta (Facebook/Instagram) System User token"
+regex = '''EAA[a-zA-Z0-9]{100,}'''
+tags = ["meta", "facebook", "instagram", "token"]
+
+[[rules]]
+id = "hb-mongodb-connection-string"
+description = "MongoDB connection string with embedded credentials"
+regex = '''mongodb(\+srv)?://[a-zA-Z0-9_-]+:[^@\s]+@[a-z0-9.-]+'''
+tags = ["mongodb", "database", "credentials"]
+
+[[rules]]
+id = "hb-mysql-connection-string"
+description = "MySQL/MariaDB connection string with embedded credentials"
+regex = '''mysql://[a-zA-Z0-9_-]+:[^@\s]+@[a-z0-9.-]+:\d+/[a-zA-Z0-9_-]+'''
+tags = ["mysql", "database", "credentials"]
+
+[[rules]]
+id = "hb-jwt-session-secret-assignment"
+description = "Hardcoded JWT/session secret assignment with non-trivial value"
+regex = '''(?i)(JWT_SECRET|SESSION_SECRET|COOKIE_SECRET|CSRF_SECRET)\s*[=:]\s*['"]([a-zA-Z0-9!@#$%^&*()_+=\-/]{20,})['"]'''
+secretGroup = 2
+tags = ["jwt", "session", "secret"]
+
+[[rules]]
+id = "hb-private-key-block"
+description = "PEM-encoded private key"
+regex = '''-----BEGIN ((RSA|EC|DSA|OPENSSH|PRIVATE) )?PRIVATE KEY( BLOCK)?-----'''
+tags = ["private-key"]
+
+# ─────────────────────────────────────────────────────────────────────
+# Allowlist — false positives en legitieme placeholders
+# ─────────────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Allowlisted files, paths, and patterns"
+
+paths = [
+  '''(.*?)(\.env\.example|\.env\.template|\.env\.sample)''',
+  '''(.*?)docs/security/.*''',
+  '''(.*?)\.gitleaks\.toml''',
+  '''(.*?)node_modules/.*''',
+  '''(.*?)\.next/.*''',
+  '''(.*?)dist/.*''',
+  '''(.*?)build/.*''',
+  '''(.*?)coverage/.*''',
+  '''(.*?)\.git/.*''',
+  '''(.*?)package-lock\.json''',
+  '''(.*?)yarn\.lock''',
+  '''(.*?)pnpm-lock\.yaml''',
+]
+
+regexes = [
+  # Placeholder patterns in .env.example or docs
+  '''your_[a-z_]+_(key|token|secret|here)''',
+  '''<your[_-][a-z]+[_-](key|token|secret)>''',
+  '''REPLACE_(WITH|ME)''',
+  '''\$\{[A-Z_]+\}''',
+  '''xxx+''',
+  '''dummy''',
+  '''example''',
+  '''CHANGEME''',
+  # Test fixtures (synthetic)
+  '''sk-test-[a-zA-Z0-9]+''',
+  '''test_secret_[a-zA-Z0-9]+''',
+]
+
+stopwords = [
+  "example",
+  "placeholder",
+  "dummy",
+  "test",
+  "demo",
+  "sample",
+]
