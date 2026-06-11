@@ -24,16 +24,11 @@ const COST_PER_CALL_EUR = 0.0; // SimpleAnalytics free-tier for HB-volume; logge
 
 async function logCost(destId, callCount) {
   try {
-    const mod = await import('../../orchestrator/costController/models/CostLog.js').catch(() => null);
-    if (!mod?.default) return;
-    const CostLog = mod.default;
-    await CostLog.create({
-      service: 'simpleanalytics',
-      operation: 'pages+events',
-      cost: COST_PER_CALL_EUR * callCount,
-      currency: 'EUR',
-      metadata: { destination_id: destId, call_count: callCount },
-      timestamp: new Date(),
+    // T1 (2026-06-11): use shared costTracker (ensureConnection-aware) instead of lazy-import
+    const { logCost: trackerLogCost } = await import('../../orchestrator/costController/index.js');
+    await trackerLogCost('simpleanalytics', 'pages+events', COST_PER_CALL_EUR * callCount, {
+      destination_id: destId,
+      call_count: callCount,
     });
   } catch (err) {
     logger.warn('[websiteTrafficCollector] cost-log failed (non-blocking):', err.message);

@@ -9,10 +9,36 @@ class CostTracker {
     return mongoose.connection.readyState === 1;
   }
 
+  /**
+   * Ensure mongoose connection — on-demand connect for contexts where main bootstrap did not run
+   * (e.g. Temporal worker activities). Returns true if connected, false otherwise.
+   * Added 2026-06-11 (T1 follow-up Trendspotter activation INC-2026-06-10).
+   */
+  async ensureConnection() {
+    const state = mongoose.connection.readyState;
+    if (state === 1) return true;
+    if (state === 2) {
+      // already connecting — wait briefly for the in-flight connect to settle
+      return await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(mongoose.connection.readyState === 1), 5000);
+        mongoose.connection.once('connected', () => { clearTimeout(timer); resolve(true); });
+      });
+    }
+    // disconnected (0) or disconnecting (3) — establish on-demand via shared bootstrap
+    try {
+      const { connectMongoDB } = await import('../../../config/database.js');
+      await connectMongoDB();
+      return mongoose.connection.readyState === 1;
+    } catch (err) {
+      console.warn('[CostTracker] ensureConnection failed:', err.message);
+      return false;
+    }
+  }
+
   async logCost(service, operation, cost, metadata = {}) {
-    // Check MongoDB connection first
-    if (!this.isMongoConnected()) {
-      console.warn('[CostTracker] MongoDB not connected, skipping cost log');
+    const connected = await this.ensureConnection();
+    if (!connected) {
+      console.warn('[CostTracker] MongoDB not connected (ensure failed), skipping cost log');
       return null;
     }
 

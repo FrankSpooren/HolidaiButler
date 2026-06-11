@@ -1,7 +1,7 @@
 /**
  * SocialAccount Model
  * Social media accounts per destination — Content Module Fase A
- * Includes AES-256-CBC token encryption helpers
+ * Includes AES-256-CBC token encryption helpers (random-IV, Format A: iv_hex:ciphertext_hex)
  */
 
 import { DataTypes } from 'sequelize';
@@ -9,10 +9,21 @@ import { mysqlSequelize } from '../config/database.js';
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-cbc';
+
+// SOCIAL_TOKEN_ENCRYPTION_KEY is required for social-account OAuth-token encryption.
+// Fail-loud on module load if missing — encrypt/decrypt operations will throw at request time.
+// Rotated 2026-06-11 (INC-2026-06-10-005): removed JWT_SECRET fallback + 'default-key-change-me-32-chars!!' literal fallback.
+const SOCIAL_TOKEN_ENCRYPTION_KEY = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY;
+if (!SOCIAL_TOKEN_ENCRYPTION_KEY) {
+  // eslint-disable-next-line no-console
+  console.error('[SocialAccount] FATAL: SOCIAL_TOKEN_ENCRYPTION_KEY env-var missing — social-account token encryption/decryption will fail at request time');
+}
+
 const getEncryptionKey = () => {
-  const key = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key-change-me-32-chars!!';
-  // Ensure 32 bytes for AES-256
-  return crypto.createHash('sha256').update(key).digest();
+  if (!SOCIAL_TOKEN_ENCRYPTION_KEY) {
+    throw new Error('SOCIAL_TOKEN_ENCRYPTION_KEY env-var is required for social-account token encryption');
+  }
+  return crypto.createHash('sha256').update(SOCIAL_TOKEN_ENCRYPTION_KEY).digest();
 };
 
 const SocialAccount = mysqlSequelize.define('SocialAccount', {
@@ -80,7 +91,7 @@ const SocialAccount = mysqlSequelize.define('SocialAccount', {
 });
 
 // ============================================================================
-// Token encryption helpers (AES-256-CBC)
+// Token encryption helpers (AES-256-CBC, random-IV per record, Format A: iv_hex:ciphertext_hex)
 // ============================================================================
 
 SocialAccount.encryptToken = function (plaintext) {
