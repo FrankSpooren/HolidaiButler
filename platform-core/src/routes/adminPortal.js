@@ -15951,14 +15951,9 @@ router.post('/content/social-accounts/connect/meta', adminAuth('destination_admi
       return res.status(400).json({ success: false, error: { code: 'VALIDATION_FAILED', message: `Could not validate token: ${fetchErr.message}` } });
     }
 
-    // Encrypt token
-    const encryptionKey = process.env.SOCIAL_TOKEN_ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key';
-    const encCrypto = await import('crypto');
-    const cipher = encCrypto.createCipheriv('aes-256-cbc',
-      encCrypto.createHash('sha256').update(encryptionKey).digest(),
-      Buffer.alloc(16, 0)
-    );
-    const encryptedToken = cipher.update(access_token, 'utf8', 'hex') + cipher.final('hex');
+    // Encrypt token via shared SocialAccount.encryptToken (random-IV, Format A: iv:ciphertext) — INC-2026-06-10-005
+    const SocialAccount = (await import('../models/SocialAccount.js')).default;
+    const encryptedToken = SocialAccount.encryptToken(access_token);
 
     // Upsert: update existing or insert new
     const [[existing]] = await mysqlSequelize.query(
