@@ -81,19 +81,14 @@ class ReisleiderAgent extends BaseAgent {
             visitors: saJson.visitors || 0,
             top_pages: (saJson.pages || []).slice(0, 5).map(p => ({ path: p.value, views: p.pageviews }))
           };
-          // Audit-trail cost-log (non-blocking)
+          // Audit-trail cost-log (non-blocking) — T1 (2026-06-11): shared costTracker (ensureConnection-aware)
           try {
-            const mod = await import('../../orchestrator/costController/models/CostLog.js').catch(() => null);
-            if (mod?.default) {
-              await mod.default.create({
-                service: 'simpleanalytics',
-                operation: 'reisleider-context-aggregate',
-                cost: 0.0,
-                currency: 'EUR',
-                metadata: { destination_id: destinationId, domain, call_count: 1 },
-                timestamp: new Date(),
-              });
-            }
+            const { logCost: trackerLogCost } = await import('../../orchestrator/costController/index.js');
+            await trackerLogCost('simpleanalytics', 'reisleider-context-aggregate', 0.0, {
+              destination_id: destinationId,
+              domain,
+              call_count: 1,
+            });
           } catch (clErr) { /* non-blocking */ }
         }
       }
