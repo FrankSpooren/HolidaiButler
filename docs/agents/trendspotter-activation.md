@@ -196,7 +196,7 @@ Recommendation: Optie B (shared service) — consistent met Trendspotter+Reislei
 
 **Impact**: Cosmetic content-strategy noise (off-brand pageviews komen door als trending-keyword). Niet-blocker voor downstream consumers die zelf filtering kunnen toepassen.
 
-**Resolution (tweede sessie)**: voeg `brandContext = await buildBrandContextStructured(destId)` toe in `websiteTrafficCollector.collect`, filter trends waar `keyword` niet matched met `brandContext.entities` of `brandContext.sources`.
+**Resolution (T2 — 2026-06-11, v5.11.1)**: `applyBrandKnowledgeFilter(destinationId, trends)` toegevoegd aan `trendAggregator.aggregate()` (generic — dekt zowel Google Trends als SimpleAnalytics). Token-overlap filter via `buildBrandContextStructured.contextString` (NB: returnt geen `entities` — gebruikt contextString tokens). **Observability-default**: log brand-mismatch candidates maar pass them through. **Active drop via env**: `TRENDSPOTTER_BRAND_FILTER_ACTIVE=true` schakelt actual filter aan na precision-validation tegen real cron data. Test (1e iteratie aggressive mode): 4/5 sample dropped incl. on-brand `'paella moraira marina'` + `'wandelen langs kust'` — daarom default observability.
 
 ## Monitoring (Tempo trace queries)
 
@@ -236,3 +236,5 @@ curl -s "http://localhost:3200/api/search?tags=service.name=hb-temporal-worker&s
 ## Version log
 
 - v1.0.0 (2026-06-10): initial activation — registration + workflows + scheduling + first manual verification
+- v1.1.0 (2026-06-11): T1 follow-up — cost_logs buffer-timeout fix in Temporal-worker context via shared `costTracker.ensureConnection()` (on-demand `connectMongoDB()` if `mongoose.connection.readyState !== 1`). `websiteTrafficCollector.logCost` + `reisleider` inline cost-log refactored to shared `costController.logCost()`. Verified via direct test (fresh process, readyState 0 → ensureConnection true → CostLog.create OK). Worker restart pid 2835010.
+- v1.2.0 (2026-06-11): T2 brand-knowledge filter in `trendAggregator` — `applyBrandKnowledgeFilter()` + `_extractBrandTokens()` helpers. Observability-mode by default (logs off-brand candidates without dropping); env-var `TRENDSPOTTER_BRAND_FILTER_ACTIVE=true` enables active drop. Validation: Calpe `dest=1` 166 brand tokens, 5/5 test trends kept in observability mode, 1/5 in active mode (4 dropped, 80% drop-rate too aggressive — confirms observability-default choice).
