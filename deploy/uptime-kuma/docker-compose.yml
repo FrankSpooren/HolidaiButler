@@ -1,0 +1,74 @@
+# HolidaiButler — Laag 4 externe uptime-monitor (UptimeKuma self-host, EU)
+#
+# Draait op een SEPARATE EU-host (UpCloud Helsinki) — bewust een ander
+# failure-domein dan prod (Hetzner Nurnberg). Mag NOOIT op prod draaien:
+# dan deelt de bewaker het failure-domein met wat hij bewaakt.
+#
+# Services:
+#   uptime-kuma   — checks + dashboard (eigen login-auth)
+#   caddy         — reverse-proxy + automatische TLS (Let's Encrypt)
+#   threema-relay — vertaalt UptimeKuma-webhook (JSON) -> Threema Gateway
+#                   (form-urlencoded). Intern-only, niet naar buiten exposed.
+#
+# Deploy: zie INSTALL.md. Creds via ./threema-relay/.env (chmod 0600).
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - uptime-kuma-data:/app/data
+    networks:
+      - monitor-net
+    # Publiek alleen via Caddy (TLS). Extra loopback-binding voor admin-toegang
+    # via SSH-tunnel (ssh -L 3001:localhost:3001 ...) — 127.0.0.1-only, dus niet
+    # extern bereikbaar en buiten ufw om (loopback).
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "extra/healthcheck.js"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    depends_on:
+      - uptime-kuma
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - monitor-net
+
+  threema-relay:
+    build: ./threema-relay
+    container_name: threema-relay
+    restart: unless-stopped
+    env_file:
+      - ./threema-relay/.env
+    networks:
+      - monitor-net
+    # Geen ports: -> alleen UptimeKuma (zelfde netwerk) bereikt de relay op
+    # http://threema-relay:8099/notify. Nooit publiek exposed.
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:8099/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  uptime-kuma-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  monitor-net:
+    driver: bridge
