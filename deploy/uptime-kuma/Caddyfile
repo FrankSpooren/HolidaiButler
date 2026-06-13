@@ -1,0 +1,32 @@
+# Caddy reverse-proxy voor Laag 4 uptime-monitor.
+# Automatische TLS via Let's Encrypt (HTTP-01). Vereist dat poort 80+443
+# publiek bereikbaar zijn en dat status.holidaibutler.com -> dit VPS-IP wijst.
+#
+# Pas het domein hieronder aan als je een ander subdomein kiest.
+
+status.holidaibutler.com {
+	encode zstd gzip
+
+	# Security headers — minimaliseer attack surface van het dashboard
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Verberg server-versie
+		-Server
+	}
+
+	reverse_proxy uptime-kuma:3001 {
+		# WebSocket-support (UptimeKuma gebruikt socket.io voor live updates)
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

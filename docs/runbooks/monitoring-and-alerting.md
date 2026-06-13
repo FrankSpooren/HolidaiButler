@@ -1,8 +1,9 @@
 # Monitoring & Alerting — Infrastructure Health
 
-> **Versie**: 1.0.0
-> **Datum**: 2026-06-11
+> **Versie**: 1.1.0
+> **Datum**: 2026-06-13
 > **Geïmplementeerd na**: INC-2026-06-11-001 (Apache 10u silent outage)
+> **v1.1.0**: Laag 4 (externe uptime-monitor) toegevoegd als ontwerp — zie §13
 
 ---
 
@@ -15,15 +16,16 @@ Het ontbrak aan:
 2. Notificatie bij service-failure (Frank moest het zelf ontdekken na 10u)
 3. Externe-perspectief check voor scenarios waar service draait maar misroute
 
-## 2. Architectuur — 3-laagse defense-in-depth
+## 2. Architectuur — 4-laagse defense-in-depth
 
 | Laag | Mechanisme | Detectie-snelheid | Vangt |
 |------|------------|-------------------|-------|
 | **1** | systemd `Restart=on-failure` op apache2 | binnen 10s automatisch | transient OS-races (port still bound by dying sibling) |
 | **2** | systemd `OnFailure=alert-threema@%n.service` | < 1 sec na StartLimit-exhaust | hard service-failures na 5× retries |
-| **3** | Cron `*/2` external-perspective HTTPS check | 2-4 min | 5xx-responses, hangs, vhost-misroute, DNS-issues |
+| **3** | Cron `*/2` external-perspective HTTPS check (op prod) | 2-4 min | 5xx-responses, hangs, vhost-misroute, lokale DNS-issues |
+| **4** | Externe uptime-monitor op aparte EU-host (UptimeKuma) | 1-2 min | **hele server-uitval, netwerk-isolatie, DNS-provider-uitval** |
 
-**Niet gedekt**: hele server-uitval, netwerk-isolatie, DNS-provider problemen. Daarvoor is een **externe uptime-monitor** nodig (UptimeRobot / BetterStack / UptimeKuma op andere host) → backlog-item.
+**Cruciaal voor Laag 4**: de monitor draait op een **ander failure-domein** (UpCloud Helsinki) dan prod (Hetzner Nürnberg). Laag 1-3 alert-paden draaien óp prod — bij hele-server-uitval falen die mee. Laag 4 heeft een onafhankelijk alert-pad. Status: **ONTWERP — zie §13** (nog niet gedeployed tot VPS geprovisioned).
 
 ## 3. Bestanden en lokaties
 
@@ -118,14 +120,60 @@ tail -3 /var/log/alert-threema.log
 
 ## 11. Niet-gevangen failure modes (backlog)
 
-- **Hele server-uitval**: externe uptime-monitor vereist (UptimeRobot gratis tier, 1min interval, Threema webhook)
-- **DNS-provider uitval bij OVH**: external resolver-based check (cloudflare DoH probe)
+- **Hele server-uitval / netwerk-isolatie**: → opgelost in ontwerp **Laag 4** (§13). Status: deployment-klaar, wacht op VPS-provisioning + live E2E.
+- **DNS-provider uitval bij OVH**: external resolver-based check (cloudflare DoH probe) — deels ondervangen door Laag 4 (externe checker bypasst lokale DNS)
 - **Certbot renewal-failure**: separate runbook + alerting via certbot hook
 
 ## 12. Les uit incident 2026-06-11
 
 Voor DNS-migraties: **TTL verlagen naar 60-300s VÓÓR de wijziging** (24-48u tevoren). Default OVH = 3600s, wat 1u stale-window oplevert. Met TTL 60s is window minuten i.p.v. uur.
 
+## 13. Laag 4 — Externe uptime-monitor (UptimeKuma, EU) — ONTWERP
+
+> Status: **deployment-klaar, nog niet live**. Volledige deploy-runbook:
+> `deploy/uptime-kuma/INSTALL.md`. Flip naar 'ACTIEF' pas na E2E (§9 daarin).
+
+### Provider-keuze (onderbouwd, 13-06-2026)
+
+**UpCloud — datacenter Helsinki (fi-hel1)**. Afwegingen:
+- **EU-soeverein**: Fins, onafhankelijk eigendom (geen US-moeder). Voldoet aan de "100% GDPR/EU-proof"-eis. Geen end-user-PII door de monitor — alleen publieke URL's + Frank's account-mail (data-minimalisatie).
+- **Betrouwbaarheid van de bewaker**: enige optie met **99,99% SLA op het instap-tier** (~€3,20/mnd). Een monitor moet betrouwbaarder zijn dan wat hij bewaakt.
+- **Failure-domein**: Helsinki = ander land, andere provider, ander stroomnet dan prod (Hetzner Nürnberg). Vangt zelfs Hetzner-brede uitval.
+- Overwogen: netcup (DE, goedkoper maar Neurenberg-DC = zelfde stad als prod), Scaleway (FR, duurder/Stardust te licht). UptimeRobot/BetterStack afgevallen: US-dataopslag (UptimeRobot) resp. Delaware-entiteit (BetterStack) — minder schoon onder de EU-eis; bovendien is self-host maximaal soeverein.
+
+### Architectuur
+
+```
+MONITOR (UpCloud Helsinki, Docker): UptimeKuma + Caddy(TLS) + threema-relay
+   checkt 6 endpoints elke 60s → DOWN → relay → Threema (eigen pad, los van prod)
+PROD (Nürnberg): Laag 1-3 + reverse-check op de monitor → mutual monitoring
+```
+
+De relay (`deploy/uptime-kuma/threema-relay/`) vertaalt UptimeKuma's JSON-webhook
+naar een Threema Gateway `send_simple` (form-urlencoded), met rate-limit + retry +
+timeout + structured logging — gelijk aan `alert-threema.sh`. Intern-only.
+
+### SPOF-mitigatie: wederzijdse monitoring (toepassen NA provisioning)
+
+`hb-health-check.sh` op prod forceert `--resolve …:443:127.0.0.1` (loopback) voor
+alle eigen vhosts. De monitor-host is **remote**, dus die check mag dié override
+NIET gebruiken. Voeg een aparte probe toe (na de bestaande loop):
+
+```bash
+# Laag-4 reverse-check: prod bewaakt de monitor (geen loopback-resolve!)
+MON_URL="https://status.holidaibutler.com"   # of het kale VPS-IP
+mon_code=$(curl -sS -o /dev/null -m 5 -w "%{http_code}" "$MON_URL" 2>/dev/null || echo "000")
+if [ "$mon_code" != "200" ]; then
+  # 2-in-row via eigen state-file, dan alert via het bestaande pad:
+  /usr/local/bin/alert-threema.sh "laag4-monitor-down" \
+    "Externe uptime-monitor ($MON_URL) onbereikbaar: HTTP $mon_code — wie bewaakt de bewaker?"
+fi
+```
+
+Resultaat: valt de monitor-VPS weg, dan alarmeert prod via zijn eigen Threema-pad.
+Beide lagen hebben een onafhankelijk alert-pad → geen single point of failure.
+
 ---
 
 *Geconfigureerd door Claude Opus 4.7 / Frank Spooren — INC-2026-06-11-001 response.*
+*Laag 4-ontwerp door Claude Opus 4.8 — 13-06-2026.*
