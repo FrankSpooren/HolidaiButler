@@ -21,7 +21,11 @@ services:
       - uptime-kuma-data:/app/data
     networks:
       - monitor-net
-    # Geen ports: -> alleen bereikbaar via Caddy (TLS) en relay-net intern
+    # Publiek alleen via Caddy (TLS). Extra loopback-binding voor admin-toegang
+    # via SSH-tunnel (ssh -L 3001:localhost:3001 ...) — 127.0.0.1-only, dus niet
+    # extern bereikbaar en buiten ufw om (loopback).
+    ports:
+      - "127.0.0.1:3001:3001"
     healthcheck:
       test: ["CMD", "node", "extra/healthcheck.js"]
       interval: 60s

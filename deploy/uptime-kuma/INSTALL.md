@@ -15,9 +15,10 @@ draaien. Gekozen: **UpCloud, datacenter Helsinki (fi-hel1)** — Fins/EU-soevere
 
 - Plan: UpCloud Starter 1GB / 1 vCPU / 25GB SSD (~€3,50/mnd; 2GB voor lucht)
 - Regio: `fi-hel1` (Helsinki)
-- OS: Ubuntu 24.04 LTS
-- SSH-key: voeg Frank's `id_ed25519` *public* key toe
-- DNS: A-record `status.holidaibutler.com` -> VPS-IP (voor Caddy auto-TLS)
+- OS: Ubuntu 26.04 LTS (gedeployed; Docker-repo ondersteunt 26.04 — bevestigd)
+- Storage: encryption-at-rest AAN (gratis, AES-256, alleen bij aanmaak instelbaar)
+- SSH-key: voeg Frank's `id_ed25519` *public* key toe (publieke deel `.pub`!)
+- DNS: A-record `status.holidaibutler.com` -> VPS-IP (MONITOR-ip, niet prod) voor Caddy auto-TLS
 
 ## 2. Host-hardening (als root op de nieuwe VPS)
 

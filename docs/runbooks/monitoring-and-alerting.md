@@ -128,10 +128,14 @@ tail -3 /var/log/alert-threema.log
 
 Voor DNS-migraties: **TTL verlagen naar 60-300s VÓÓR de wijziging** (24-48u tevoren). Default OVH = 3600s, wat 1u stale-window oplevert. Met TTL 60s is window minuten i.p.v. uur.
 
-## 13. Laag 4 — Externe uptime-monitor (UptimeKuma, EU) — ONTWERP
+## 13. Laag 4 — Externe uptime-monitor (UptimeKuma, EU) — ACTIEF
 
-> Status: **deployment-klaar, nog niet live**. Volledige deploy-runbook:
-> `deploy/uptime-kuma/INSTALL.md`. Flip naar 'ACTIEF' pas na E2E (§9 daarin).
+> Status: **LIVE per 13-06-2026** op UpCloud Helsinki (`212.147.237.156`).
+> Dashboard: `https://status.holidaibutler.com` (Caddy auto-TLS, login `admin`).
+> 6 monitors UP, alert-keten E2E bewezen (UptimeKuma→relay→Threema, msgId
+> 86aabeb9...). Wederzijdse monitoring actief: prod's `hb-health-check.sh` heeft
+> een reverse-probe (IP gepind) naar de monitor. Deploy-runbook:
+> `deploy/uptime-kuma/INSTALL.md`. Config-as-code: `deploy/uptime-kuma/setup_kuma.py`.
 
 ### Provider-keuze (onderbouwd, 13-06-2026)
 
