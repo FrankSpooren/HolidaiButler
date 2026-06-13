@@ -1,0 +1,5 @@
+# Secrets — NOOIT committen
+threema-relay/.env
+**/.env
+# Caddy/UptimeKuma runtime-data (lokaal op de monitor-host via Docker volumes)
+data/

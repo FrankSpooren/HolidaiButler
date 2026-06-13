@@ -1,0 +1,11 @@
+{
+  "name": "threema-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "UptimeKuma webhook -> Threema Gateway relay (Laag 4)",
+  "type": "commonjs",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js"
+  }
+}
