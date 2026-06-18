@@ -14856,13 +14856,29 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
        LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
        WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted')
+         AND (ci.scheduled_at IS NOT NULL OR ci.published_at IS NOT NULL)
          AND (
            (ci.scheduled_at BETWEEN :start AND :end)
            OR (ci.published_at BETWEEN :start AND :end)
-           OR (ci.approval_status IN ('approved') AND ci.scheduled_at IS NULL AND ci.published_at IS NULL AND ci.created_at BETWEEN :start AND :end)
          )
-       ORDER BY COALESCE(ci.scheduled_at, ci.published_at, ci.created_at) ASC`,
+       ORDER BY COALESCE(ci.scheduled_at, ci.published_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
+    );
+
+    // C2-fix (T2): approved-but-unscheduled items horen NIET op een kalenderdatum
+    // (eerder gebucket op created_at => leek "vandaag"). Apart teruggegeven zodat de
+    // frontend ze in een "Klaar om in te plannen"-strook toont, los van een dag-cel.
+    // Destination-scoped, bewust GEEN datumvenster (ze hebben immers geen datum).
+    const [readyToSchedule] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
+              ci.seo_score, ci.content_source_type, ci.publish_error, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+       FROM content_items ci
+       LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+       LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+       WHERE ci.destination_id = :destId AND ci.approval_status = 'approved'
+         AND ci.scheduled_at IS NULL AND ci.published_at IS NULL
+       ORDER BY ci.created_at DESC`,
+      { replacements: { destId: Number(destId) } }
     );
 
     // Also fetch seasonal periods for overlay (table uses start_month/start_day, not start_date)
@@ -14883,7 +14899,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
       end_date: `${queryYear}-${String(s.end_month).padStart(2, '0')}-${String(s.end_day).padStart(2, '0')}`,
     }));
 
-    res.json({ success: true, data: { items: items || [], seasons: seasonsFormatted, view: view || 'month' } });
+    res.json({ success: true, data: { items: items || [], readyToSchedule: readyToSchedule || [], seasons: seasonsFormatted, view: view || 'month' } });
   } catch (error) {
     logger.error('[AdminPortal] Calendar error:', error);
     res.status(500).json({ success: false, error: { code: 'CALENDAR_ERROR', message: error.message } });
