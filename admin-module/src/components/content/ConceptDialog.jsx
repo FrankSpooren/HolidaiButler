@@ -902,7 +902,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         setSnackMsg(`${successCount} gepubliceerd, ${failCount} mislukt — controleer social account koppelingen`);
       }
     } catch (err) {
-      setSnackMsg(`Publicatie mislukt: ${err.message}`);
+      console.error('[publishAll] failed:', err);
+      setSnackMsg({ severity: 'error', text: `Publicatie mislukt: ${formatApiError(err, t)}` });
     } finally {
       setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
     }
@@ -930,7 +931,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg({ severity: 'success', text: `${platform} succesvol gepubliceerd` });
     } catch (err) {
-      setSnackMsg({ severity: 'error', text: `Publicatie ${platform} mislukt: ${err.response?.data?.error?.message || err.message}` });
+      console.error('[publishItem] failed:', err);
+      setSnackMsg({ severity: 'error', text: `Publicatie ${platform} mislukt: ${formatApiError(err, t)}` });
     } finally {
       setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
     }
@@ -962,7 +964,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
           return handleRepublishItem(itemId, platform, true);
         }
       }
-      setSnackMsg({ severity: 'error', text: `Republish ${platform} mislukt: ${err.response?.data?.error?.message || err.message}` });
+      console.error('[republishItem] failed:', err);
+      setSnackMsg({ severity: 'error', text: `Republish ${platform} mislukt: ${formatApiError(err, t)}` });
     } finally {
       setTimeout(() => { setPublishing(false); setPublishStatus(null); }, 1500);
     }

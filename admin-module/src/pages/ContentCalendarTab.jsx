@@ -35,6 +35,7 @@ import {
 } from '../hooks/useContent.js';
 import contentService from '../api/contentService.js';
 import client from '../api/client.js';
+import { formatApiError } from '../utils/formatApiError.js';
 
 // ─── Constants ───────────────────────────────────────────────────
 const PLATFORM_ICONS = {
@@ -736,7 +737,13 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
   };
 
   const handlePublishNow = async (itemId, socialAccountId) => {
-    await publishMut.mutateAsync({ id: itemId, data: { social_account_id: socialAccountId } });
+    // P3 (/quality): gelokaliseerde, leesbare fout i.p.v. silent fail / ruwe backend-string.
+    try {
+      await publishMut.mutateAsync({ id: itemId, data: { social_account_id: socialAccountId } });
+    } catch (err) {
+      console.error('[Calendar] publish-now failed:', err);
+      setAutoFillSnack(formatApiError(err, t));
+    }
   };
 
   const handleCancel = async (itemId) => {
@@ -915,11 +922,17 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
       {/* C1/C2 (T4): "Klaar om in te plannen" — approved-maar-ongeplande items, bewust NIET
           op een dag-cel. Klik opent de schedule-modal (ConceptDialog) via onEditConcept. */}
       {readyToSchedule.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: 1, bgcolor: 'warning.50', borderColor: 'warning.200' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <ScheduleIcon sx={{ fontSize: 18, color: 'warning.main' }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-              {t('contentStudio.calendar.readyToSchedule', 'Klaar om in te plannen')} ({readyToSchedule.length})
+        <Paper elevation={0} sx={{ p: 1.75, mb: 2, borderRadius: 1.5, bgcolor: 'warning.50',
+          border: '1px solid', borderColor: 'warning.300', borderLeft: '4px solid', borderLeftColor: 'warning.main' }}>
+          {/* P2 (/ux): nadruk — icoon + titel + count-badge + micro-hint, eigen getinte vlak. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <ScheduleIcon sx={{ fontSize: 20, color: 'warning.main' }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              {t('contentStudio.calendar.readyToSchedule', 'Klaar om in te plannen')}
+            </Typography>
+            <Chip label={readyToSchedule.length} size="small" color="warning" sx={{ height: 20, fontWeight: 700, fontSize: 11 }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 'auto', fontStyle: 'italic' }}>
+              {t('contentStudio.calendar.readyToScheduleHint', 'Klik op een item om het in te plannen')}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -931,7 +944,8 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
                   <Chip icon={<PfIcon sx={{ fontSize: '14px !important' }} />}
                     label={item.title || pf} size="small" variant="outlined"
                     onClick={() => onEditConcept && onEditConcept(item.concept_id, item.target_platform)}
-                    sx={{ cursor: 'pointer', maxWidth: 260, '&:hover': { bgcolor: 'action.hover' } }} />
+                    sx={{ cursor: 'pointer', maxWidth: 260, bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover', borderColor: 'warning.main' } }} />
                 </Tooltip>
               );
             })}

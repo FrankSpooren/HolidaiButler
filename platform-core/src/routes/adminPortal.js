@@ -15326,7 +15326,9 @@ router.post('/content/items/:id/publish-now', adminAuth('editor'), async (req, r
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('[AdminPortal] Publish-now error:', error);
-    res.status(500).json({ success: false, error: { code: 'PUBLISH_ERROR', message: error.message } });
+    // P3 (/quality): forward domain-codes (bv. INVALID_STATE_FOR_PUBLISH 409) zodat de
+    // frontend errors.<code> kan lokaliseren i.p.v. de ruwe interne string te tonen.
+    return sendApiError(res, error, 'PUBLISH_ERROR');
   }
 });
 
@@ -15487,7 +15489,8 @@ router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['p
     res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
   } catch (error) {
     logger.error('[AdminPortal] Republish error:', error);
-    res.status(500).json({ success: false, error: { code: 'REPUBLISH_ERROR', message: error.message } });
+    // P3 (/quality): forward domain-codes zodat frontend errors.<code> kan lokaliseren.
+    return sendApiError(res, error, 'REPUBLISH_ERROR');
   }
 });
 

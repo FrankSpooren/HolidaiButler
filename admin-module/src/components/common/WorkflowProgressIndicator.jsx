@@ -90,21 +90,23 @@ export default function WorkflowProgressIndicator({ items = [], sx = {}, compact
                 size="small"
                 variant={isCurrent ? 'filled' : 'outlined'}
                 sx={{
+                  // P1 (/ux · WCAG): geen ghosting. Inactieve stappen blijven leesbaar
+                  // (text.secondary ≈ 4.5:1 + zichtbare omlijning) i.p.v. grijs-op-grijs op opacity 0.4.
                   bgcolor: isCurrent ? stage.color : 'transparent',
-                  color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd',
-                  borderColor: isPast ? stage.color : isCurrent ? stage.color : '#e0e0e0',
-                  fontWeight: isCurrent ? 700 : 500,
+                  color: isCurrent ? '#fff' : isPast ? stage.color : 'text.secondary',
+                  borderColor: isCurrent ? stage.color : isPast ? stage.color : '#9e9e9e',
+                  borderWidth: isCurrent ? 0 : 1.5,
+                  fontWeight: isCurrent ? 700 : isPast ? 600 : 500,
                   height: isCurrent ? chipHeight + 2 : chipHeight,
                   fontSize: isCurrent ? fontSize + 1 : fontSize,
-                  opacity: isCurrent ? 1 : isPast ? 0.55 : 0.4,
                   boxShadow: isCurrent ? `0 0 0 2px ${stage.color}40` : 'none',
-                  '& .MuiChip-icon': { color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd' },
+                  '& .MuiChip-icon': { color: isCurrent ? '#fff' : isPast ? stage.color : 'text.secondary' },
                   transition: 'all 200ms ease',
                 }}
               />
             </Tooltip>
             {idx < stages.length - 1 && (
-              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? '#bdbdbd' : '#e0e0e0', opacity: isCurrent ? 0.8 : 0.4 }} />
+              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? stage.color : '#9e9e9e' }} />
             )}
           </React.Fragment>
         );

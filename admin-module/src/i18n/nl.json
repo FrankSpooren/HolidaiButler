@@ -1812,6 +1812,7 @@
       "clearFilters": "Filters wissen",
       "print": "Afdrukken",
       "readyToSchedule": "Klaar om in te plannen",
+      "readyToScheduleHint": "Klik op een item om het in te plannen",
       "requiresApproval": "Keur dit item eerst goed voordat je het kunt inplannen",
       "scheduleAction": "Inplannen"
     },
@@ -2152,6 +2153,8 @@
     "media_required": "{{targetPlatform}}-bericht heeft een afbeelding nodig. Voeg een foto toe voordat je inplant.",
     "invalid_transition": "Deze statuswijziging is niet toegestaan (van \"{{from}}\" naar \"{{to}}\").",
     "publish_too_early": "Dit item is voor een later tijdstip ingepland en kan nu nog niet gepubliceerd worden. Gebruik \"Nu publiceren\" om dit te omzeilen.",
+    "invalid_state_for_publish": "Dit item kan nog niet gepubliceerd worden. Keur het eerst goed of plan het in.",
+    "already_published": "Dit item is al gepubliceerd.",
     "pre_publish_validation_failed": "De post is nog niet klaar om te publiceren. Controleer de afbeelding, link en inhoud.",
     "missing_domain_config": "Geen websitedomein geconfigureerd voor deze bestemming."
   }
