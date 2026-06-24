@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { Box, Chip, Tooltip } from '@mui/material';
+import { Box, Chip, Tooltip, alpha } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import CheckIcon from '@mui/icons-material/Check';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -26,6 +26,7 @@ import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ErrorIcon from '@mui/icons-material/Error';
 import { getPrimaryStages, deriveConceptWorkflowStatus } from '../../lib/workflowStatus.js';
+import { tokens } from '../../theme.js';
 
 const ICON_MAP = {
   EditNoteIcon, CheckCircleIcon, ScheduleIcon, PublishedWithChangesIcon, CancelIcon, ErrorIcon,
@@ -88,23 +89,28 @@ export default function WorkflowProgressIndicator({ items = [], sx = {}, compact
                   : Icon ? <Icon sx={{ fontSize: iconSize }} /> : undefined}
                 label={label}
                 size="small"
-                variant={isCurrent ? 'filled' : 'outlined'}
+                variant={(isCurrent || isPast) ? 'filled' : 'outlined'}
                 sx={{
-                  bgcolor: isCurrent ? stage.color : 'transparent',
-                  color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd',
-                  borderColor: isPast ? stage.color : isCurrent ? stage.color : '#e0e0e0',
-                  fontWeight: isCurrent ? 700 : 500,
+                  // C1-POLISH-3 (/ux · WCAG-AA): WITTE tekst/vinkje op een DONKERDER teal-vulling
+                  // (tokens.brand.tealDark #017A60 — wit-op-vulling = 5.31:1, voldoet ≥4.5:1).
+                  // Eén thema-token, geen verspreide hex. Consistent met de "Approve alle"-knop (wit op teal).
+                  // ACTIEF dominant via ring + bold + groter; VOLTOOID herkenbaar aan het vinkje
+                  // (vorm-onderscheid = kleurenblind-veilig). AANKOMEND blijft leesbaar grijs.
+                  bgcolor: (isCurrent || isPast) ? tokens.brand.tealDark : 'transparent',
+                  color: (isCurrent || isPast) ? '#fff' : 'text.secondary',
+                  borderColor: (isCurrent || isPast) ? tokens.brand.tealDark : '#9e9e9e',
+                  borderWidth: (isCurrent || isPast) ? 0 : 1.5,
+                  fontWeight: isCurrent ? 700 : isPast ? 600 : 500,
                   height: isCurrent ? chipHeight + 2 : chipHeight,
                   fontSize: isCurrent ? fontSize + 1 : fontSize,
-                  opacity: isCurrent ? 1 : isPast ? 0.55 : 0.4,
-                  boxShadow: isCurrent ? `0 0 0 2px ${stage.color}40` : 'none',
-                  '& .MuiChip-icon': { color: isCurrent ? '#fff' : isPast ? stage.color : '#bdbdbd' },
+                  boxShadow: isCurrent ? (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.35)}` : 'none',
+                  '& .MuiChip-icon': { color: (isCurrent || isPast) ? '#fff' : 'text.secondary' },
                   transition: 'all 200ms ease',
                 }}
               />
             </Tooltip>
             {idx < stages.length - 1 && (
-              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? '#bdbdbd' : '#e0e0e0', opacity: isCurrent ? 0.8 : 0.4 }} />
+              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? 'primary.main' : '#9e9e9e' }} />
             )}
           </React.Fragment>
         );

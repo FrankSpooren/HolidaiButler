@@ -17,6 +17,7 @@ export const tokens = {
   // Brand
   brand: {
     teal: '#02C39A',       // Primary action
+    tealDark: '#017A60',   // AA-vulling: wit-op-tealDark = 5.31:1 (>=4.5:1, WCAG-AA)
     tealDim: 'rgba(2, 195, 154, 0.15)',
     gold: '#F2C94C',       // Warnings, highlights
     goldDim: 'rgba(242, 201, 76, 0.12)',
