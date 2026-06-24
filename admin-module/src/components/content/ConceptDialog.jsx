@@ -994,7 +994,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg('Alle items ingepland (duplicaat kanalen met 2 uur spreiding)');
     } catch (err) {
-      setSnackMsg(`Inplannen mislukt: ${formatApiError(err, t)}`);
+      setSnackMsg({ severity: 'error', text: `Inplannen mislukt: ${formatApiError(err, t)}` });
     } finally {
       setPublishing(false);
     }
@@ -1013,7 +1013,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       if (onUpdate) onUpdate();
       setSnackMsg(`${platform} ingepland op ${new Date(scheduleDatetime).toLocaleString('nl-NL')}`);
     } catch (err) {
-      setSnackMsg(`Inplannen mislukt: ${formatApiError(err, t)}`);
+      setSnackMsg({ severity: 'error', text: `Inplannen mislukt: ${formatApiError(err, t)}` });
     } finally {
       setPublishing(false);
     }
@@ -1866,10 +1866,15 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                                 <PublishIcon sx={{ fontSize: 14 }} />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Inplannen">
-                              <IconButton size="small" onClick={() => { setPublishTarget(it.id); setScheduleDialogOpen(true); }} disabled={publishing}>
-                                <ScheduleIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
+                            {/* C1 (T2): inplannen gegated op backend can_schedule (autoritatieve FSM). */}
+                            <Tooltip title={it.can_schedule === false
+                              ? t('contentStudio.calendar.requiresApproval', 'Keur dit item eerst goed voordat je het kunt inplannen')
+                              : t('contentStudio.calendar.scheduleAction', 'Inplannen')}>
+                              <span>
+                                <IconButton size="small" onClick={() => { setPublishTarget(it.id); setScheduleDialogOpen(true); }} disabled={publishing || it.can_schedule === false}>
+                                  <ScheduleIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </span>
                             </Tooltip>
                           </>
                         )}
@@ -2291,6 +2296,13 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                 {publishTarget ? 'Plan dit platform-item in op een specifiek tijdstip.' : 'Plan alle platform-versies tegelijk in.'}
               </Typography>
 
+              {/* C1 (T2): zichtbare approval-hint wanneer doelitem niet inplanbaar is (backend can_schedule). */}
+              {publishTarget && items.find(i => i.id === publishTarget)?.can_schedule === false && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {t('contentStudio.calendar.requiresApproval', 'Keur dit item eerst goed voordat je het kunt inplannen')}
+                </Alert>
+              )}
+
               {/* Best Time Suggestions */}
               {activeItem?.target_platform && activeItem.target_platform !== 'website' && (
                 <Box sx={{ mb: 2, p: 1.5, bgcolor: 'success.50', borderRadius: 1, border: '1px solid', borderColor: 'success.200' }}>
@@ -2323,7 +2335,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
 
               <Button variant="contained" fullWidth startIcon={publishing ? <CircularProgress size={14} /> : <ScheduleIcon />}
                 onClick={() => publishTarget ? handleScheduleItem(publishTarget, activeItem?.target_platform) : handleScheduleAll()}
-                disabled={publishing || !scheduleDatetime}>
+                disabled={publishing || !scheduleDatetime || (publishTarget && items.find(i => i.id === publishTarget)?.can_schedule === false)}>
                 {publishTarget ? 'Dit item inplannen' : 'Alle items inplannen'}
               </Button>
             </DialogContent>
@@ -2366,8 +2378,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         </DialogActions>
       </Dialog>
 
-      {/* Feedback Snackbar */}
-      <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)} message={typeof snackMsg === 'string' ? snackMsg : snackMsg?.text} />
+      {/* Feedback Snackbar — C1 (T3): rendert als gekleurde Alert (error = rood) boven de
+          modal (anchor top-center + zIndex > modal) zodat transitie-fouten (409) zichtbaar
+          zijn en nooit achter/onder de dialog verdwijnen. */}
+      <Snackbar open={!!snackMsg} autoHideDuration={6000} onClose={() => setSnackMsg(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ zIndex: theme => theme.zIndex.modal + 2 }}>
+        <Alert onClose={() => setSnackMsg(null)} variant="filled"
+          severity={typeof snackMsg === 'object' && snackMsg?.severity ? snackMsg.severity : 'info'}
+          sx={{ width: '100%' }}>
+          {typeof snackMsg === 'string' ? snackMsg : snackMsg?.text}
+        </Alert>
+      </Snackbar>
 
       {/* A/B Variant Split-View Dialog — Opdracht 3 */}
       <Dialog open={!!altResult || !!altError} onClose={() => { setAltResult(null); setAltError(null); }} maxWidth={false} fullWidth PaperProps={{ sx: { width: '95vw', maxWidth: 1400, height: '90vh' } }}>

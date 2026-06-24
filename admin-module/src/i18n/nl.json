@@ -1810,7 +1810,10 @@
       "filters": "Filters",
       "toggleFilters": "Filters tonen/verbergen",
       "clearFilters": "Filters wissen",
-      "print": "Afdrukken"
+      "print": "Afdrukken",
+      "readyToSchedule": "Klaar om in te plannen",
+      "requiresApproval": "Keur dit item eerst goed voordat je het kunt inplannen",
+      "scheduleAction": "Inplannen"
     },
     "performance": {
       "days": "dagen",

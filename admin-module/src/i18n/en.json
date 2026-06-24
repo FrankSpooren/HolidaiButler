@@ -1795,7 +1795,10 @@
       "filters": "Filters",
       "toggleFilters": "Show/hide filters",
       "clearFilters": "Clear filters",
-      "print": "Print"
+      "print": "Print",
+      "readyToSchedule": "Ready to schedule",
+      "requiresApproval": "Approve this item first before you can schedule it",
+      "scheduleAction": "Schedule"
     },
     "performance": {
       "days": "days",

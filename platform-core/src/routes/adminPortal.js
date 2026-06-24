@@ -199,7 +199,7 @@ import { listTemplates, createTemplate, deleteTemplate, useTemplate } from './ha
 import { handleBatchAutoFillPages } from './handlers/batchAutoFillHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
-import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
+import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS, canTransitionXState } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
 
 /**
@@ -13519,10 +13519,18 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [concept.id] }
     );
 
+    // C1 (T1): can_schedule-vlag via de AUTORITATIEVE per-tenant FSM (SSOT). De
+    // frontend dupliceert GEEN transitieregels meer — een item is inplanbaar wanneer
+    // 'scheduled' een geldige overgang is vanuit de huidige approval_status, volgens
+    // de tenant-specifieke workflow_configurations (fallback DEFAULT_TRANSITIONS).
+    // Eén lookup per concept (5-min cache in workflowConfigService).
+    const _schedTransitions = await workflowConfigService.getTransitions(concept.destination_id);
+
     // Parse JSON fields + resolve images (same as GET /content/items)
     const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     const mediaBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
     for (const item of items) {
+      item.can_schedule = canTransitionXState(item.approval_status, 'scheduled', _schedTransitions);
       if (typeof item.seo_data === 'string') try { item.seo_data = JSON.parse(item.seo_data); } catch { /* keep string */ }
       if (typeof item.social_metadata === 'string') try { item.social_metadata = JSON.parse(item.social_metadata); } catch { /* keep string */ }
       if (typeof item.media_ids === 'string') try { item.media_ids = JSON.parse(item.media_ids); } catch { /* keep string */ }

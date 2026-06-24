@@ -489,6 +489,8 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
 
   const items = calendarData?.data?.items || [];
   const seasons = calendarData?.data?.seasons || [];
+  // C2/C1 (T4): approved-maar-ongeplande items komen apart binnen (niet op een dag-cel).
+  const readyToSchedule = calendarData?.data?.readyToSchedule || [];
   const accounts = accountsData?.data || [];
 
   // Filter items
@@ -909,6 +911,33 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
           </Button>
         ) : null}
       />
+
+      {/* C1/C2 (T4): "Klaar om in te plannen" — approved-maar-ongeplande items, bewust NIET
+          op een dag-cel. Klik opent de schedule-modal (ConceptDialog) via onEditConcept. */}
+      {readyToSchedule.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 1.5, mb: 2, borderRadius: 1, bgcolor: 'warning.50', borderColor: 'warning.200' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <ScheduleIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              {t('contentStudio.calendar.readyToSchedule', 'Klaar om in te plannen')} ({readyToSchedule.length})
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {readyToSchedule.map(item => {
+              const pf = item.target_platform;
+              const PfIcon = pf === 'facebook' ? FacebookIcon : pf === 'linkedin' ? LinkedInIcon : pf === 'instagram' ? InstagramIcon : LanguageIcon;
+              return (
+                <Tooltip key={item.id} title={t('contentStudio.calendar.scheduleAction', 'Inplannen')}>
+                  <Chip icon={<PfIcon sx={{ fontSize: '14px !important' }} />}
+                    label={item.title || pf} size="small" variant="outlined"
+                    onClick={() => onEditConcept && onEditConcept(item.concept_id, item.target_platform)}
+                    sx={{ cursor: 'pointer', maxWidth: 260, '&:hover': { bgcolor: 'action.hover' } }} />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Paper>
+      )}
 
       {/* Main layout: mini-calendar + filters (left) | calendar grid (right) */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
