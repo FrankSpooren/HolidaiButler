@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { Box, Chip, Tooltip } from '@mui/material';
+import { Box, Chip, Tooltip, alpha } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import CheckIcon from '@mui/icons-material/Check';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -88,25 +88,28 @@ export default function WorkflowProgressIndicator({ items = [], sx = {}, compact
                   : Icon ? <Icon sx={{ fontSize: iconSize }} /> : undefined}
                 label={label}
                 size="small"
-                variant={isCurrent ? 'filled' : 'outlined'}
+                variant={(isCurrent || isPast) ? 'filled' : 'outlined'}
                 sx={{
-                  // P1 (/ux · WCAG): geen ghosting. Inactieve stappen blijven leesbaar
-                  // (text.secondary ≈ 4.5:1 + zichtbare omlijning) i.p.v. grijs-op-grijs op opacity 0.4.
-                  bgcolor: isCurrent ? stage.color : 'transparent',
-                  color: isCurrent ? '#fff' : isPast ? stage.color : 'text.secondary',
-                  borderColor: isCurrent ? stage.color : isPast ? stage.color : '#9e9e9e',
-                  borderWidth: isCurrent ? 0 : 1.5,
+                  // C1-POLISH-2 (/ux · WCAG): consistente thema-teal (primary.main) voor
+                  // VOLTOOID + ACTIEF i.p.v. de per-stage kleur (stage 1 'Concept' = grijs → klacht).
+                  // Labels donker op de teal-vulling (≈9:1, voldoet ≥4.5:1; wit-op-teal zou 2.3:1 zijn).
+                  // ACTIEF dominant via ring + bold + groter; VOLTOOID herkenbaar aan het vinkje
+                  // (vorm-onderscheid = kleurenblind-veilig). AANKOMEND blijft leesbaar grijs.
+                  bgcolor: (isCurrent || isPast) ? 'primary.main' : 'transparent',
+                  color: (isCurrent || isPast) ? 'text.primary' : 'text.secondary',
+                  borderColor: (isCurrent || isPast) ? 'primary.main' : '#9e9e9e',
+                  borderWidth: (isCurrent || isPast) ? 0 : 1.5,
                   fontWeight: isCurrent ? 700 : isPast ? 600 : 500,
                   height: isCurrent ? chipHeight + 2 : chipHeight,
                   fontSize: isCurrent ? fontSize + 1 : fontSize,
-                  boxShadow: isCurrent ? `0 0 0 2px ${stage.color}40` : 'none',
-                  '& .MuiChip-icon': { color: isCurrent ? '#fff' : isPast ? stage.color : 'text.secondary' },
+                  boxShadow: isCurrent ? (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.35)}` : 'none',
+                  '& .MuiChip-icon': { color: (isCurrent || isPast) ? 'text.primary' : 'text.secondary' },
                   transition: 'all 200ms ease',
                 }}
               />
             </Tooltip>
             {idx < stages.length - 1 && (
-              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? stage.color : '#9e9e9e' }} />
+              <ArrowRightIcon sx={{ fontSize: iconSize, color: isPast ? 'primary.main' : '#9e9e9e' }} />
             )}
           </React.Fragment>
         );
