@@ -35,6 +35,7 @@ import {
 } from '../hooks/useContent.js';
 import contentService from '../api/contentService.js';
 import client from '../api/client.js';
+import { formatApiError } from '../utils/formatApiError.js';
 
 // ─── Constants ───────────────────────────────────────────────────
 const PLATFORM_ICONS = {
@@ -489,6 +490,8 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
 
   const items = calendarData?.data?.items || [];
   const seasons = calendarData?.data?.seasons || [];
+  // C2/C1 (T4): approved-maar-ongeplande items komen apart binnen (niet op een dag-cel).
+  const readyToSchedule = calendarData?.data?.readyToSchedule || [];
   const accounts = accountsData?.data || [];
 
   // Filter items
@@ -734,7 +737,13 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
   };
 
   const handlePublishNow = async (itemId, socialAccountId) => {
-    await publishMut.mutateAsync({ id: itemId, data: { social_account_id: socialAccountId } });
+    // P3 (/quality): gelokaliseerde, leesbare fout i.p.v. silent fail / ruwe backend-string.
+    try {
+      await publishMut.mutateAsync({ id: itemId, data: { social_account_id: socialAccountId } });
+    } catch (err) {
+      console.error('[Calendar] publish-now failed:', err);
+      setAutoFillSnack(formatApiError(err, t));
+    }
   };
 
   const handleCancel = async (itemId) => {
@@ -909,6 +918,40 @@ export default function ContentCalendarTab({ destinationId, onEditConcept }) {
           </Button>
         ) : null}
       />
+
+      {/* C1/C2 (T4): "Klaar om in te plannen" — approved-maar-ongeplande items, bewust NIET
+          op een dag-cel. Klik opent de schedule-modal (ConceptDialog) via onEditConcept. */}
+      {readyToSchedule.length > 0 && (
+        <Paper elevation={0} sx={{ p: 1.75, mb: 2, borderRadius: 1.5, bgcolor: 'warning.50',
+          border: '1px solid', borderColor: 'warning.300', borderLeft: '4px solid', borderLeftColor: 'warning.main' }}>
+          {/* P2 (/ux): nadruk — icoon + titel + count-badge + micro-hint, eigen getinte vlak. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+            <ScheduleIcon sx={{ fontSize: 20, color: 'warning.main' }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+              {t('contentStudio.calendar.readyToSchedule', 'Klaar om in te plannen')}
+            </Typography>
+            <Chip label={readyToSchedule.length} size="small" color="warning" sx={{ height: 20, fontWeight: 700, fontSize: 11 }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 'auto', fontStyle: 'italic' }}>
+              {t('contentStudio.calendar.readyToScheduleHint', 'Klik op een item om het in te plannen')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {readyToSchedule.map(item => {
+              const pf = item.target_platform;
+              const PfIcon = pf === 'facebook' ? FacebookIcon : pf === 'linkedin' ? LinkedInIcon : pf === 'instagram' ? InstagramIcon : LanguageIcon;
+              return (
+                <Tooltip key={item.id} title={t('contentStudio.calendar.scheduleAction', 'Inplannen')}>
+                  <Chip icon={<PfIcon sx={{ fontSize: '14px !important' }} />}
+                    label={item.title || pf} size="small" variant="outlined"
+                    onClick={() => onEditConcept && onEditConcept(item.concept_id, item.target_platform)}
+                    sx={{ cursor: 'pointer', maxWidth: 260, bgcolor: 'background.paper',
+                      '&:hover': { bgcolor: 'action.hover', borderColor: 'warning.main' } }} />
+                </Tooltip>
+              );
+            })}
+          </Box>
+        </Paper>
+      )}
 
       {/* Main layout: mini-calendar + filters (left) | calendar grid (right) */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>

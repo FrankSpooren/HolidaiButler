@@ -199,7 +199,7 @@ import { listTemplates, createTemplate, deleteTemplate, useTemplate } from './ha
 import { handleBatchAutoFillPages } from './handlers/batchAutoFillHandler.js';
 import workflowConfigService from '../services/workflowConfigService.js';
 import webhookDispatcher from '../services/webhookDispatcher.js';
-import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS } from '../services/contentWorkflowMachine.js';
+import { buildContentWorkflowMachine, getMachineGraph, WORKFLOW_PRESETS, canTransitionXState } from '../services/contentWorkflowMachine.js';
 import tenantCacheService from '../services/tenantCacheService.js';
 
 /**
@@ -13519,10 +13519,18 @@ router.get('/content/concepts/:id', adminAuth('editor'), async (req, res) => {
       { replacements: [concept.id] }
     );
 
+    // C1 (T1): can_schedule-vlag via de AUTORITATIEVE per-tenant FSM (SSOT). De
+    // frontend dupliceert GEEN transitieregels meer — een item is inplanbaar wanneer
+    // 'scheduled' een geldige overgang is vanuit de huidige approval_status, volgens
+    // de tenant-specifieke workflow_configurations (fallback DEFAULT_TRANSITIONS).
+    // Eén lookup per concept (5-min cache in workflowConfigService).
+    const _schedTransitions = await workflowConfigService.getTransitions(concept.destination_id);
+
     // Parse JSON fields + resolve images (same as GET /content/items)
     const imageBase = process.env.IMAGE_BASE_URL || 'https://test.holidaibutler.com';
     const mediaBase = process.env.API_BASE_URL || 'https://api.holidaibutler.com';
     for (const item of items) {
+      item.can_schedule = canTransitionXState(item.approval_status, 'scheduled', _schedTransitions);
       if (typeof item.seo_data === 'string') try { item.seo_data = JSON.parse(item.seo_data); } catch { /* keep string */ }
       if (typeof item.social_metadata === 'string') try { item.social_metadata = JSON.parse(item.social_metadata); } catch { /* keep string */ }
       if (typeof item.media_ids === 'string') try { item.media_ids = JSON.parse(item.media_ids); } catch { /* keep string */ }
@@ -14856,13 +14864,29 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
        LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
        WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted')
+         AND (ci.scheduled_at IS NOT NULL OR ci.published_at IS NOT NULL)
          AND (
            (ci.scheduled_at BETWEEN :start AND :end)
            OR (ci.published_at BETWEEN :start AND :end)
-           OR (ci.approval_status IN ('approved') AND ci.scheduled_at IS NULL AND ci.published_at IS NULL AND ci.created_at BETWEEN :start AND :end)
          )
-       ORDER BY COALESCE(ci.scheduled_at, ci.published_at, ci.created_at) ASC`,
+       ORDER BY COALESCE(ci.scheduled_at, ci.published_at) ASC`,
       { replacements: { destId: Number(destId), start: startDate, end: endDate + ' 23:59:59' } }
+    );
+
+    // C2-fix (T2): approved-but-unscheduled items horen NIET op een kalenderdatum
+    // (eerder gebucket op created_at => leek "vandaag"). Apart teruggegeven zodat de
+    // frontend ze in een "Klaar om in te plannen"-strook toont, los van een dag-cel.
+    // Destination-scoped, bewust GEEN datumvenster (ze hebben immers geen datum).
+    const [readyToSchedule] = await mysqlSequelize.query(
+      `SELECT ci.id, ci.concept_id, ci.title, ci.content_type, ci.target_platform, ci.approval_status, ci.scheduled_at, ci.published_at, ci.publish_url, ci.created_at,
+              ci.seo_score, ci.content_source_type, ci.publish_error, cc.pillar_id, cp.name AS pillar_name, cp.color AS pillar_color
+       FROM content_items ci
+       LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
+       LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
+       WHERE ci.destination_id = :destId AND ci.approval_status = 'approved'
+         AND ci.scheduled_at IS NULL AND ci.published_at IS NULL
+       ORDER BY ci.created_at DESC`,
+      { replacements: { destId: Number(destId) } }
     );
 
     // Also fetch seasonal periods for overlay (table uses start_month/start_day, not start_date)
@@ -14883,7 +14907,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
       end_date: `${queryYear}-${String(s.end_month).padStart(2, '0')}-${String(s.end_day).padStart(2, '0')}`,
     }));
 
-    res.json({ success: true, data: { items: items || [], seasons: seasonsFormatted, view: view || 'month' } });
+    res.json({ success: true, data: { items: items || [], readyToSchedule: readyToSchedule || [], seasons: seasonsFormatted, view: view || 'month' } });
   } catch (error) {
     logger.error('[AdminPortal] Calendar error:', error);
     res.status(500).json({ success: false, error: { code: 'CALENDAR_ERROR', message: error.message } });
@@ -15302,7 +15326,9 @@ router.post('/content/items/:id/publish-now', adminAuth('editor'), async (req, r
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('[AdminPortal] Publish-now error:', error);
-    res.status(500).json({ success: false, error: { code: 'PUBLISH_ERROR', message: error.message } });
+    // P3 (/quality): forward domain-codes (bv. INVALID_STATE_FOR_PUBLISH 409) zodat de
+    // frontend errors.<code> kan lokaliseren i.p.v. de ruwe interne string te tonen.
+    return sendApiError(res, error, 'PUBLISH_ERROR');
   }
 });
 
@@ -15463,7 +15489,8 @@ router.post('/content/items/:id/republish', adminAuth('editor'), writeAccess(['p
     res.json({ success: true, data: { ...result, id: Number(id), approval_status: 'published' } });
   } catch (error) {
     logger.error('[AdminPortal] Republish error:', error);
-    res.status(500).json({ success: false, error: { code: 'REPUBLISH_ERROR', message: error.message } });
+    // P3 (/quality): forward domain-codes zodat frontend errors.<code> kan lokaliseren.
+    return sendApiError(res, error, 'REPUBLISH_ERROR');
   }
 });
 

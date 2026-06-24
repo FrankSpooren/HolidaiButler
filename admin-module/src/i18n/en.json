@@ -1795,7 +1795,11 @@
       "filters": "Filters",
       "toggleFilters": "Show/hide filters",
       "clearFilters": "Clear filters",
-      "print": "Print"
+      "print": "Print",
+      "readyToSchedule": "Ready to schedule",
+      "readyToScheduleHint": "Click an item to schedule it",
+      "requiresApproval": "Approve this item first before you can schedule it",
+      "scheduleAction": "Schedule"
     },
     "performance": {
       "days": "days",
@@ -2134,6 +2138,8 @@
     "media_required": "A {{targetPlatform}} post needs an image. Add a photo before scheduling.",
     "invalid_transition": "This status change is not allowed (from \"{{from}}\" to \"{{to}}\").",
     "publish_too_early": "This item is scheduled for a later time and cannot be published yet. Use Publish Now to override.",
+    "invalid_state_for_publish": "This item cannot be published yet. Approve or schedule it first.",
+    "already_published": "This item has already been published.",
     "pre_publish_validation_failed": "The post is not ready to be published. Check the image, link and content.",
     "missing_domain_config": "No website domain is configured for this destination."
   }
