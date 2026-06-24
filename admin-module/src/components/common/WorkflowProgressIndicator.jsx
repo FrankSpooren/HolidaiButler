@@ -26,6 +26,7 @@ import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ErrorIcon from '@mui/icons-material/Error';
 import { getPrimaryStages, deriveConceptWorkflowStatus } from '../../lib/workflowStatus.js';
+import { tokens } from '../../theme.js';
 
 const ICON_MAP = {
   EditNoteIcon, CheckCircleIcon, ScheduleIcon, PublishedWithChangesIcon, CancelIcon, ErrorIcon,
@@ -90,20 +91,20 @@ export default function WorkflowProgressIndicator({ items = [], sx = {}, compact
                 size="small"
                 variant={(isCurrent || isPast) ? 'filled' : 'outlined'}
                 sx={{
-                  // C1-POLISH-2 (/ux · WCAG): consistente thema-teal (primary.main) voor
-                  // VOLTOOID + ACTIEF i.p.v. de per-stage kleur (stage 1 'Concept' = grijs → klacht).
-                  // Labels donker op de teal-vulling (≈9:1, voldoet ≥4.5:1; wit-op-teal zou 2.3:1 zijn).
+                  // C1-POLISH-3 (/ux · WCAG-AA): WITTE tekst/vinkje op een DONKERDER teal-vulling
+                  // (tokens.brand.tealDark #017A60 — wit-op-vulling = 5.31:1, voldoet ≥4.5:1).
+                  // Eén thema-token, geen verspreide hex. Consistent met de "Approve alle"-knop (wit op teal).
                   // ACTIEF dominant via ring + bold + groter; VOLTOOID herkenbaar aan het vinkje
                   // (vorm-onderscheid = kleurenblind-veilig). AANKOMEND blijft leesbaar grijs.
-                  bgcolor: (isCurrent || isPast) ? 'primary.main' : 'transparent',
-                  color: (isCurrent || isPast) ? 'text.primary' : 'text.secondary',
-                  borderColor: (isCurrent || isPast) ? 'primary.main' : '#9e9e9e',
+                  bgcolor: (isCurrent || isPast) ? tokens.brand.tealDark : 'transparent',
+                  color: (isCurrent || isPast) ? '#fff' : 'text.secondary',
+                  borderColor: (isCurrent || isPast) ? tokens.brand.tealDark : '#9e9e9e',
                   borderWidth: (isCurrent || isPast) ? 0 : 1.5,
                   fontWeight: isCurrent ? 700 : isPast ? 600 : 500,
                   height: isCurrent ? chipHeight + 2 : chipHeight,
                   fontSize: isCurrent ? fontSize + 1 : fontSize,
                   boxShadow: isCurrent ? (theme) => `0 0 0 3px ${alpha(theme.palette.primary.main, 0.35)}` : 'none',
-                  '& .MuiChip-icon': { color: (isCurrent || isPast) ? 'text.primary' : 'text.secondary' },
+                  '& .MuiChip-icon': { color: (isCurrent || isPast) ? '#fff' : 'text.secondary' },
                   transition: 'all 200ms ease',
                 }}
               />
