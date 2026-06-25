@@ -488,7 +488,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         await loadConcept();
         const itemIdReload = items[activeTab]?.id;
         if (itemIdReload) loadApprovalLog(itemIdReload);
-        setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
+        setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : status === 'pending_review' ? t('contentStudio.actions.resubmitted', 'Opnieuw ingediend voor beoordeling') : 'Afgewezen' });
       }
     } catch (err) {
       setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
@@ -1800,6 +1800,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
                         {retrying ? 'Opnieuw...' : 'Opnieuw'}
                       </Button>
+                    )}
+                    {/* A4-FIX T4 (Optie C): afgewezen item → opnieuw indienen via bestaande
+                        rejected→pending_review-transitie (GEEN directe rejected→approved). */}
+                    {activeItem?.approval_status === 'rejected' && (
+                      <Tooltip title={t('contentStudio.actions.resubmitHint', 'Dit item is afgewezen. Dien het opnieuw in voor beoordeling.')}>
+                        <Button size="small" variant="contained" color="info"
+                          onClick={() => handleStatusUpdate('pending_review', 'single')}
+                          startIcon={<ReplayIcon />}>
+                          {t('contentStudio.actions.resubmit', 'Opnieuw ter goedkeuring indienen')}
+                        </Button>
+                      </Tooltip>
                     )}
                   </Box>
 

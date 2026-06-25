@@ -1592,6 +1592,9 @@
     },
     "actions": {
       "cancel": "Cancel",
+      "resubmit": "Resubmit for approval",
+      "resubmitHint": "This item was rejected. Resubmit it for review.",
+      "resubmitted": "Resubmitted for review",
       "add": "Add",
       "generating": "Generating...",
       "create": "Create",

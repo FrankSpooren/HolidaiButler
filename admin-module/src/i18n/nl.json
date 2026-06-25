@@ -1607,6 +1607,9 @@
     },
     "actions": {
       "cancel": "Annuleren",
+      "resubmit": "Opnieuw ter goedkeuring indienen",
+      "resubmitHint": "Dit item is afgewezen. Dien het opnieuw in voor beoordeling.",
+      "resubmitted": "Opnieuw ingediend voor beoordeling",
       "add": "Toevoegen",
       "generating": "Genereren...",
       "create": "Aanmaken",
