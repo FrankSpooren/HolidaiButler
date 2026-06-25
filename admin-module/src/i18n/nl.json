@@ -1607,6 +1607,11 @@
     },
     "actions": {
       "cancel": "Annuleren",
+      "resubmit": "Opnieuw ter goedkeuring indienen",
+      "resubmitHint": "Dit item is afgewezen. Dien het opnieuw in voor beoordeling.",
+      "resubmitted": "Opnieuw ingediend voor beoordeling",
+      "translateAll": "Vertaal naar alle talen",
+      "altApplied": "Alternatief toegepast en opgeslagen",
       "add": "Toevoegen",
       "generating": "Genereren...",
       "create": "Aanmaken",
@@ -1815,6 +1820,13 @@
       "readyToScheduleHint": "Klik op een item om het in te plannen",
       "requiresApproval": "Keur dit item eerst goed voordat je het kunt inplannen",
       "scheduleAction": "Inplannen"
+    },
+    "lang": {
+      "translations": "Vertalingen",
+      "empty": "Nog niet vertaald",
+      "translateTo": "Vertaal naar:",
+      "filledCount": "{{filled}} van {{total}} talen ingevuld",
+      "translateAllDone": "{{ok}} vertaald, {{fail}} mislukt"
     },
     "performance": {
       "days": "dagen",

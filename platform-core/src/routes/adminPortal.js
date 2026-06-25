@@ -13183,6 +13183,12 @@ router.patch('/content/items/:id', adminAuth('editor'), writeAccess(['platform_a
       }
     }
 
+    // A4-FIX T1.2: de UI-"Afwijzen" muteert approval_status rauw via dit endpoint (omzeilt
+    // transitionStatus). Spiegel de FSM-clear: bij reject ook scheduled_at nullen (= hoe 303 ontstond).
+    if (req.body.approval_status === 'rejected' && !updates.some(u => u.startsWith('scheduled_at'))) {
+      updates.push('scheduled_at = NULL');
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ success: false, error: { code: 'NO_UPDATES', message: 'No valid fields to update' } });
     }
@@ -14863,7 +14869,7 @@ router.get('/content/calendar', adminAuth('editor'), async (req, res) => {
        FROM content_items ci
        LEFT JOIN content_concepts cc ON cc.id = ci.concept_id
        LEFT JOIN content_pillars cp ON cp.id = cc.pillar_id
-       WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted')
+       WHERE ci.destination_id = :destId AND ci.approval_status NOT IN ('deleted', 'rejected', 'archived')
          AND (ci.scheduled_at IS NOT NULL OR ci.published_at IS NOT NULL)
          AND (
            (ci.scheduled_at BETWEEN :start AND :end)

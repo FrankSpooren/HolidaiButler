@@ -1908,8 +1908,9 @@ Write your ${platform} post now. Maximum ${platformRules.maxChars} characters. S
         }
       );
 
-      // Sanitize output
-      content = sanitizeContent(content, 'social_post', platform);
+      // Sanitize output — T8-FIX: gebruik de werkelijke content_type (website→blog) i.p.v. hardcoded
+      // 'social_post', zodat een website/blog-repurpose de BLOG-sanitatie-tak raakt (fence-strip).
+      content = sanitizeContent(content, platform === 'website' ? 'blog' : 'social_post', platform);
       content = formatForPlatform(content, platform);
 
       // Strict character limit enforcement — retry up to 2 times
@@ -1929,7 +1930,7 @@ Write a SHORTER, punchier ${platform} post. ${platformRules.maxChars} chars MAX.
           ],
           { temperature: 0.5, maxTokens: 800 }
         );
-        content = sanitizeContent(retryContent, 'social_post', platform);
+        content = sanitizeContent(retryContent, platform === 'website' ? 'blog' : 'social_post', platform);
         content = formatForPlatform(content, platform);
       }
 

@@ -1592,6 +1592,11 @@
     },
     "actions": {
       "cancel": "Cancel",
+      "resubmit": "Resubmit for approval",
+      "resubmitHint": "This item was rejected. Resubmit it for review.",
+      "resubmitted": "Resubmitted for review",
+      "translateAll": "Translate to all languages",
+      "altApplied": "Alternative applied and saved",
       "add": "Add",
       "generating": "Generating...",
       "create": "Create",
@@ -1800,6 +1805,13 @@
       "readyToScheduleHint": "Click an item to schedule it",
       "requiresApproval": "Approve this item first before you can schedule it",
       "scheduleAction": "Schedule"
+    },
+    "lang": {
+      "translations": "Translations",
+      "empty": "Not translated yet",
+      "translateTo": "Translate to:",
+      "filledCount": "{{filled}} of {{total}} languages filled",
+      "translateAllDone": "{{ok}} translated, {{fail}} failed"
     },
     "performance": {
       "days": "days",

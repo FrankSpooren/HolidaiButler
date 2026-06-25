@@ -246,6 +246,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
   // Translation state
   const [translating, setTranslating] = useState(false);
   const [translateLang, setTranslateLang] = useState(null);
+  const [translatingAll, setTranslatingAll] = useState(false);
 
   // AI improve state
   const [improving, setImproving] = useState(false);
@@ -488,7 +489,7 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         await loadConcept();
         const itemIdReload = items[activeTab]?.id;
         if (itemIdReload) loadApprovalLog(itemIdReload);
-        setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : 'Afgewezen' });
+        setSnackMsg({ severity: 'success', text: status === 'approved' ? 'Goedgekeurd' : status === 'pending_review' ? t('contentStudio.actions.resubmitted', 'Opnieuw ingediend voor beoordeling') : 'Afgewezen' });
       }
     } catch (err) {
       setSnackMsg({ severity: 'error', text: err.message || 'Status update mislukt' });
@@ -642,11 +643,14 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     finally { setSavingTitle(false); }
   };
 
-  const handleSaveBody = async () => {
+  const handleSaveBody = async (bodyArg) => {
     if (!activeItem) return;
+    // T16-FIX: optionele body-override zodat een gekozen alternatief direct persist kan zonder
+    // afhankelijk te zijn van de async editBody-state (race met tab-sync/10s-autosave).
+    const bodyToSave = bodyArg !== undefined ? bodyArg : editBody;
     setSaving(true);
     try {
-      const updates = { [`body_${langTab}`]: editBody };
+      const updates = { [`body_${langTab}`]: bodyToSave };
       // Blog: also save SEO metadata
       if (isBlog) {
         updates.seo_data = JSON.stringify({
@@ -657,9 +661,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         });
       }
       await contentService.updateItem(activeItem.id, updates);
-      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: editBody, ...(isBlog ? { seo_data: updates.seo_data } : {}) } : i));
+      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: bodyToSave, ...(isBlog ? { seo_data: updates.seo_data } : {}) } : i));
       setDirty(false);
-      setWasEdited(editBody !== originalBody);
+      setWasEdited(bodyToSave !== originalBody);
       if (!isBlog) setIsEditing(false);
       if (onUpdate) onUpdate();
       setSnackMsg('Opgeslagen');
@@ -690,6 +694,94 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
       setTranslating(false);
       setTranslateLang(null);
     }
+  };
+
+  // A2-FIX T5 deel (a): opt-in "Vertaal naar alle talen" — lus over de nog-lege supported_languages
+  // via het BESTAANDE single-target translate-endpoint (geen duplicatie van de vertaal-service; alleen
+  // body, SEO-meta blijft buiten scope = T9). Per-taal voortgang; faalt 1 taal, dan gaan de andere door.
+  const handleTranslateAll = async () => {
+    if (!activeItem) return;
+    const emptyLangs = LANGS.filter(l => !activeItem[`body_${l}`]);
+    if (emptyLangs.length === 0) return;
+    setTranslatingAll(true);
+    let ok = 0, fail = 0;
+    for (const lang of emptyLangs) {
+      setTranslateLang(lang);
+      try { await contentService.translateItem(activeItem.id, lang); ok++; }
+      catch (err) { console.error(`[translateAll] ${lang} mislukt:`, err); fail++; }
+    }
+    setTranslateLang(null);
+    try {
+      const refreshed = await contentService.getItem(activeItem.id);
+      const data = refreshed.data || refreshed;
+      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, ...data } : i));
+    } catch { /* refresh non-blocking */ }
+    if (onUpdate) onUpdate();
+    setTranslatingAll(false);
+    setSnackMsg({ severity: fail ? 'warning' : 'success', text: t('contentStudio.lang.translateAllDone', '{{ok}} vertaald, {{fail}} mislukt', { ok, fail }) });
+  };
+
+  // A2-FIX T5: gedeeld "Vertalingen"-paneel (voorheen 2x gedupliceerd) met EERLIJKE taal-UI:
+  // gevulde tab = groen + vinkje; lege tab = dashed/gedempt + "nog niet vertaald" (b1); eerlijke
+  // teller "X van N talen ingevuld" (b2); per-taal "Vertaal naar X" + opt-in "Vertaal naar alle talen" (a1).
+  const renderTranslationPanel = () => {
+    if (!activeItem) return null;
+    const filledLangs = LANGS.filter(l => !!activeItem[`body_${l}`]);
+    const emptyLangs = LANGS.filter(l => !activeItem[`body_${l}`]);
+    const busy = translating || translatingAll;
+    return (
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+          <Typography variant="caption" sx={{ fontWeight: 600 }}>{t('contentStudio.lang.translations', 'Vertalingen')}</Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600 }} color={emptyLangs.length ? 'warning.main' : 'success.main'}>
+            {t('contentStudio.lang.filledCount', '{{filled}} van {{total}} talen ingevuld', { filled: filledLangs.length, total: LANGS.length })}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          {LANGS.map(lang => {
+            const hasBody = !!activeItem[`body_${lang}`];
+            const isActive = langTab === lang;
+            const isTranslatingThis = busy && translateLang === lang;
+            return (
+              <Tooltip key={lang} title={hasBody ? lang.toUpperCase() : t('contentStudio.lang.empty', 'Nog niet vertaald')}>
+                <Chip
+                  label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                    {lang.toUpperCase()}
+                    {isTranslatingThis ? <CircularProgress size={10} /> : hasBody ? <CheckIcon sx={{ fontSize: 12 }} /> : null}
+                  </Box>}
+                  size="small"
+                  variant={isActive ? 'filled' : hasBody ? 'filled' : 'outlined'}
+                  color={isActive ? 'primary' : hasBody ? 'success' : 'default'}
+                  onClick={() => { if (hasBody) setLangTab(lang); }}
+                  sx={{ height: 26, fontSize: 11, cursor: hasBody ? 'pointer' : 'default',
+                    fontWeight: isActive ? 700 : 400,
+                    borderStyle: hasBody ? 'solid' : 'dashed', opacity: hasBody ? 1 : 0.7,
+                    border: isActive ? '2px solid' : undefined, borderColor: isActive ? 'primary.main' : undefined }}
+                />
+              </Tooltip>
+            );
+          })}
+        </Box>
+        {emptyLangs.length > 0 && (
+          <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+            <TranslateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>{t('contentStudio.lang.translateTo', 'Vertaal naar:')}</Typography>
+            {emptyLangs.map(l => (
+              <Chip key={l} label={l.toUpperCase()} size="small" variant="outlined"
+                icon={busy && translateLang === l ? <CircularProgress size={10} /> : <TranslateIcon sx={{ fontSize: 12 }} />}
+                onClick={() => handleTranslate(l)} disabled={busy}
+                sx={{ height: 22, fontSize: 10, cursor: 'pointer' }} />
+            ))}
+            <Button size="small" variant="outlined"
+              startIcon={translatingAll ? <CircularProgress size={12} /> : <TranslateIcon sx={{ fontSize: 14 }} />}
+              onClick={handleTranslateAll} disabled={busy}
+              sx={{ height: 24, fontSize: 10, textTransform: 'none', ml: 0.5 }}>
+              {t('contentStudio.actions.translateAll', 'Vertaal naar alle talen')}
+            </Button>
+          </Box>
+        )}
+      </Paper>
+    );
   };
 
   const handleImprove = async () => {
@@ -741,12 +833,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
-  const handleUseAlternative = () => {
+  const handleUseAlternative = async () => {
     if (!altResult?.alternative) return;
-    setEditBody(altResult.alternative.body_en || '');
-    setDirty(true);
+    const altBody = altResult.alternative.body_en || '';
+    setEditBody(altBody);
     setIsEditing(true);
     setAltResult(null);
+    // T16-FIX (terugval A): de dirty-flow overleeft een tab-/taalwissel niet (tab-sync reset editBody +
+    // dirty; autosave is 10s gedebounced). Persist het gekozen alternatief daarom DIRECT via de bestaande
+    // save-flow. GEEN auto-vertaling: alleen body_<langTab> wordt opgeslagen; andere talen blijven "nog
+    // niet vertaald" tot de opt-in "Vertaal naar alle talen".
+    await handleSaveBody(altBody);
+    setSnackMsg({ severity: 'success', text: t('contentStudio.actions.altApplied', 'Alternatief toegepast en opgeslagen') });
   };
 
   const handleImageUpdate = async () => {
@@ -1450,35 +1548,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                       helperText={`calpetrip.com/blog/${blogSlug}`} />
                   </Paper>
 
-                  {/* Language tabs for blog */}
-                  <Paper variant="outlined" sx={{ p: 1.5 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>Vertalingen</Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {LANGS.map(lang => {
-                        const hasBody = !!activeItem[`body_${lang}`];
-                        const isActive = langTab === lang;
-                        return (
-                          <Chip key={lang} label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                            {lang.toUpperCase()} {hasBody ? <CheckIcon sx={{ fontSize: 12 }} /> : null}
-                          </Box>} size="small" variant={isActive ? 'filled' : hasBody ? 'filled' : 'outlined'}
-                            color={isActive ? 'primary' : hasBody ? 'success' : 'default'}
-                            onClick={() => hasBody && setLangTab(lang)}
-                            sx={{ height: 26, fontSize: 11, cursor: hasBody ? 'pointer' : 'default', fontWeight: isActive ? 700 : 400 }} />
-                        );
-                      })}
-                    </Box>
-                    {LANGS.filter(l => !activeItem[`body_${l}`]).length > 0 && (
-                      <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <TranslateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Vertaal naar:</Typography>
-                        {LANGS.filter(l => !activeItem[`body_${l}`]).map(l => (
-                          <Chip key={l} label={l.toUpperCase()} size="small" variant="outlined"
-                            icon={<TranslateIcon sx={{ fontSize: 12 }} />} onClick={() => handleTranslate(l)}
-                            disabled={translating} sx={{ height: 22, fontSize: 10, cursor: 'pointer' }} />
-                        ))}
-                      </Box>
-                    )}
-                  </Paper>
+                  {/* Language tabs for blog — A2-FIX T5: gedeeld eerlijk Vertalingen-paneel */}
+                  {renderTranslationPanel()}
                 </Box>
 
               ) : activeItem ? (
@@ -1672,57 +1743,8 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                     </Typography>
                   </Box>
 
-                  {/* ── Language / Translation Tabs ── */}
-                  <Paper variant="outlined" sx={{ p: 1.5 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>Vertalingen</Typography>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {LANGS.map(lang => {
-                        const hasBody = !!activeItem[`body_${lang}`];
-                        const isActive = langTab === lang;
-                        const isTranslatingThis = translating && translateLang === lang;
-                        return (
-                          <Chip
-                            key={lang}
-                            label={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                                {lang.toUpperCase()}
-                                {isTranslatingThis ? <CircularProgress size={10} /> : hasBody ? <CheckIcon sx={{ fontSize: 12 }} /> : null}
-                              </Box>
-                            }
-                            size="small"
-                            variant={isActive ? 'filled' : hasBody ? 'filled' : 'outlined'}
-                            color={isActive ? 'primary' : hasBody ? 'success' : 'default'}
-                            onClick={() => {
-                              if (hasBody) {
-                                setLangTab(lang);
-                              }
-                            }}
-                            sx={{
-                              height: 26, fontSize: 11, cursor: hasBody ? 'pointer' : 'default',
-                              fontWeight: isActive ? 700 : 400,
-                              border: isActive ? '2px solid' : undefined,
-                              borderColor: isActive ? 'primary.main' : undefined,
-                            }}
-                          />
-                        );
-                      })}
-                    </Box>
-
-                    {/* Translate missing languages */}
-                    {LANGS.filter(l => !activeItem[`body_${l}`]).length > 0 && (
-                      <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <TranslateIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Vertaal naar:</Typography>
-                        {LANGS.filter(l => !activeItem[`body_${l}`]).map(l => (
-                          <Chip key={l} label={l.toUpperCase()} size="small" variant="outlined"
-                            icon={<TranslateIcon sx={{ fontSize: 12 }} />}
-                            onClick={() => handleTranslate(l)}
-                            disabled={translating}
-                            sx={{ height: 22, fontSize: 10, cursor: 'pointer' }} />
-                        ))}
-                      </Box>
-                    )}
-                  </Paper>
+                  {/* ── Language / Translation Tabs — A2-FIX T5: gedeeld eerlijk Vertalingen-paneel ── */}
+                  {renderTranslationPanel()}
 
                   {/* Published / Error info */}
                   {activeItem.published_at && (
@@ -1800,6 +1822,17 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
                         startIcon={retrying ? <CircularProgress size={14} /> : <ReplayIcon />}>
                         {retrying ? 'Opnieuw...' : 'Opnieuw'}
                       </Button>
+                    )}
+                    {/* A4-FIX T4 (Optie C): afgewezen item → opnieuw indienen via bestaande
+                        rejected→pending_review-transitie (GEEN directe rejected→approved). */}
+                    {activeItem?.approval_status === 'rejected' && (
+                      <Tooltip title={t('contentStudio.actions.resubmitHint', 'Dit item is afgewezen. Dien het opnieuw in voor beoordeling.')}>
+                        <Button size="small" variant="contained" color="info"
+                          onClick={() => handleStatusUpdate('pending_review', 'single')}
+                          startIcon={<ReplayIcon />}>
+                          {t('contentStudio.actions.resubmit', 'Opnieuw ter goedkeuring indienen')}
+                        </Button>
+                      </Tooltip>
                     )}
                   </Box>
 
