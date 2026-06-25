@@ -9859,3 +9859,35 @@ Alle 6 soak-mitigatie spawn-tasks afgerond. Klaar voor S2-A op 2026-06-04.
 - Classifier-verfijning: AST-based detection zou false positives elimineren
   (nice-to-have, niet noodzakelijk voor security)
 - Cron-job MAILTO=frank voor errors (separate spawn-task indien gewenst)
+
+
+---
+
+## v5.12.0 — Fase A: Content Studio Scheduling-correctheid + UX-polish (24 juni 2026)
+
+### Samenvatting
+Diagnose → fix → cascade van twee scheduling-bugs (compagnon-review RC2) plus UX-polish op de Content Studio kalender/lifecycle, gepromoot dev→test→main en geverifieerd op productie.
+
+**C2 — kalender read-path** (`ded4239`): `GET /content/calendar` toonde approved-maar-ongeplande items op hun `created_at` (leek "vandaag"). Read-only diagnose bewees dat de write-path (single-item `/content/items/:id/schedule`) de platform-selectie al respecteerde — het was puur de read-query. Fix: WHERE alleen `scheduled_at`/`published_at` binnen venster, `ORDER BY COALESCE(scheduled_at, published_at)` (geen `created_at`-fallback); approved-ongepland apart teruggegeven als `readyToSchedule`-array (niet op een dag-cel).
+
+**C1 — approval-gating + zichtbare 409** (`344771f`): nieuw veld `can_schedule` per item op `GET /content/concepts/:id`, berekend via de autoritatieve per-tenant FSM (`workflowConfigService.getTransitions` + `canTransitionXState`, fallback `DEFAULT_TRANSITIONS`). Frontend gate't de "Inplannen"-knop + dialog-confirm hierop (géén gedupliceerde transitieregels) en toont de 409 (`InvalidTransitionError` → `errors.invalid_transition`) als gekleurde Alert top-center (`zIndex > modal`) i.p.v. verstopt achter de modal.
+
+**C1-POLISH** (`778198a`, `a7a0e1f`, `918c578`): `WorkflowProgressIndicator` — eerst ghosting weg (inactief was `opacity 0.4` grijs-op-grijs), daarna consistent teal (per-stage kleur gaf stage 1 "Concept" = grijs → klacht), uiteindelijk WITTE tekst/vinkje op `tokens.brand.tealDark` (#017A60, wit-op-vulling = 5,31:1 WCAG-AA; wit-op-brand-teal #02C39A was 2,26:1). Drie-toestanden: voltooid=gevuld+wit vinkje / actief=gevuld+ring+bold+groter / aankomend=grijs outline (vorm-onderscheid = kleurenblind-veilig). Kalender "Klaar om in te plannen"-strook met count-badge + micro-hint. Publicatiefout gehumaniseerd: publish-now/republish endpoints → `sendApiError` (forwardt `INVALID_STATE_FOR_PUBLISH` 409 i.p.v. ruwe `PUBLISH_ERROR` 500-string met intern item-id + Engelse state-lijst), frontend `formatApiError` → `errors.invalid_state_for_publish` (nl/en); ruwe details alleen naar console.
+
+### Commits & promotie
+- `ded4239` C2 · `344771f` C1 · `778198a` polish · `a7a0e1f` stepper-teal · `918c578` tealDark AA.
+- Cascade: dev → test (`3413d36`) → main (`2f08e28`) via tijdelijke-`git worktree`-merge (API-worktree op dev ongemoeid); admin-bundle per docroot gedeployed met backup.
+- **Prod-bewijs** (via productie-surface → 3001): kalender = alleen gedateerde items (297/299/303) + `readyToSchedule` (300/296); `POST /content/items/304/publish-now` → 409 `INVALID_STATE_FOR_PUBLISH`; prod-admin index 200 + `tealDark` (#017A60) in geserveerde bundle. Frank visueel bevestigd.
+
+### Infrastructuur-ontdekking (zie CLAUDE.md deploy-sectie)
+Eén gedeelde Platform-Core API (poort 3001, checkout op branch dev) bedient alle admin-surfaces (admin.dev/admin.test/prod); admin-frontend is wél per-omgeving een aparte docroot. CI auto-deploy staat uit; cascade via git-worktree-merge + handmatige bundle-deploy per docroot. Curl-verificatie per env via `--resolve <host>:443:127.0.0.1` (anders HTTP 421 door strikte SNI).
+
+### Learnings
+- **Versie-drift**: de SSOT-versie liep voor op de opdracht-aanname (v4.82.0 verwacht vs v5.11.4 live). Les: bevestig de CLAUDE.md-versie altijd expliciet in pre-flight; baseer plannen niet op aangenomen versies.
+- **Zichtbaarheid = onderdeel van Definition of Done**: een onzichtbare 409 achter een modal, een ghosting-kruimelpad (opacity 0.4 grijs-op-grijs) en wit-op-teal 2,26:1 waren elk "werkend maar onbruikbaar". Wayfinding + foutmeldingen moeten leesbaar én WCAG-AA-conform (≥4,5:1) zijn vóór "klaar".
+- **Read- vs write-path**: het kalender-symptoom léék een planlogica-bug maar zat volledig in de read-query. Eerst de data bewijzen (DB + live curl) vóór de oorzaak toewijzen — de write-path was onschuldig.
+
+### Open punten (doorgezet)
+- **REJECTED-FSM** (volgende opdracht): afgewezen item kan niet opnieuw goedgekeurd worden; afgewezen-maar-gepland (item 303 = rejected + `scheduled_at`); `transitionStatus` cleart `scheduled_at` niet bij `rejected`.
+- **FSM-drift**: dubbele bron `approvalStateMachine.js` + `contentWorkflowMachine.js`; `allowedTransitions()` leest de niet-tenant DEFAULT-map.
+- **`feature/media-library-wip` (`6725792`)** ongemoeid (Frank's parallel media-WIP, niet gemerged).
