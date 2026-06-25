@@ -267,6 +267,10 @@ export async function transitionStatus(itemId, newStatus, options = {}) {
     repl.userId = userId;
   } else if (newStatus === 'deleted') {
     updates.push('scheduled_at = NULL');
+  } else if (newStatus === 'rejected') {
+    // A4-FIX T1: een afgewezen item is niet langer ingepland — ruim scheduled_at op
+    // zodat het niet als "afgewezen-maar-gepland" blijft hangen (read-path vangnet in T2).
+    updates.push('scheduled_at = NULL');
   }
 
   await mysqlSequelize.query(
