@@ -1596,6 +1596,7 @@
       "resubmitHint": "This item was rejected. Resubmit it for review.",
       "resubmitted": "Resubmitted for review",
       "translateAll": "Translate to all languages",
+      "altApplied": "Alternative applied and saved",
       "add": "Add",
       "generating": "Generating...",
       "create": "Create",

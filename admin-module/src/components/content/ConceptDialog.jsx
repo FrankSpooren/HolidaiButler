@@ -643,11 +643,14 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     finally { setSavingTitle(false); }
   };
 
-  const handleSaveBody = async () => {
+  const handleSaveBody = async (bodyArg) => {
     if (!activeItem) return;
+    // T16-FIX: optionele body-override zodat een gekozen alternatief direct persist kan zonder
+    // afhankelijk te zijn van de async editBody-state (race met tab-sync/10s-autosave).
+    const bodyToSave = bodyArg !== undefined ? bodyArg : editBody;
     setSaving(true);
     try {
-      const updates = { [`body_${langTab}`]: editBody };
+      const updates = { [`body_${langTab}`]: bodyToSave };
       // Blog: also save SEO metadata
       if (isBlog) {
         updates.seo_data = JSON.stringify({
@@ -658,9 +661,9 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
         });
       }
       await contentService.updateItem(activeItem.id, updates);
-      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: editBody, ...(isBlog ? { seo_data: updates.seo_data } : {}) } : i));
+      setItems(prev => prev.map(i => i.id === activeItem.id ? { ...i, [`body_${langTab}`]: bodyToSave, ...(isBlog ? { seo_data: updates.seo_data } : {}) } : i));
       setDirty(false);
-      setWasEdited(editBody !== originalBody);
+      setWasEdited(bodyToSave !== originalBody);
       if (!isBlog) setIsEditing(false);
       if (onUpdate) onUpdate();
       setSnackMsg('Opgeslagen');
@@ -830,12 +833,18 @@ export default function ConceptDialog({ open, onClose, conceptId, onUpdate, dest
     }
   };
 
-  const handleUseAlternative = () => {
+  const handleUseAlternative = async () => {
     if (!altResult?.alternative) return;
-    setEditBody(altResult.alternative.body_en || '');
-    setDirty(true);
+    const altBody = altResult.alternative.body_en || '';
+    setEditBody(altBody);
     setIsEditing(true);
     setAltResult(null);
+    // T16-FIX (terugval A): de dirty-flow overleeft een tab-/taalwissel niet (tab-sync reset editBody +
+    // dirty; autosave is 10s gedebounced). Persist het gekozen alternatief daarom DIRECT via de bestaande
+    // save-flow. GEEN auto-vertaling: alleen body_<langTab> wordt opgeslagen; andere talen blijven "nog
+    // niet vertaald" tot de opt-in "Vertaal naar alle talen".
+    await handleSaveBody(altBody);
+    setSnackMsg({ severity: 'success', text: t('contentStudio.actions.altApplied', 'Alternatief toegepast en opgeslagen') });
   };
 
   const handleImageUpdate = async () => {
