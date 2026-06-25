@@ -9891,3 +9891,32 @@ Eén gedeelde Platform-Core API (poort 3001, checkout op branch dev) bedient all
 - **REJECTED-FSM** (volgende opdracht): afgewezen item kan niet opnieuw goedgekeurd worden; afgewezen-maar-gepland (item 303 = rejected + `scheduled_at`); `transitionStatus` cleart `scheduled_at` niet bij `rejected`.
 - **FSM-drift**: dubbele bron `approvalStateMachine.js` + `contentWorkflowMachine.js`; `allowedTransitions()` leest de niet-tenant DEFAULT-map.
 - **`feature/media-library-wip` (`6725792`)** ongemoeid (Frank's parallel media-WIP, niet gemerged).
+
+
+---
+
+## v5.13.0 — Fase A vervolg: RC2/RC4 Content Studio fixes A4+A2+T8+T16 (25 juni 2026)
+
+### Samenvatting
+Vier diagnose→fix→cascade-rondes op de Content Studio (vervolg op v5.12.0), gepromoot dev→test→main en geverifieerd op productie (a–e groen). Backend draait gedeeld op 3001 (A4+T8 live); admin-bundle per docroot gedeployed met backup.
+
+**A4 — rejected-FSM** (`f78075e`): "afgewezen-maar-gepland" (item 303 = `rejected` + `scheduled_at`) had twee oorzaken — write-path (`transitionStatus` cleart `scheduled_at` niet bij `rejected`) én read-path (kalender-WHERE filterde alleen `deleted`). **Kern-ontdekking**: de UI-"Afwijzen" loopt via de **rauwe PATCH** `/content/items/:id` (bouwt `UPDATE` uit `allowedFields`) en **omzeilt** `transitionStatus` — dáár ontstond 303. Fix: `rejected`-clear-tak in `transitionStatus` **én** scheduled_at-null in de PATCH-tak; kalender-WHERE `NOT IN ('deleted','rejected','archived')`; resubmit via bestaande `rejected→pending_review` (Optie C, geen nieuwe edge — directe `rejected→approved` blijft 409 via FSM-pad). Record 303 opgeschoond. Checkpoint testte het ECHTE UI-PATCH-pad (anti-vals-groen), niet alleen `bulk/reject`.
+
+**A2/T5 — eerlijke taal-UI** (`97df723`): `LANGS` kwam uit `supported_languages` (config), niet uit gevulde bodies → "N talen" geclaimd met lege body. Fix: lege tab = "nog niet vertaald" (dashed), eerlijke teller "X van N talen ingevuld"; opt-in "Vertaal naar alle talen" (frontend-lus over bestaand single-target endpoint; **geen** auto-bulk; SEO buiten scope = T9); twee gedupliceerde Vertalingen-blokken → `renderTranslationPanel()`.
+
+**T8 — sanitizer-dekking** (`c1f5b67`): `sanitizeContent` werd al toegepast bij generatie (regel 401), maar de blog-tak-regex `\n?```\s*$` matchte een sluit-``` niet als er `\n\n---` ná kwam (item 143). Decisieve test: re-toepassing loste het niet op (idempotent met hetzelfde gat). Fix in de **dekking** (blog-tak): strip kale ```-regels overal + HTML-omwikkelde fence-junk (`<p>``` ---</p>`, item 144) + trailing `---`; non-blog-tak ongemoeid. Repurpose-sanitize → werkelijke content_type (`website→blog`). 6 items opgeschoond.
+
+**T16 — alternatief-persist** (`1edd8e7`): beslis-gate wees uit dat een robuuste edit-flow die taalwissel overleeft **niet bestaat** (tab-sync reset `editBody`+`dirty`; autosave 10s gedebounced) → terugval A: "Gebruik alternatief" persisteert direct via `handleSaveBody(altBody)` (optionele body-override). Geen auto-vertaling.
+
+### Commits & promotie
+- `f78075e` A4 · `97df723` A2 · `c1f5b67` T8 · `1edd8e7` T16.
+- Cascade: dev `1edd8e7` → test `fc02fd1` → main `e5b222a` (worktree-merge; API-worktree ongemoeid).
+- Prod-bewijs (admin.holidaibutler.com → 3001): A4 publish-now draft → 409 + rejected+scheduled=0; A2 item-bodies onderscheiden gevuld/leeg; T8 fence-bodies=0; T16 PATCH-alt → GET persisted; prod index 200 + verse bundle.
+
+### Learnings
+- **Beslis-gate vóór implementatie voorkomt vals-groen** (T16): pre-flight bewees dat de "robuuste edit-flow" (route C) niet bestond → terugval A gekozen vóór code.
+- **Idempotente sanitizer ≠ volledige dekking** (T8): een tweede toepassing dicht een dekkingsgat niet; de fix zat in de regex-dekking, niet in herhaling.
+- **UI-pad ≠ FSM-pad** (A4): "Afwijzen" liep via rauwe PATCH buiten de FSM om; een checkpoint moet het ECHTE gebruikerspad testen, niet alleen het canonieke FSM-pad.
+
+### Open punten (zie CLAUDE.md "Open Punten")
+FSM-achterdeur (rauwe PATCH approval_status, RC2; T16 gebruikt dit bewust), T9 (SEO-meta single + niet vertaald → datamodelkeuze), FSM-de-dup, generiek editor-edit-verlies bij tabwissel (breder dan T16). RC4: T5/T8/T16 opgelost, T9 open.
