@@ -79,6 +79,15 @@ export function sanitizeContent(rawContent, contentType, targetPlatform) {
     // Strip AI artifacts
     clean = clean.replace(/^```html\s*\n?/i, '');  // strip opening ```html
     clean = clean.replace(/\n?```\s*$/g, '');       // strip closing ```
+    // T8-FIX: strip elke KALE code-fence-regel ongeacht positie (open/sluit/lone/trailing) —
+    // een bare ```-regel in HTML-blogcontent is altijd een markdown-artefact. Dekt de gevallen
+    // waar de sluit-``` niet exact aan het eind staat (bv. gevolgd door een '---'-regel).
+    clean = clean.replace(/^[ \t]*```[a-z]*[ \t]*$/gim, '');
+    // T8-FIX: strip een HTML-omwikkelde fence-junk-paragraaf (<p> die UITSLUITEND ```/streepjes/whitespace
+    // bevat, bv. "<p>``` ---</p>"). Vereist een ``` → legitieme paragrafen met echte tekst matchen niet.
+    clean = clean.replace(/<p>\s*```[a-z]*[\s-]*<\/p>/gi, '');
+    // T8-FIX: verwijder een ACHTERGEBLEVEN trailing '---'-artefact (alleen losse regel áán het eind).
+    clean = clean.replace(/\n+[ \t]*-{3,}[ \t]*$/g, '');
     clean = clean.replace(/\s*[•◦▪▫▸▹⦁⬤·∙⋅⁃]\s*/g, ', ');  // inline bullets → comma
     clean = clean.replace(/,\s*,/g, ',');
     clean = clean.replace(/^\s*,\s*/gm, '');
